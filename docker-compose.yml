@@ -1,0 +1,32 @@
+services:
+  hce-db:
+    image: postgres:15-alpine
+    container_name: hce-db
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: hce_provider
+    volumes:
+      - ./db/data:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+  
+  hce-api:
+    build: ./api
+    container_name: hce-api
+    restart: always
+    depends_on:
+      - hce-db
+    environment:
+      DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@hce-db:5432/hce_provider
+    ports:
+     - "8000:8000"
+
+  hce-ui:
+    build: ./ui
+    container_name: hce-ui
+    restart: always
+    ports:
+      - "80:80"
