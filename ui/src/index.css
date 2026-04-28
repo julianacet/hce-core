@@ -1,0 +1,80 @@
+@import "tailwindcss";
+
+/* Variables del tema — se sobreescriben desde TemaContext al cargar */
+:root {
+  --hce-primary: #1d4ed8;
+  --hce-primary-text: #ffffff;
+  --hce-primary-hover: #1e40af;
+  --hce-sidebar: #1e3a5f;
+  --hce-sidebar-text: #ffffff;
+  --hce-sidebar-muted: rgba(255, 255, 255, 0.55);
+  --hce-bg: #f8fafc;
+  --hce-card: #ffffff;
+  --hce-border: #e2e8f0;
+  --hce-text: #0f172a;
+  --hce-text-muted: #64748b;
+}
+
+/* Base */
+body {
+  margin: 0;
+  font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
+  background-color: var(--hce-bg);
+  color: var(--hce-text);
+}
+
+/* Botón primario — usado en todo el sistema */
+.btn-primary {
+  background-color: var(--hce-primary);
+  color: var(--hce-primary-text);
+  font-size: 0.875rem;
+  font-weight: 500;
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: opacity 0.15s;
+  text-decoration: none;
+}
+.btn-primary:hover:not(:disabled) { opacity: 0.88; }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Inputs */
+.input-hce {
+  width: 100%;
+  border: 1px solid var(--hce-border);
+  border-radius: 0.375rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  background-color: var(--hce-card);
+  color: var(--hce-text);
+  outline: none;
+  transition: box-shadow 0.15s;
+}
+.input-hce:focus {
+  box-shadow: 0 0 0 2px var(--hce-primary);
+  border-color: var(--hce-primary);
+}
+
+/* Cards */
+.card-hce {
+  background-color: var(--hce-card);
+  border: 1px solid var(--hce-border);
+  border-radius: 0.75rem;
+}
+
+/* Labels */
+.label-hce {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--hce-text-muted);
+  margin-bottom: 0.25rem;
+}
+
+/* Separadores */
+.divider-hce {
+  border-color: var(--hce-border);
+}
