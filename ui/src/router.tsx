@@ -14,6 +14,8 @@ import NuevoEncuentro from './pages/pacientes/NuevoEncuentro'
 import DetalleEncuentro from './pages/pacientes/DetalleEncuentro'
 import AuditoriaPaciente from './pages/pacientes/AuditoriaPaciente'
 import NuevaFormula from './pages/pacientes/NuevaFormula'
+import NuevaFactura from './pages/pacientes/NuevaFactura'
+import DetalleFactura from './pages/pacientes/DetalleFactura'
 import NuevoPaciente from './pages/NuevoPaciente'
 
 const router = createBrowserRouter([
@@ -51,6 +53,8 @@ const router = createBrowserRouter([
               { path: 'encuentros/nuevo', element: <NuevoEncuentro /> },
               { path: 'encuentros/:encId', element: <DetalleEncuentro /> },
               { path: 'encuentros/:encId/formula', element: <NuevaFormula /> },
+              { path: 'encuentros/:encId/facturas/nueva', element: <NuevaFactura /> },
+              { path: 'encuentros/:encId/facturas/:facturaId', element: <DetalleFactura /> },
               { path: 'auditoria', element: <AuditoriaPaciente /> },
             ],
           },
