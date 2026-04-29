@@ -63,6 +63,7 @@ func main() {
 
 		// Accesibles por cualquier usuario autenticado (admin, medico, auxiliar)
 		r.Mount("/pacientes", handlers.PacientesRouter(db))
+		r.Mount("/auditoria", handlers.AuditoriaRouter(db))
 
 		// Solo admin
 		// r.With(appmiddleware.RequiereRol("admin")).Mount("/usuarios", handlers.UsuariosRouter(db))
