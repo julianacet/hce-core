@@ -26,8 +26,11 @@ func EncuentrosRouter(db *pgxpool.Pool) http.Handler {
 
 	r.Get("/", h.listar)
 	r.Post("/", h.crear)
-	r.Get("/{encuentroId}", h.obtener)
-	r.Put("/{encuentroId}", h.actualizar)
+	r.Route("/{encuentroId}", func(r chi.Router) {
+		r.Get("/", h.obtener)
+		r.Put("/", h.actualizar)
+		r.Mount("/formulas", FormulasRouter(db))
+	})
 
 	return r
 }
