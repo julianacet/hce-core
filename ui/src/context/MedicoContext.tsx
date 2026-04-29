@@ -9,6 +9,8 @@ export type DatosMedico = {
   ciudad: string
   nombreConsultorio: string
   correoElectronico: string   // para futura integración con Google Drive
+  nit: string                 // NIT del consultorio — requerido para RIPS y FEV
+  codPrestador: string        // código de habilitación ante el MinSalud (10 dígitos)
   firmaBase64: string | null
 }
 
@@ -21,6 +23,8 @@ const defaults: DatosMedico = {
   ciudad: '',
   nombreConsultorio: '',
   correoElectronico: '',
+  nit: '',
+  codPrestador: '',
   firmaBase64: null,
 }
 

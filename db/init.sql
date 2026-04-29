@@ -238,8 +238,9 @@ CREATE INDEX idx_factura_item_factura ON factura_item(factura_id);
 
 CREATE TABLE rips_generado (
     id           UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    encuentro_id UUID NOT NULL,
+    encuentro_id UUID,                           -- nulo en lotes mensuales
     factura_id   UUID REFERENCES factura(id),
+    periodo      VARCHAR(7),                     -- "YYYY-MM" para lotes mensuales
 
     datos_json       JSONB       NOT NULL,
     estado           VARCHAR(20) NOT NULL DEFAULT 'pendiente'
@@ -252,7 +253,8 @@ CREATE TABLE rips_generado (
     creado_por       TEXT        NOT NULL
 );
 
-CREATE INDEX idx_rips_encuentro ON rips_generado(encuentro_id);
+CREATE INDEX idx_rips_encuentro ON rips_generado(encuentro_id) WHERE encuentro_id IS NOT NULL;
+CREATE INDEX idx_rips_periodo   ON rips_generado(periodo)      WHERE periodo IS NOT NULL;
 
 -- ============================================================
 -- 9. Inventario de insumos

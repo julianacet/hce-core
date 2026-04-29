@@ -1,5 +1,5 @@
 import { Outlet, NavLink, useNavigate } from 'react-router'
-import { LayoutDashboard, UserSearch, Users, Settings, ShieldCheck, LogOut } from 'lucide-react'
+import { LayoutDashboard, UserSearch, Users, Settings, ShieldCheck, LogOut, FileCode2 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useTema } from '../context/TemaContext'
 
@@ -17,6 +17,7 @@ export default function RootLayout() {
     { to: '/', label: 'Inicio', icon: LayoutDashboard, end: true },
     { to: '/nueva-consulta', label: 'Nueva consulta', icon: UserSearch },
     { to: '/pacientes', label: 'Pacientes', icon: Users },
+    { to: '/rips-mensual', label: 'RIPS Mensual', icon: FileCode2 },
   ]
 
   return (

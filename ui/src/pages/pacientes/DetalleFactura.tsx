@@ -1,11 +1,12 @@
 import { useNavigate, useParams } from 'react-router'
-import { Download, Printer, ChevronLeft } from 'lucide-react'
+import { Download, Printer, ChevronLeft, FileCode2 } from 'lucide-react'
 import { PDFDownloadLink, pdf } from '@react-pdf/renderer'
 import { useState } from 'react'
 import { useFactura } from '../../api/facturas'
 import { usePaciente } from '../../api/pacientes'
 import { useEncuentro } from '../../api/encuentros'
 import { useMedico } from '../../context/MedicoContext'
+import { useGenerarRips, useRips } from '../../api/rips'
 import FacturaPDF from '../../components/pdf/FacturaPDF'
 
 function formatCOP(valor: number) {
@@ -19,6 +20,16 @@ const colorEstado: Record<string, string> = {
   anulada: 'bg-red-100 text-red-700',
 }
 
+function descargarJSON(datos: unknown, nombre: string) {
+  const blob = new Blob([JSON.stringify(datos, null, 2)], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = nombre
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
 export default function DetalleFactura() {
   const { id, encId, facturaId } = useParams()
   const navigate = useNavigate()
@@ -28,6 +39,9 @@ export default function DetalleFactura() {
   const { data: factura, isLoading, isError } = useFactura(id ?? '', encId ?? '', facturaId ?? '')
   const { data: paciente } = usePaciente(id ?? '')
   const { data: encuentro } = useEncuentro(id ?? '', encId ?? '')
+  const { data: ripsExistente } = useRips(id ?? '', encId ?? '', facturaId ?? '')
+
+  const generarRips = useGenerarRips(id ?? '', encId ?? '', facturaId ?? '')
 
   if (isLoading) return <div className="p-6 text-sm text-slate-400">Cargando factura...</div>
   if (isError || !factura) return <div className="p-6 text-sm text-red-500">Error al cargar la factura.</div>
@@ -66,6 +80,19 @@ export default function DetalleFactura() {
     } finally {
       setImprimiendo(false)
     }
+  }
+
+  async function handleGenerarRips() {
+    if (!medico.nit || !medico.codPrestador) {
+      alert('Configurá el NIT y el código de habilitación en la sección Configuración antes de generar RIPS.')
+      return
+    }
+    const resultado = await generarRips.mutateAsync({
+      nit: medico.nit,
+      codPrestador: medico.codPrestador,
+      tipoDiagnosticoPrincipal: '01',
+    })
+    descargarJSON(resultado.datos_json, `rips_${factura.paciente_documento}_${Date.now()}.json`)
   }
 
   return (
@@ -140,6 +167,52 @@ export default function DetalleFactura() {
             </tr>
           </tfoot>
         </table>
+      </div>
+
+      {/* RIPS */}
+      <div className="bg-white rounded-xl border border-slate-200 px-5 py-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-sm font-semibold text-slate-700">RIPS (Res. 2275/2023)</h3>
+            {ripsExistente ? (
+              <p className="text-xs text-slate-400 mt-0.5">
+                Último generado: {new Date(ripsExistente.fecha_generacion).toLocaleString('es-CO')}
+                {' · '}<span className="text-amber-600">{ripsExistente.estado}</span>
+              </p>
+            ) : (
+              <p className="text-xs text-slate-400 mt-0.5">
+                No hay RIPS generado para esta factura.
+              </p>
+            )}
+          </div>
+          <div className="flex gap-2">
+            {ripsExistente && (
+              <button
+                onClick={() => descargarJSON(ripsExistente.datos_json, `rips_${factura.paciente_documento}.json`)}
+                className="flex items-center gap-2 text-sm px-4 py-2 rounded-md border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors"
+              >
+                <Download size={14} />
+                Descargar último
+              </button>
+            )}
+            <button
+              onClick={handleGenerarRips}
+              disabled={generarRips.isPending}
+              className="flex items-center gap-2 text-sm px-4 py-2 rounded-md border border-blue-700 text-blue-700 hover:bg-blue-50 transition-colors disabled:opacity-50"
+            >
+              <FileCode2 size={14} />
+              {generarRips.isPending ? 'Generando...' : 'Generar RIPS'}
+            </button>
+          </div>
+        </div>
+        {generarRips.isError && (
+          <p className="mt-2 text-xs text-red-500">{generarRips.error.message}</p>
+        )}
+        {!medico.nit || !medico.codPrestador ? (
+          <p className="mt-2 text-xs text-amber-600">
+            Completá el NIT y el código de habilitación en Configuración para generar RIPS.
+          </p>
+        ) : null}
       </div>
     </div>
   )

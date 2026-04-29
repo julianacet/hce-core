@@ -97,6 +97,27 @@ export default function Configuracion() {
               placeholder="601 234 5678"
               className="input-hce" />
           </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="label-hce">NIT del consultorio</label>
+              <input name="nit" value={form.nit} onChange={handleChange}
+                placeholder="900123456-7"
+                className="input-hce" />
+              <p className="text-xs mt-1" style={{ color: 'var(--hce-text-muted)' }}>
+                Requerido para RIPS y factura electrónica
+              </p>
+            </div>
+            <div>
+              <label className="label-hce">Código habilitación (MinSalud)</label>
+              <input name="codPrestador" value={form.codPrestador} onChange={handleChange}
+                placeholder="1234567890" maxLength={10}
+                className="input-hce" />
+              <p className="text-xs mt-1" style={{ color: 'var(--hce-text-muted)' }}>
+                10 dígitos — código de prestador ante el MinSalud
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* Perfil del usuario */}

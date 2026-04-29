@@ -23,7 +23,10 @@ func FacturasRouter(db *pgxpool.Pool) http.Handler {
 	r := chi.NewRouter()
 	r.Get("/", h.listar)
 	r.Post("/", h.crear)
-	r.Get("/{facturaId}", h.obtener)
+	r.Route("/{facturaId}", func(r chi.Router) {
+		r.Get("/", h.obtener)
+		r.Mount("/rips", RipsRouter(db))
+	})
 	return r
 }
 
