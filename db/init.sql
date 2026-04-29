@@ -255,7 +255,42 @@ CREATE TABLE rips_generado (
 CREATE INDEX idx_rips_encuentro ON rips_generado(encuentro_id);
 
 -- ============================================================
--- 9. Log de auditoría
+-- 9. Inventario de insumos
+-- ============================================================
+
+CREATE TABLE insumo (
+    id            UUID          PRIMARY KEY DEFAULT uuid_generate_v4(),
+    nombre        TEXT          NOT NULL,
+    descripcion   TEXT,
+    unidad        TEXT          NOT NULL,  -- unidad, caja, rollo, ml…
+    stock_actual  NUMERIC(10,2) NOT NULL DEFAULT 0,
+    stock_minimo  NUMERIC(10,2) NOT NULL DEFAULT 0,  -- dispara alerta cuando stock_actual <= stock_minimo
+    esta_activo   BOOLEAN       NOT NULL DEFAULT TRUE,
+    fecha_creacion TIMESTAMPTZ  NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    creado_por    TEXT          NOT NULL
+);
+
+-- Cada entrada o salida de inventario queda registrada aquí.
+-- referencia_tipo + referencia_id permiten vincular la salida a un encuentro
+-- o factura en el futuro (descuento automático).
+CREATE TABLE insumo_movimiento (
+    id               UUID          PRIMARY KEY DEFAULT uuid_generate_v4(),
+    insumo_id        UUID          NOT NULL REFERENCES insumo(id),
+    tipo             VARCHAR(10)   NOT NULL CHECK (tipo IN ('entrada', 'salida', 'ajuste')),
+    cantidad         NUMERIC(10,2) NOT NULL,
+    stock_resultante NUMERIC(10,2) NOT NULL,  -- snapshot del stock tras el movimiento
+    referencia_tipo  VARCHAR(20),  -- 'encuentro', 'factura', 'manual'
+    referencia_id    UUID,         -- id del encuentro o factura que causó el movimiento
+    notas            TEXT,
+    fecha_movimiento TIMESTAMPTZ   NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    creado_por       TEXT          NOT NULL
+);
+
+CREATE INDEX idx_insumo_movimiento_insumo ON insumo_movimiento(insumo_id);
+CREATE INDEX idx_insumo_movimiento_fecha  ON insumo_movimiento(fecha_movimiento DESC);
+
+-- ============================================================
+-- 10. Log de auditoría
 -- ============================================================
 
 CREATE TABLE log_auditoria (
@@ -273,7 +308,7 @@ CREATE INDEX idx_log_tabla_registro ON log_auditoria(nombre_tabla, registro_id);
 CREATE INDEX idx_log_fecha          ON log_auditoria(fecha_cambio DESC);
 
 -- ============================================================
--- 10. Función y triggers de auditoría
+-- 11. Función y triggers de auditoría
 -- ============================================================
 
 CREATE OR REPLACE FUNCTION fn_auditar_cambios()
@@ -311,7 +346,7 @@ AFTER INSERT OR UPDATE OR DELETE ON factura
 FOR EACH ROW EXECUTE FUNCTION fn_auditar_cambios();
 
 -- ============================================================
--- 11. Seeds
+-- 12. Seeds
 -- ============================================================
 
 -- Usuario administrador por defecto.
