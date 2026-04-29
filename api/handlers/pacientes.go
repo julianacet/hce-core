@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	appmiddleware "hce/api/middleware"
 	"hce/api/models"
 )
 
@@ -138,7 +139,8 @@ func (h *PacienteHandler) crear(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	p, err := insertarPaciente(r.Context(), h.db, input, 1, "sistema")
+	u := appmiddleware.UsuarioDesdeContexto(r.Context())
+	p, err := insertarPaciente(r.Context(), h.db, input, 1, u.Nombre)
 	if err != nil {
 		if strings.Contains(err.Error(), "duplicate") || strings.Contains(err.Error(), "unique") {
 			responderError(w, http.StatusConflict, "ya existe un paciente con ese documento")
@@ -189,7 +191,8 @@ func (h *PacienteHandler) actualizar(w http.ResponseWriter, r *http.Request) {
 	}
 
 	input.NumeroDocumento = documento
-	p, err := insertarPaciente(r.Context(), tx, input, versionActual+1, "sistema")
+	u := appmiddleware.UsuarioDesdeContexto(r.Context())
+	p, err := insertarPaciente(r.Context(), tx, input, versionActual+1, u.Nombre)
 	if err != nil {
 		responderError(w, http.StatusInternalServerError, "error al guardar nueva versión")
 		return

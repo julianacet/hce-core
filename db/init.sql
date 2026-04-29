@@ -352,8 +352,9 @@ FOR EACH ROW EXECUTE FUNCTION fn_auditar_cambios();
 -- Usuario administrador por defecto.
 -- El hash debe reemplazarse al configurar el sistema por primera vez
 -- (bcrypt del password real, generado por el backend).
+
 INSERT INTO usuario (nombre_usuario, nombre_completo, rol, hash_contrasena) VALUES
-    ('admin', 'Administrador', 'admin', '$2a$12$REEMPLAZAR_CON_HASH_REAL');
+    ('admin', 'Administrador', 'admin', '$2a$12$ItytOuCJ/XQQvxe/9Cvxo.GQ8cs6h16JxJzb6S7PguCUAovZ/p29G');
 
 -- Códigos CUPS frecuentes en consulta externa (muestra — cargar catálogo completo).
 -- Fuente oficial: https://www.minsalud.gov.co (Res. 2706/2025)
