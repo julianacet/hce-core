@@ -42,8 +42,6 @@ func main() {
 	r.Use(chimiddleware.Logger)
 	r.Use(chimiddleware.Recoverer)
 
-	// CORS solo aplica en desarrollo, cuando el frontend corre en un servidor
-	// separado. En producción Go sirve el frontend directamente y no se necesita.
 	if allowedOrigin := os.Getenv("ALLOWED_ORIGIN"); allowedOrigin != "" {
 		r.Use(cors.Handler(cors.Options{
 			AllowedOrigins: []string{allowedOrigin},
@@ -59,7 +57,7 @@ func main() {
 	// Rutas públicas
 	r.Mount("/auth", handlers.AuthRouter(db, jwtSecreto))
 
-	// Rutas protegidas — requieren token JWT válido
+	// Rutas protegidas — requieren token JWT
 	r.Group(func(r chi.Router) {
 		r.Use(appmiddleware.RequiereAuth(jwtSecreto))
 

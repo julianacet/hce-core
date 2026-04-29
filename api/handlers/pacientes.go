@@ -26,8 +26,11 @@ func PacientesRouter(db *pgxpool.Pool) http.Handler {
 
 	r.Get("/", h.listar)
 	r.Post("/", h.crear)
-	r.Get("/{documento}", h.obtener)
-	r.Put("/{documento}", h.actualizar)
+	r.Route("/{documento}", func(r chi.Router) {
+		r.Get("/", h.obtener)
+		r.Put("/", h.actualizar)
+		r.Mount("/encuentros", EncuentrosRouter(db))
+	})
 
 	return r
 }
