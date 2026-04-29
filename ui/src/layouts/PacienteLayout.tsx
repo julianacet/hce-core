@@ -1,9 +1,16 @@
 import { Outlet, NavLink, useParams, useNavigate } from 'react-router'
 import { User, ClipboardList, Shield, ArrowLeft, PlusCircle } from 'lucide-react'
+import { usePaciente } from '../api/pacientes'
 
 export default function PacienteLayout() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const { data: paciente } = usePaciente(id ?? '')
+
+  const nombreCompleto = paciente
+    ? [paciente.nombre_primero, paciente.nombre_segundo, paciente.apellido_primero, paciente.apellido_segundo]
+        .filter(Boolean).join(' ')
+    : '...'
 
   const tabs = [
     { to: `/pacientes/${id}`, label: 'Ficha', icon: User, end: true },
@@ -13,7 +20,6 @@ export default function PacienteLayout() {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header del paciente */}
       <div className="bg-white border-b border-slate-200 px-6 py-4">
         <button
           onClick={() => navigate(-1)}
@@ -26,9 +32,10 @@ export default function PacienteLayout() {
         <div className="flex items-center justify-between">
           <div>
             <p className="text-xs text-slate-400 uppercase tracking-wide mb-0.5">Paciente</p>
-            {/* El nombre se llenará cuando tengamos datos reales */}
-            <h2 className="text-lg font-semibold text-slate-800">Cargando...</h2>
-            <p className="text-sm text-slate-500">ID: {id}</p>
+            <h2 className="text-lg font-semibold text-slate-800">{nombreCompleto}</h2>
+            <p className="text-sm text-slate-500">
+              {paciente ? `${paciente.tipo_documento} ${paciente.numero_documento}` : id}
+            </p>
           </div>
           <button
             onClick={() => navigate(`/pacientes/${id}/encuentros/nuevo`)}
@@ -39,7 +46,6 @@ export default function PacienteLayout() {
           </button>
         </div>
 
-        {/* Tabs */}
         <div className="flex gap-1 mt-4">
           {tabs.map(({ to, label, icon: Icon, end }) => (
             <NavLink

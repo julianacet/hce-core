@@ -149,6 +149,7 @@ func (h *PacienteHandler) crear(w http.ResponseWriter, r *http.Request) {
 			responderError(w, http.StatusConflict, "ya existe un paciente con ese documento")
 			return
 		}
+		log.Printf("crear paciente: %v", err)
 		responderError(w, http.StatusInternalServerError, "error al crear paciente")
 		return
 	}

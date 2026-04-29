@@ -14,6 +14,7 @@ import NuevoEncuentro from './pages/pacientes/NuevoEncuentro'
 import DetalleEncuentro from './pages/pacientes/DetalleEncuentro'
 import AuditoriaPaciente from './pages/pacientes/AuditoriaPaciente'
 import NuevaFormula from './pages/pacientes/NuevaFormula'
+import NuevoPaciente from './pages/NuevoPaciente'
 
 const router = createBrowserRouter([
   { path: '/login', element: <Login /> },
@@ -29,6 +30,7 @@ const router = createBrowserRouter([
           { index: true, element: <Inicio /> },
           { path: 'nueva-consulta', element: <NuevaConsulta /> },
           { path: 'pacientes', element: <ListaPacientes /> },
+          { path: 'pacientes/nuevo', element: <NuevoPaciente /> },
           { path: 'configuracion', element: <Configuracion /> },
 
           // Solo admin

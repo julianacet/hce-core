@@ -1,17 +1,37 @@
+import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
-import { ChevronRight, PlusCircle } from 'lucide-react'
-import { useEncuentros } from '../../api/encuentros'
+import { ChevronRight, PlusCircle, Search, X } from 'lucide-react'
+import { useEncuentros, type FiltrosEncuentro } from '../../api/encuentros'
 
 export default function HistorialEncuentros() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { data: encuentros = [], isLoading, isError } = useEncuentros(id ?? '')
+
+  const [filtros, setFiltros] = useState<FiltrosEncuentro>({})
+  const [form, setForm] = useState({ desde: '', hasta: '', diagnostico: '' })
+
+  const { data: encuentros = [], isLoading, isError } = useEncuentros(id ?? '', filtros)
+
+  function aplicar() {
+    setFiltros({
+      desde: form.desde || undefined,
+      hasta: form.hasta || undefined,
+      diagnostico: form.diagnostico || undefined,
+    })
+  }
+
+  function limpiar() {
+    setForm({ desde: '', hasta: '', diagnostico: '' })
+    setFiltros({})
+  }
+
+  const hayFiltros = !!(filtros.desde || filtros.hasta || filtros.diagnostico)
 
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <p className="text-sm text-slate-500">
-          {isLoading ? 'Cargando...' : `${encuentros.length} encuentro(s) registrado(s)`}
+          {isLoading ? 'Cargando...' : `${encuentros.length} encuentro(s)${hayFiltros ? ' (filtrado)' : ''}`}
         </p>
         <button
           onClick={() => navigate(`/pacientes/${id}/encuentros/nuevo`)}
@@ -20,6 +40,39 @@ export default function HistorialEncuentros() {
           <PlusCircle size={15} />
           Nuevo encuentro
         </button>
+      </div>
+
+      {/* Filtros */}
+      <div className="bg-white rounded-xl border border-slate-200 px-5 py-4 flex flex-wrap gap-3 items-end">
+        <div>
+          <label className="block text-xs text-slate-400 mb-1">Desde</label>
+          <input type="date" value={form.desde} onChange={(e) => setForm((p) => ({ ...p, desde: e.target.value }))}
+            className="border border-slate-200 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        </div>
+        <div>
+          <label className="block text-xs text-slate-400 mb-1">Hasta</label>
+          <input type="date" value={form.hasta} onChange={(e) => setForm((p) => ({ ...p, hasta: e.target.value }))}
+            className="border border-slate-200 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        </div>
+        <div className="flex-1 min-w-40">
+          <label className="block text-xs text-slate-400 mb-1">Diagnóstico</label>
+          <input type="text" value={form.diagnostico} placeholder="Código CIE-10 o descripción"
+            onChange={(e) => setForm((p) => ({ ...p, diagnostico: e.target.value }))}
+            onKeyDown={(e) => e.key === 'Enter' && aplicar()}
+            className="w-full border border-slate-200 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        </div>
+        <div className="flex gap-2">
+          <button onClick={aplicar}
+            className="flex items-center gap-1.5 bg-blue-700 hover:bg-blue-800 text-white text-sm px-3 py-1.5 rounded-md transition-colors">
+            <Search size={13} /> Filtrar
+          </button>
+          {hayFiltros && (
+            <button onClick={limpiar}
+              className="flex items-center gap-1.5 text-slate-500 hover:text-slate-700 text-sm px-3 py-1.5 rounded-md border border-slate-200 hover:bg-slate-50 transition-colors">
+              <X size={13} /> Limpiar
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">

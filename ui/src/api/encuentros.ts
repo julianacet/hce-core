@@ -34,10 +34,23 @@ export type EncuentroInput = {
   plan_manejo?: string
 }
 
-export function useEncuentros(documento: string) {
+export type FiltrosEncuentro = {
+  desde?: string
+  hasta?: string
+  diagnostico?: string
+}
+
+export function useEncuentros(documento: string, filtros?: FiltrosEncuentro) {
   return useQuery({
-    queryKey: ['encuentros', documento],
-    queryFn: () => apiFetch<Encuentro[]>(`/pacientes/${documento}/encuentros`),
+    queryKey: ['encuentros', documento, filtros],
+    queryFn: () => {
+      const params = new URLSearchParams()
+      if (filtros?.desde) params.set('desde', filtros.desde)
+      if (filtros?.hasta) params.set('hasta', filtros.hasta)
+      if (filtros?.diagnostico) params.set('diagnostico', filtros.diagnostico)
+      const qs = params.toString()
+      return apiFetch<Encuentro[]>(`/pacientes/${documento}/encuentros${qs ? `?${qs}` : ''}`)
+    },
     enabled: !!documento,
   })
 }

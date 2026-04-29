@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"strings"
@@ -43,17 +44,35 @@ const columnasEncuentro = `
 	codigo_diagnostico_principal, descripcion_diagnostico, plan_manejo,
 	hash_integridad, fecha_creacion, creado_por, id_sistema_anterior`
 
-// GET /pacientes/{documento}/encuentros
+// GET /pacientes/{documento}/encuentros?desde=&hasta=&diagnostico=
 func (h *EncuentroHandler) listar(w http.ResponseWriter, r *http.Request) {
 	documento := chi.URLParam(r, "documento")
 
-	rows, err := h.db.Query(r.Context(),
-		`SELECT`+columnasEncuentro+`
-		 FROM encuentro_clinico
-		 WHERE paciente_documento = $1 AND es_ultima_version = TRUE AND esta_activo = TRUE
-		 ORDER BY fecha_atencion DESC`,
-		documento,
-	)
+	desde := strings.TrimSpace(r.URL.Query().Get("desde"))
+	hasta := strings.TrimSpace(r.URL.Query().Get("hasta"))
+	diagnostico := strings.TrimSpace(r.URL.Query().Get("diagnostico"))
+
+	query := `SELECT` + columnasEncuentro + `
+		FROM encuentro_clinico
+		WHERE paciente_documento = $1 AND es_ultima_version = TRUE AND esta_activo = TRUE`
+	args := []any{documento}
+
+	if desde != "" {
+		args = append(args, desde)
+		query += ` AND fecha_atencion >= $` + fmt.Sprintf("%d", len(args))
+	}
+	if hasta != "" {
+		args = append(args, hasta+" 23:59:59")
+		query += ` AND fecha_atencion <= $` + fmt.Sprintf("%d", len(args))
+	}
+	if diagnostico != "" {
+		args = append(args, "%"+strings.ToLower(diagnostico)+"%")
+		query += ` AND (LOWER(codigo_diagnostico_principal) LIKE $` + fmt.Sprintf("%d", len(args)) +
+			` OR LOWER(descripcion_diagnostico) LIKE $` + fmt.Sprintf("%d", len(args)) + `)`
+	}
+	query += ` ORDER BY fecha_atencion DESC`
+
+	rows, err := h.db.Query(r.Context(), query, args...)
 	if err != nil {
 		log.Printf("listar encuentros: %v", err)
 		responderError(w, http.StatusInternalServerError, "error al consultar encuentros")
