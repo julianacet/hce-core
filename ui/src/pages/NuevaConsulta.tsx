@@ -1,39 +1,25 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router'
 import { Search, UserPlus, ChevronRight } from 'lucide-react'
+import { usePacientes, type Paciente } from '../api/pacientes'
 
-type Resultado = {
-  id: string
-  nombre: string
-  documento: string
-  tipo_documento: string
-  telefono: string
-  fecha_nacimiento: string
+function nombreCompleto(p: Paciente) {
+  return [p.nombre_primero, p.nombre_segundo, p.apellido_primero, p.apellido_segundo]
+    .filter(Boolean)
+    .join(' ')
 }
-
-// Datos de ejemplo hasta conectar la API
-const datosMock: Resultado[] = [
-  { id: '1', nombre: 'María García López', documento: '1234567890', tipo_documento: 'CC', telefono: '3001234567', fecha_nacimiento: '1985-03-12' },
-  { id: '2', nombre: 'Carlos Martínez Ruiz', documento: '9876543210', tipo_documento: 'CC', telefono: '3109876543', fecha_nacimiento: '1970-07-22' },
-]
 
 export default function NuevaConsulta() {
   const navigate = useNavigate()
   const [busqueda, setBusqueda] = useState('')
-  const [resultados, setResultados] = useState<Resultado[]>([])
-  const [buscado, setBuscado] = useState(false)
+  const [query, setQuery] = useState('')
+
+  const { data: resultados = [], isLoading, isError } = usePacientes(query || undefined)
+  const buscado = !!query
 
   function buscar() {
     if (!busqueda.trim()) return
-    const q = busqueda.toLowerCase()
-    const encontrados = datosMock.filter(
-      (p) =>
-        p.documento.includes(q) ||
-        p.nombre.toLowerCase().includes(q) ||
-        p.telefono.includes(q)
-    )
-    setResultados(encontrados)
-    setBuscado(true)
+    setQuery(busqueda.trim())
   }
 
   return (
@@ -73,7 +59,17 @@ export default function NuevaConsulta() {
       {/* Resultados */}
       {buscado && (
         <div className="bg-white rounded-xl border border-slate-200 overflow-hidden mb-4">
-          {resultados.length > 0 ? (
+          {isLoading && (
+            <div className="px-5 py-8 text-center text-sm text-slate-400">Buscando...</div>
+          )}
+
+          {isError && (
+            <div className="px-5 py-8 text-center text-sm text-red-500">
+              Error al buscar. Intenta de nuevo.
+            </div>
+          )}
+
+          {!isLoading && !isError && resultados.length > 0 && (
             <>
               <div className="px-5 py-3 border-b border-slate-100">
                 <p className="text-sm text-slate-500">{resultados.length} resultado(s) encontrado(s)</p>
@@ -81,14 +77,16 @@ export default function NuevaConsulta() {
               <div className="divide-y divide-slate-100">
                 {resultados.map((p) => (
                   <button
-                    key={p.id}
-                    onClick={() => navigate(`/pacientes/${p.id}`)}
+                    key={p.numero_documento}
+                    onClick={() => navigate(`/pacientes/${p.numero_documento}`)}
                     className="w-full px-5 py-4 flex items-center justify-between hover:bg-slate-50 transition-colors text-left"
                   >
                     <div>
-                      <p className="text-sm font-medium text-slate-800">{p.nombre}</p>
+                      <p className="text-sm font-medium text-slate-800">{nombreCompleto(p)}</p>
                       <p className="text-xs text-slate-400 mt-0.5">
-                        {p.tipo_documento} {p.documento} · {p.telefono} · Nac. {p.fecha_nacimiento}
+                        {p.tipo_documento} {p.numero_documento}
+                        {p.telefono ? ` · ${p.telefono}` : ''}
+                        {p.fecha_nacimiento ? ` · Nac. ${p.fecha_nacimiento}` : ''}
                       </p>
                     </div>
                     <ChevronRight size={16} className="text-slate-400" />
@@ -96,7 +94,9 @@ export default function NuevaConsulta() {
                 ))}
               </div>
             </>
-          ) : (
+          )}
+
+          {!isLoading && !isError && resultados.length === 0 && (
             <div className="px-5 py-8 text-center">
               <p className="text-sm text-slate-500 mb-4">No se encontró ningún paciente con esos datos.</p>
               <button

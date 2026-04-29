@@ -4,6 +4,8 @@ import { PDFViewer, PDFDownloadLink, pdf } from '@react-pdf/renderer'
 import { Plus, Trash2, Download, Printer, ChevronLeft, Eye, EyeOff } from 'lucide-react'
 import { useMedico } from '../../context/MedicoContext'
 import FormulaPDF, { type Medicamento } from '../../components/pdf/FormulaPDF'
+import { usePaciente } from '../../api/pacientes'
+import { useEncuentro } from '../../api/encuentros'
 
 const medVacio: Medicamento = {
   nombre: '',
@@ -21,19 +23,24 @@ const formasFarmaceuticas = [
   'crema', 'ungüento', 'gotas', 'parche', 'supositorio', 'otro',
 ]
 
-// Vendrán de la API cuando el backend esté listo
-const pacienteMock = {
-  nombre: 'María García López',
-  documento: '1234567890',
-  tipoDocumento: 'CC',
-  fechaNacimiento: '12/03/1985',
-}
-const diagnosticoMock = 'J00 - Rinofaringitis aguda'
-
 export default function NuevaFormula() {
   const { id, encId } = useParams()
   const navigate = useNavigate()
   const { medico } = useMedico()
+
+  const { data: pacienteData, isLoading: cargandoPaciente } = usePaciente(id ?? '')
+  const { data: encuentroData, isLoading: cargandoEncuentro } = useEncuentro(id ?? '', encId ?? '')
+
+  const paciente = pacienteData ? {
+    nombre: [pacienteData.nombre_primero, pacienteData.nombre_segundo, pacienteData.apellido_primero, pacienteData.apellido_segundo].filter(Boolean).join(' '),
+    documento: pacienteData.numero_documento,
+    tipoDocumento: pacienteData.tipo_documento,
+    fechaNacimiento: new Date(pacienteData.fecha_nacimiento).toLocaleDateString('es-CO'),
+  } : null
+
+  const diagnostico = encuentroData
+    ? [encuentroData.codigo_diagnostico_principal, encuentroData.descripcion_diagnostico].filter(Boolean).join(' - ')
+    : ''
 
   const [medicamentos, setMedicamentos] = useState<Medicamento[]>([{ ...medVacio }])
   const [incluirFirma, setIncluirFirma] = useState(!!medico.firmaBase64)
@@ -58,21 +65,22 @@ export default function NuevaFormula() {
     )
   }
 
-  const formulaValida = medicamentos.every((m) => m.nombre && m.dosis && m.frecuencia)
+  const formulaValida = !!paciente && medicamentos.every((m) => m.nombre && m.dosis && m.frecuencia)
 
-  const docPDF = (
+  const docPDF = paciente ? (
     <FormulaPDF
       medico={medico}
-      paciente={pacienteMock}
-      diagnostico={diagnosticoMock}
+      paciente={paciente}
+      diagnostico={diagnostico}
       medicamentos={medicamentos}
       incluirFirma={incluirFirma}
       fecha={fecha}
     />
-  )
+  ) : null
 
   // Genera el PDF como blob y abre el diálogo de impresión del sistema operativo
   async function imprimir() {
+    if (!docPDF) return
     setImprimiendo(true)
     try {
       const blob = await pdf(docPDF).toBlob()
@@ -109,7 +117,9 @@ export default function NuevaFormula() {
               Nueva fórmula médica
             </h2>
             <p className="text-xs" style={{ color: 'var(--hce-text-muted)' }}>
-              {pacienteMock.nombre} · {diagnosticoMock}
+              {cargandoPaciente || cargandoEncuentro
+                ? 'Cargando...'
+                : `${paciente?.nombre ?? ''} · ${diagnostico}`}
             </p>
           </div>
         </div>
@@ -144,7 +154,7 @@ export default function NuevaFormula() {
           </button>
 
           {/* Imprimir */}
-          {formulaValida && (
+          {formulaValida && docPDF && (
             <button
               onClick={imprimir}
               disabled={imprimiendo}
@@ -161,10 +171,10 @@ export default function NuevaFormula() {
           )}
 
           {/* Descargar PDF */}
-          {formulaValida && (
+          {formulaValida && docPDF && (
             <PDFDownloadLink
               document={docPDF}
-              fileName={`formula_${pacienteMock.documento}_${Date.now()}.pdf`}
+              fileName={`formula_${paciente?.documento ?? id}_${Date.now()}.pdf`}
             >
               {({ loading }) => (
                 <button
@@ -273,7 +283,7 @@ export default function NuevaFormula() {
         </div>
 
         {/* Panel derecho o pantalla completa: visor PDF sin toolbar propio */}
-        {(vistaPrevia || formulaValida) && (
+        {(vistaPrevia || formulaValida) && docPDF && (
           <div className={`flex flex-col ${vistaPrevia ? 'flex-1' : 'w-96'}`}
             style={{ backgroundColor: '#525659' }}>
             <div className="px-4 py-2 flex items-center justify-between"

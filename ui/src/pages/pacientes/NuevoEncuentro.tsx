@@ -1,9 +1,11 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
+import { useCrearEncuentro } from '../../api/encuentros'
 
 export default function NuevoEncuentro() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const crear = useCrearEncuentro(id ?? '')
 
   const [form, setForm] = useState({
     motivo_consulta: '',
@@ -19,11 +21,10 @@ export default function NuevoEncuentro() {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }))
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    // TODO: llamar a la API
-    console.log('Encuentro a registrar:', form)
-    navigate(`/pacientes/${id}/encuentros`)
+    const encuentro = await crear.mutateAsync(form)
+    navigate(`/pacientes/${id}/encuentros/${encuentro.encuentro_id}`)
   }
 
   return (
@@ -85,14 +86,21 @@ export default function NuevoEncuentro() {
           className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none" />
       </div>
 
+      {crear.isError && (
+        <p className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+          {(crear.error as Error)?.message ?? 'Error al guardar el encuentro.'}
+        </p>
+      )}
+
       <div className="flex justify-end gap-3 pt-2 border-t border-slate-100">
         <button type="button" onClick={() => navigate(-1)}
-          className="text-sm text-slate-500 hover:text-slate-700 px-4 py-2 rounded-md border border-slate-200 hover:bg-slate-50 transition-colors">
+          disabled={crear.isPending}
+          className="text-sm text-slate-500 hover:text-slate-700 px-4 py-2 rounded-md border border-slate-200 hover:bg-slate-50 transition-colors disabled:opacity-50">
           Cancelar
         </button>
-        <button type="submit"
-          className="text-sm bg-blue-700 hover:bg-blue-800 text-white px-4 py-2 rounded-md transition-colors">
-          Guardar encuentro
+        <button type="submit" disabled={crear.isPending}
+          className="text-sm bg-blue-700 hover:bg-blue-800 text-white px-4 py-2 rounded-md transition-colors disabled:opacity-50">
+          {crear.isPending ? 'Guardando...' : 'Guardar encuentro'}
         </button>
       </div>
     </form>

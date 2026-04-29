@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, type ReactNode } from 'react'
+import { apiFetch } from '../api/client'
 
 export type Rol = 'admin' | 'medico' | 'auxiliar'
 
@@ -11,15 +12,21 @@ export type Usuario = {
 
 type AuthContextType = {
   usuario: Usuario | null
-  login: (usuario: string, password: string) => boolean
+  login: (usuario: string, password: string) => Promise<boolean>
   logout: () => void
   tieneRol: (...roles: Rol[]) => boolean
 }
 
-const USUARIOS_MOCK = [
-  { id: '1', nombre: 'Administrador', usuario: 'admin', password: 'admin123', rol: 'admin' as Rol },
-  { id: '2', nombre: 'Dr. García', usuario: 'medico', password: 'medico123', rol: 'medico' as Rol },
-]
+type LoginResponse = {
+  token: string
+  nombre: string
+  rol: string
+}
+
+function decodeJwtPayload(token: string): Record<string, unknown> {
+  const b64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')
+  return JSON.parse(atob(b64))
+}
 
 const AuthContext = createContext<AuthContextType | null>(null)
 
@@ -29,19 +36,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return guardado ? JSON.parse(guardado) : null
   })
 
-  function login(usuarioInput: string, password: string): boolean {
-    const encontrado = USUARIOS_MOCK.find(
-      (u) => u.usuario === usuarioInput && u.password === password
-    )
-    if (!encontrado) return false
-    const { password: _, ...sesion } = encontrado
-    setUsuario(sesion)
-    localStorage.setItem('hce_sesion', JSON.stringify(sesion))
-    return true
+  async function login(usuarioInput: string, password: string): Promise<boolean> {
+    try {
+      const data = await apiFetch<LoginResponse>('/auth/login', {
+        method: 'POST',
+        skipAuth: true,
+        body: JSON.stringify({ nombre_usuario: usuarioInput, contrasena: password }),
+      })
+
+      const payload = decodeJwtPayload(data.token)
+
+      const sesion: Usuario = {
+        id: payload.id as string,
+        nombre: data.nombre,
+        usuario: usuarioInput,
+        rol: data.rol as Rol,
+      }
+
+      localStorage.setItem('hce_token', data.token)
+      localStorage.setItem('hce_sesion', JSON.stringify(sesion))
+      setUsuario(sesion)
+      return true
+    } catch {
+      return false
+    }
   }
 
   function logout() {
     setUsuario(null)
+    localStorage.removeItem('hce_token')
     localStorage.removeItem('hce_sesion')
   }
 

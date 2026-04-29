@@ -1,20 +1,18 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router'
 import { Search, UserPlus, ChevronRight } from 'lucide-react'
+import { usePacientes, type Paciente } from '../api/pacientes'
 
-const pacientesMock = [
-  { id: '1', nombre: 'María García López', documento: '1234567890', telefono: '3001234567', eps: 'Sura' },
-  { id: '2', nombre: 'Carlos Martínez Ruiz', documento: '9876543210', telefono: '3109876543', eps: 'Nueva EPS' },
-]
+function nombreCompleto(p: Paciente) {
+  return [p.nombre_primero, p.nombre_segundo, p.apellido_primero, p.apellido_segundo]
+    .filter(Boolean)
+    .join(' ')
+}
 
 export default function ListaPacientes() {
   const navigate = useNavigate()
   const [filtro, setFiltro] = useState('')
-
-  const filtrados = pacientesMock.filter((p) => {
-    const q = filtro.toLowerCase()
-    return p.nombre.toLowerCase().includes(q) || p.documento.includes(q)
-  })
+  const { data: pacientes = [], isLoading, isError } = usePacientes(filtro || undefined)
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
@@ -40,32 +38,44 @@ export default function ListaPacientes() {
               type="text"
               value={filtro}
               onChange={(e) => setFiltro(e.target.value)}
-              placeholder="Filtrar por nombre o documento..."
+              placeholder="Buscar por nombre o documento..."
               className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
         </div>
 
         <div className="divide-y divide-slate-100">
-          {filtrados.map((p) => (
+          {isLoading && (
+            <div className="px-5 py-8 text-center text-sm text-slate-400">Cargando...</div>
+          )}
+
+          {isError && (
+            <div className="px-5 py-8 text-center text-sm text-red-500">
+              Error al cargar pacientes. Intenta de nuevo.
+            </div>
+          )}
+
+          {!isLoading && !isError && pacientes.map((p) => (
             <button
-              key={p.id}
-              onClick={() => navigate(`/pacientes/${p.id}`)}
+              key={p.numero_documento}
+              onClick={() => navigate(`/pacientes/${p.numero_documento}`)}
               className="w-full px-5 py-4 flex items-center justify-between hover:bg-slate-50 transition-colors text-left"
             >
               <div>
-                <p className="text-sm font-medium text-slate-800">{p.nombre}</p>
+                <p className="text-sm font-medium text-slate-800">{nombreCompleto(p)}</p>
                 <p className="text-xs text-slate-400 mt-0.5">
-                  CC {p.documento} · {p.telefono} · {p.eps}
+                  {p.tipo_documento} {p.numero_documento}
+                  {p.telefono ? ` · ${p.telefono}` : ''}
+                  {p.codigo_eps ? ` · ${p.codigo_eps}` : ''}
                 </p>
               </div>
               <ChevronRight size={16} className="text-slate-400" />
             </button>
           ))}
 
-          {filtrados.length === 0 && (
+          {!isLoading && !isError && pacientes.length === 0 && (
             <div className="px-5 py-8 text-center text-sm text-slate-400">
-              No se encontraron pacientes con ese criterio.
+              {filtro ? 'No se encontraron pacientes con ese criterio.' : 'Aún no hay pacientes registrados.'}
             </div>
           )}
         </div>
