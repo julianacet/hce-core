@@ -1,0 +1,281 @@
+package handlers
+
+import (
+	"context"
+	"encoding/json"
+	"log"
+	"net/http"
+	"strings"
+	"time"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
+
+	"hce/api/models"
+)
+
+type PacienteHandler struct {
+	db *pgxpool.Pool
+}
+
+func PacientesRouter(db *pgxpool.Pool) http.Handler {
+	h := &PacienteHandler{db: db}
+	r := chi.NewRouter()
+
+	r.Get("/", h.listar)
+	r.Post("/", h.crear)
+	r.Get("/{documento}", h.obtener)
+	r.Put("/{documento}", h.actualizar)
+
+	return r
+}
+
+// queryRower es satisfecho tanto por *pgxpool.Pool como por pgx.Tx,
+// lo que permite reutilizar insertarPaciente dentro y fuera de transacciones.
+type queryRower interface {
+	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
+}
+
+// GET /pacientes?q=texto
+func (h *PacienteHandler) listar(w http.ResponseWriter, r *http.Request) {
+	q := strings.TrimSpace(r.URL.Query().Get("q"))
+
+	base := `
+		SELECT id, numero_version, es_ultima_version, esta_activo,
+		       tipo_documento, numero_documento, nombre_primero, nombre_segundo,
+		       apellido_primero, apellido_segundo, fecha_nacimiento, genero,
+		       estado_civil, ocupacion, direccion,
+		       nombre_responsable, telefono_responsable, parentesco_responsable,
+		       codigo_pais_origen, codigo_municipio_residencia, zona_residencia,
+		       tipo_usuario, codigo_etnia, codigo_discapacidad, codigo_eps,
+		       telefono, correo_electronico, politica_datos_aceptada,
+		       fecha_creacion, creado_por
+		FROM paciente
+		WHERE es_ultima_version = TRUE AND esta_activo = TRUE`
+
+	var (
+		rows pgx.Rows
+		err  error
+	)
+
+	if q == "" {
+		rows, err = h.db.Query(r.Context(), base+" ORDER BY apellido_primero, nombre_primero")
+	} else {
+		like := "%" + strings.ToLower(q) + "%"
+		rows, err = h.db.Query(r.Context(), base+`
+			AND (
+				numero_documento ILIKE $1 OR
+				LOWER(nombre_primero)   LIKE $1 OR
+				LOWER(apellido_primero) LIKE $1 OR
+				LOWER(apellido_segundo) LIKE $1 OR
+				telefono LIKE $1
+			)
+			ORDER BY apellido_primero, nombre_primero`, like)
+	}
+	if err != nil {
+		log.Printf("listar pacientes: %v", err)
+		responderError(w, http.StatusInternalServerError, "error al consultar pacientes")
+		return
+	}
+	defer rows.Close()
+
+	pacientes := make([]models.Paciente, 0)
+	for rows.Next() {
+		p, err := escanearPaciente(rows)
+		if err != nil {
+			responderError(w, http.StatusInternalServerError, "error al leer paciente")
+			return
+		}
+		pacientes = append(pacientes, p)
+	}
+	if rows.Err() != nil {
+		responderError(w, http.StatusInternalServerError, "error al iterar pacientes")
+		return
+	}
+
+	responderJSON(w, http.StatusOK, pacientes)
+}
+
+// GET /pacientes/{documento}
+func (h *PacienteHandler) obtener(w http.ResponseWriter, r *http.Request) {
+	documento := chi.URLParam(r, "documento")
+
+	row := h.db.QueryRow(r.Context(), `
+		SELECT id, numero_version, es_ultima_version, esta_activo,
+		       tipo_documento, numero_documento, nombre_primero, nombre_segundo,
+		       apellido_primero, apellido_segundo, fecha_nacimiento, genero,
+		       estado_civil, ocupacion, direccion,
+		       nombre_responsable, telefono_responsable, parentesco_responsable,
+		       codigo_pais_origen, codigo_municipio_residencia, zona_residencia,
+		       tipo_usuario, codigo_etnia, codigo_discapacidad, codigo_eps,
+		       telefono, correo_electronico, politica_datos_aceptada,
+		       fecha_creacion, creado_por
+		FROM paciente
+		WHERE numero_documento = $1 AND es_ultima_version = TRUE AND esta_activo = TRUE`,
+		documento,
+	)
+
+	p, err := escanearPaciente(row)
+	if err != nil {
+		responderError(w, http.StatusNotFound, "paciente no encontrado")
+		return
+	}
+
+	responderJSON(w, http.StatusOK, p)
+}
+
+// POST /pacientes
+func (h *PacienteHandler) crear(w http.ResponseWriter, r *http.Request) {
+	var input models.PacienteInput
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		responderError(w, http.StatusBadRequest, "body inválido")
+		return
+	}
+
+	if input.NumeroDocumento == "" || input.NombrePrimero == "" || input.ApellidoPrimero == "" {
+		responderError(w, http.StatusBadRequest, "numero_documento, nombre_primero y apellido_primero son obligatorios")
+		return
+	}
+
+	p, err := insertarPaciente(r.Context(), h.db, input, 1, "sistema")
+	if err != nil {
+		if strings.Contains(err.Error(), "duplicate") || strings.Contains(err.Error(), "unique") {
+			responderError(w, http.StatusConflict, "ya existe un paciente con ese documento")
+			return
+		}
+		responderError(w, http.StatusInternalServerError, "error al crear paciente")
+		return
+	}
+
+	responderJSON(w, http.StatusCreated, p)
+}
+
+// PUT /pacientes/{documento}
+// Crea una nueva versión (SCD2) sin sobreescribir la anterior.
+func (h *PacienteHandler) actualizar(w http.ResponseWriter, r *http.Request) {
+	documento := chi.URLParam(r, "documento")
+
+	var input models.PacienteInput
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		responderError(w, http.StatusBadRequest, "body inválido")
+		return
+	}
+
+	var versionActual int
+	err := h.db.QueryRow(r.Context(),
+		`SELECT numero_version FROM paciente WHERE numero_documento = $1 AND es_ultima_version = TRUE AND esta_activo = TRUE`,
+		documento,
+	).Scan(&versionActual)
+	if err != nil {
+		responderError(w, http.StatusNotFound, "paciente no encontrado")
+		return
+	}
+
+	tx, err := h.db.Begin(r.Context())
+	if err != nil {
+		responderError(w, http.StatusInternalServerError, "error al iniciar transacción")
+		return
+	}
+	defer tx.Rollback(r.Context())
+
+	_, err = tx.Exec(r.Context(),
+		`UPDATE paciente SET es_ultima_version = FALSE WHERE numero_documento = $1 AND es_ultima_version = TRUE`,
+		documento,
+	)
+	if err != nil {
+		responderError(w, http.StatusInternalServerError, "error al versionar paciente")
+		return
+	}
+
+	input.NumeroDocumento = documento
+	p, err := insertarPaciente(r.Context(), tx, input, versionActual+1, "sistema")
+	if err != nil {
+		responderError(w, http.StatusInternalServerError, "error al guardar nueva versión")
+		return
+	}
+
+	if err := tx.Commit(r.Context()); err != nil {
+		responderError(w, http.StatusInternalServerError, "error al confirmar transacción")
+		return
+	}
+
+	responderJSON(w, http.StatusOK, p)
+}
+
+// ── helpers ──────────────────────────────────────────────────────────────────
+
+// escanearPaciente lee una fila (de Query o QueryRow) en una struct Paciente.
+type scanner interface {
+	Scan(dest ...any) error
+}
+
+func escanearPaciente(row scanner) (models.Paciente, error) {
+	var p models.Paciente
+	var fechaNac time.Time
+	err := row.Scan(
+		&p.ID, &p.NumeroVersion, &p.EsUltimaVersion, &p.EstaActivo,
+		&p.TipoDocumento, &p.NumeroDocumento, &p.NombrePrimero, &p.NombreSegundo,
+		&p.ApellidoPrimero, &p.ApellidoSegundo, &fechaNac, &p.Genero,
+		&p.EstadoCivil, &p.Ocupacion, &p.Direccion,
+		&p.NombreResponsable, &p.TelefonoResponsable, &p.ParentescoResponsable,
+		&p.CodigoPaisOrigen, &p.CodigoMunicipioResidencia, &p.ZonaResidencia,
+		&p.TipoUsuario, &p.CodigoEtnia, &p.CodigoDiscapacidad, &p.CodigoEps,
+		&p.Telefono, &p.CorreoElectronico, &p.PoliticaDatosAceptada,
+		&p.FechaCreacion, &p.CreadoPor,
+	)
+	if err != nil {
+		return models.Paciente{}, err
+	}
+	p.FechaNacimiento = fechaNac.Format("2006-01-02")
+	return p, nil
+}
+
+func insertarPaciente(ctx context.Context, db queryRower, input models.PacienteInput, version int, creadoPor string) (models.Paciente, error) {
+	row := db.QueryRow(ctx, `
+		INSERT INTO paciente (
+			numero_version, es_ultima_version, esta_activo,
+			tipo_documento, numero_documento, nombre_primero, nombre_segundo,
+			apellido_primero, apellido_segundo, fecha_nacimiento, genero,
+			estado_civil, ocupacion, direccion,
+			nombre_responsable, telefono_responsable, parentesco_responsable,
+			codigo_pais_origen, codigo_municipio_residencia, zona_residencia,
+			tipo_usuario, codigo_etnia, codigo_discapacidad, codigo_eps,
+			telefono, correo_electronico, politica_datos_aceptada, creado_por
+		) VALUES (
+			$1, TRUE, TRUE,
+			$2, $3, $4, $5, $6, $7, $8, $9,
+			$10, $11, $12, $13, $14, $15,
+			$16, $17, $18, $19, $20, $21, $22,
+			$23, $24, $25, $26
+		)
+		RETURNING id, numero_version, es_ultima_version, esta_activo,
+		          tipo_documento, numero_documento, nombre_primero, nombre_segundo,
+		          apellido_primero, apellido_segundo, fecha_nacimiento, genero,
+		          estado_civil, ocupacion, direccion,
+		          nombre_responsable, telefono_responsable, parentesco_responsable,
+		          codigo_pais_origen, codigo_municipio_residencia, zona_residencia,
+		          tipo_usuario, codigo_etnia, codigo_discapacidad, codigo_eps,
+		          telefono, correo_electronico, politica_datos_aceptada,
+		          fecha_creacion, creado_por`,
+		version,
+		input.TipoDocumento, input.NumeroDocumento, input.NombrePrimero, input.NombreSegundo,
+		input.ApellidoPrimero, input.ApellidoSegundo, input.FechaNacimiento, input.Genero,
+		input.EstadoCivil, input.Ocupacion, input.Direccion,
+		input.NombreResponsable, input.TelefonoResponsable, input.ParentescoResponsable,
+		input.CodigoPaisOrigen, input.CodigoMunicipioResidencia, input.ZonaResidencia,
+		input.TipoUsuario, input.CodigoEtnia, input.CodigoDiscapacidad, input.CodigoEps,
+		input.Telefono, input.CorreoElectronico, input.PoliticaDatosAceptada, creadoPor,
+	)
+	return escanearPaciente(row)
+}
+
+func responderJSON(w http.ResponseWriter, status int, data any) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	json.NewEncoder(w).Encode(data)
+}
+
+func responderError(w http.ResponseWriter, status int, mensaje string) {
+	responderJSON(w, status, map[string]string{"error": mensaje})
+}
