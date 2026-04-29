@@ -107,9 +107,9 @@ CREATE TABLE encuentro_clinico (
     numero_version    INTEGER     NOT NULL DEFAULT 1,
     es_ultima_version BOOLEAN     NOT NULL DEFAULT TRUE,
     esta_activo       BOOLEAN     NOT NULL DEFAULT TRUE,
+    paciente_documento  VARCHAR(20) NOT NULL,
 
-    -- Vínculo con el paciente por documento (no por UUID de versión)
-    paciente_documento VARCHAR(20) NOT NULL,
+    encuentro_padre_id  UUID        NULL,
 
     -- Clasificación RIPS
     fecha_atencion         TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -152,7 +152,8 @@ CREATE TABLE formula_medica (
     es_ultima_version BOOLEAN     NOT NULL DEFAULT TRUE,
     esta_activo       BOOLEAN     NOT NULL DEFAULT TRUE,
     encuentro_id      UUID        NOT NULL,
-    observaciones TEXT,
+    tipo              VARCHAR(10) NOT NULL DEFAULT 'no_pos' CHECK (tipo IN ('pos', 'no_pos')),
+    observaciones     TEXT,
     fecha_creacion TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     creado_por     TEXT        NOT NULL
 );
