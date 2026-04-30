@@ -72,7 +72,7 @@ func main() {
 		r.Mount("/insumos", handlers.InsumosRouter(db))
 
 		// Solo admin
-		// r.With(appmiddleware.RequiereRol("admin")).Mount("/usuarios", handlers.UsuariosRouter(db))
+		r.With(appmiddleware.RequiereRol("admin")).Mount("/usuarios", handlers.UsuariosRouter(db))
 		// r.With(appmiddleware.RequiereRol("admin")).Mount("/cups", handlers.CupsRouter(db))
 	})
 

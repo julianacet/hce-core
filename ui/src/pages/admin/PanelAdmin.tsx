@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react'
 import { useTema, DEFAULTS, type Tema } from '../../context/TemaContext'
-import { Upload, Trash2, CheckCircle, RotateCcw, Plus, Pencil, X } from 'lucide-react'
+import { Upload, Trash2, CheckCircle, RotateCcw, Plus, Pencil, X, ShieldCheck, Stethoscope, Users } from 'lucide-react'
 import {
   usePlantillas,
   useCrearPlantilla,
@@ -8,6 +8,14 @@ import {
   useDesactivarPlantilla,
   type PlantillaConsentimiento,
 } from '../../api/consentimientos'
+import {
+  useUsuarios,
+  useCrearUsuario,
+  useActualizarUsuario,
+  useDesactivarUsuario,
+  type Usuario,
+  type UsuarioInput,
+} from '../../api/usuarios'
 
 const PALETAS = [
   {
@@ -175,11 +183,219 @@ function PlantillasAdmin() {
   )
 }
 
+const ROL_LABEL: Record<string, string> = { admin: 'Admin', medico: 'Médico', auxiliar: 'Auxiliar' }
+const ROL_BADGE: Record<string, string> = {
+  admin: 'bg-purple-100 text-purple-700',
+  medico: 'bg-blue-100 text-blue-700',
+  auxiliar: 'bg-slate-100 text-slate-600',
+}
+const ROL_ICON: Record<string, React.ElementType> = {
+  admin: ShieldCheck,
+  medico: Stethoscope,
+  auxiliar: Users,
+}
+
+const FORM_USUARIO_INICIAL: UsuarioInput = {
+  nombre_usuario: '',
+  nombre_completo: '',
+  rol: 'medico',
+  contrasena: '',
+}
+
+function UsuariosAdmin() {
+  const { data: usuarios = [] } = useUsuarios()
+  const crear = useCrearUsuario()
+  const desactivar = useDesactivarUsuario()
+  const [editando, setEditando] = useState<Usuario | null>(null)
+  const [nuevo, setNuevo] = useState(false)
+  const [form, setForm] = useState<UsuarioInput>(FORM_USUARIO_INICIAL)
+  const [error, setError] = useState('')
+  const actualizar = useActualizarUsuario(editando?.id ?? '')
+
+  function abrirNuevo() {
+    setEditando(null)
+    setForm(FORM_USUARIO_INICIAL)
+    setError('')
+    setNuevo(true)
+  }
+
+  function abrirEditar(u: Usuario) {
+    setNuevo(false)
+    setForm({ nombre_usuario: u.nombre_usuario, nombre_completo: u.nombre_completo, rol: u.rol, contrasena: '' })
+    setError('')
+    setEditando(u)
+  }
+
+  function cerrar() {
+    setNuevo(false)
+    setEditando(null)
+    setForm(FORM_USUARIO_INICIAL)
+    setError('')
+  }
+
+  async function guardar() {
+    setError('')
+    try {
+      if (editando) {
+        await actualizar.mutateAsync(form)
+      } else {
+        await crear.mutateAsync(form)
+      }
+      cerrar()
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Error al guardar')
+    }
+  }
+
+  async function handleDesactivar(u: Usuario) {
+    if (!confirm(`¿Desactivar al usuario "${u.nombre_completo}"?`)) return
+    await desactivar.mutateAsync(u.id)
+  }
+
+  const activos = usuarios.filter((u) => u.esta_activo)
+  const inactivos = usuarios.filter((u) => !u.esta_activo)
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-slate-500">{activos.length} usuario{activos.length !== 1 ? 's' : ''} activo{activos.length !== 1 ? 's' : ''}</p>
+        <button onClick={abrirNuevo} className="btn-primary flex items-center gap-1.5">
+          <Plus size={14} /> Nuevo usuario
+        </button>
+      </div>
+
+      {/* Formulario crear / editar */}
+      {(nuevo || editando) && (
+        <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 space-y-4">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-semibold text-slate-700">{editando ? 'Editar usuario' : 'Nuevo usuario'}</p>
+            <button onClick={cerrar} className="text-slate-400 hover:text-slate-600"><X size={15} /></button>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="label-hce">Nombre completo *</label>
+              <input
+                className="input-hce"
+                value={form.nombre_completo}
+                onChange={(e) => setForm((f) => ({ ...f, nombre_completo: e.target.value }))}
+                placeholder="Dra. María García"
+              />
+            </div>
+            <div>
+              <label className="label-hce">Usuario (login) *</label>
+              <input
+                className="input-hce"
+                value={form.nombre_usuario}
+                onChange={(e) => setForm((f) => ({ ...f, nombre_usuario: e.target.value }))}
+                placeholder="mgarcia"
+                disabled={!!editando}
+              />
+            </div>
+            <div>
+              <label className="label-hce">Rol</label>
+              <select
+                className="input-hce"
+                value={form.rol}
+                onChange={(e) => setForm((f) => ({ ...f, rol: e.target.value as UsuarioInput['rol'] }))}
+              >
+                <option value="medico">Médico</option>
+                <option value="auxiliar">Auxiliar</option>
+                <option value="admin">Admin</option>
+              </select>
+            </div>
+            <div>
+              <label className="label-hce">
+                Contraseña {editando && <span className="text-slate-400">(dejar vacío para no cambiar)</span>}
+              </label>
+              <input
+                type="password"
+                className="input-hce"
+                value={form.contrasena}
+                onChange={(e) => setForm((f) => ({ ...f, contrasena: e.target.value }))}
+                placeholder={editando ? '••••••••' : 'Mínimo 6 caracteres'}
+              />
+            </div>
+          </div>
+
+          {error && (
+            <p className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-md px-3 py-2">{error}</p>
+          )}
+
+          <div className="flex justify-end gap-2">
+            <button onClick={cerrar} className="text-sm px-3 py-1.5 rounded-md border border-slate-200 text-slate-600 hover:bg-slate-50">
+              Cancelar
+            </button>
+            <button
+              onClick={guardar}
+              disabled={crear.isPending || actualizar.isPending || !form.nombre_completo.trim() || (!editando && !form.contrasena)}
+              className="btn-primary disabled:opacity-40"
+            >
+              {crear.isPending || actualizar.isPending ? 'Guardando...' : 'Guardar'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Lista activos */}
+      <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100 overflow-hidden">
+        {activos.length === 0 && (
+          <p className="px-5 py-6 text-sm text-slate-400 text-center">Sin usuarios activos.</p>
+        )}
+        {activos.map((u) => {
+          const Icon = ROL_ICON[u.rol] ?? Users
+          return (
+            <div key={u.id} className="px-5 py-3 flex items-center gap-4">
+              <Icon size={16} className="text-slate-400 shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-slate-800">{u.nombre_completo}</p>
+                <p className="text-xs text-slate-400">{u.nombre_usuario}</p>
+              </div>
+              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${ROL_BADGE[u.rol]}`}>
+                {ROL_LABEL[u.rol]}
+              </span>
+              <div className="flex gap-2 shrink-0">
+                <button onClick={() => abrirEditar(u)} className="text-slate-400 hover:text-blue-700 transition-colors">
+                  <Pencil size={14} />
+                </button>
+                <button onClick={() => handleDesactivar(u)} className="text-slate-400 hover:text-red-600 transition-colors">
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Inactivos */}
+      {inactivos.length > 0 && (
+        <div>
+          <p className="text-xs text-slate-400 mb-2">Usuarios desactivados</p>
+          <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100 overflow-hidden opacity-60">
+            {inactivos.map((u) => (
+              <div key={u.id} className="px-5 py-3 flex items-center gap-4">
+                <Users size={16} className="text-slate-300 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-slate-400 line-through">{u.nombre_completo}</p>
+                  <p className="text-xs text-slate-300">{u.nombre_usuario}</p>
+                </div>
+                <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-400">
+                  Inactivo
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function PanelAdmin() {
   const { tema, guardarTema } = useTema()
   const [form, setForm] = useState<Tema>(tema)
   const [guardado, setGuardado] = useState(false)
-  const [tab, setTab] = useState<'apariencia' | 'consentimientos'>('apariencia')
+  const [tab, setTab] = useState<'apariencia' | 'consentimientos' | 'usuarios'>('apariencia')
   const inputLogo = useRef<HTMLInputElement>(null)
 
   function set<K extends keyof Tema>(key: K, value: Tema[K]) {
@@ -222,22 +438,27 @@ export default function PanelAdmin() {
 
       {/* Tabs */}
       <div className="flex gap-1 mb-6 border-b border-slate-200">
-        {(['apariencia', 'consentimientos'] as const).map((t) => (
+        {([
+          { id: 'apariencia', label: 'Apariencia' },
+          { id: 'consentimientos', label: 'Consentimientos' },
+          { id: 'usuarios', label: 'Usuarios' },
+        ] as const).map(({ id, label }) => (
           <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px capitalize ${
-              tab === t
+            key={id}
+            onClick={() => setTab(id)}
+            className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
+              tab === id
                 ? 'border-blue-700 text-blue-700'
                 : 'border-transparent text-slate-500 hover:text-slate-700'
             }`}
           >
-            {t === 'apariencia' ? 'Apariencia' : 'Consentimientos'}
+            {label}
           </button>
         ))}
       </div>
 
       {tab === 'consentimientos' && <PlantillasAdmin />}
+      {tab === 'usuarios' && <UsuariosAdmin />}
 
       {tab === 'apariencia' && <form onSubmit={guardar} className="space-y-6">
 
