@@ -257,7 +257,75 @@ CREATE INDEX idx_rips_encuentro ON rips_generado(encuentro_id) WHERE encuentro_i
 CREATE INDEX idx_rips_periodo   ON rips_generado(periodo)      WHERE periodo IS NOT NULL;
 
 -- ============================================================
--- 9. Inventario de insumos
+-- 9. Consentimientos informados
+-- ============================================================
+
+CREATE TABLE plantilla_consentimiento (
+    id           UUID        PRIMARY KEY DEFAULT uuid_generate_v4(),
+    nombre       VARCHAR(100) NOT NULL,
+    contenido    TEXT        NOT NULL,  -- soporta {{variables}}
+    esta_activo  BOOLEAN     NOT NULL DEFAULT TRUE,
+    fecha_creacion TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    creado_por   TEXT        NOT NULL
+);
+
+CREATE TABLE consentimiento_generado (
+    id                   UUID        PRIMARY KEY DEFAULT uuid_generate_v4(),
+    encuentro_id         UUID        NOT NULL,
+    plantilla_id         UUID        REFERENCES plantilla_consentimiento(id),
+    paciente_documento   VARCHAR(20) NOT NULL,
+    contenido_renderizado TEXT       NOT NULL,  -- texto final con variables sustituidas
+    fecha_generacion     TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    creado_por           TEXT        NOT NULL
+);
+
+CREATE INDEX idx_consentimiento_encuentro ON consentimiento_generado(encuentro_id);
+
+INSERT INTO plantilla_consentimiento (nombre, contenido, creado_por) VALUES (
+    'Consentimiento informado general',
+    'Por medio del presente documento, yo, {{paciente_nombre}}, identificado/a con {{tipo_documento}} N.° {{paciente_documento}}, manifiesto que:
+
+1. He sido informado/a por el Dr. {{medico_nombre}} sobre mi estado de salud, el diagnóstico, el tratamiento propuesto y sus posibles riesgos y beneficios.
+
+2. He tenido la oportunidad de formular las preguntas que he considerado necesarias y todas han sido respondidas satisfactoriamente.
+
+3. Autorizo la realización de los procedimientos diagnósticos y terapéuticos necesarios para mi atención médica en {{consultorio}}.
+
+4. Entiendo que puedo revocar este consentimiento en cualquier momento, siempre y cuando no se hayan iniciado los procedimientos.
+
+5. Autorizo el manejo de mis datos personales con fines exclusivamente médicos, de conformidad con la Ley 1581 de 2012 y el Decreto 1377 de 2013.',
+    'sistema'
+);
+
+-- ============================================================
+-- 10. Encuestas de satisfacción
+-- ============================================================
+
+CREATE TABLE encuesta_satisfaccion (
+    id                        UUID        PRIMARY KEY DEFAULT uuid_generate_v4(),
+    fecha_atencion            DATE        NOT NULL,            -- ingresada manualmente por el personal
+    paciente_documento        TEXT,                            -- opcional, para privacidad
+    -- Dimensiones 1-5
+    facilidad_cita            SMALLINT    NOT NULL CHECK (facilidad_cita BETWEEN 1 AND 5),
+    tiempo_espera             SMALLINT    NOT NULL CHECK (tiempo_espera BETWEEN 1 AND 5),
+    calidad_atencion          SMALLINT    NOT NULL CHECK (calidad_atencion BETWEEN 1 AND 5),
+    comunicacion_medico       SMALLINT    NOT NULL CHECK (comunicacion_medico BETWEEN 1 AND 5),
+    claridad_informacion      SMALLINT    NOT NULL CHECK (claridad_informacion BETWEEN 1 AND 5),
+    comodidad_instalaciones   SMALLINT    NOT NULL CHECK (comodidad_instalaciones BETWEEN 1 AND 5),
+    satisfaccion_general      SMALLINT    NOT NULL CHECK (satisfaccion_general BETWEEN 1 AND 5),
+    -- NPS
+    recomendaria              BOOLEAN     NOT NULL,
+    -- Texto libre
+    comentarios               TEXT,
+    -- Auditoría (sistema, no manual)
+    fecha_registro            TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    registrado_por            TEXT        NOT NULL
+);
+
+CREATE INDEX idx_encuesta_fecha ON encuesta_satisfaccion(fecha_atencion DESC);
+
+-- ============================================================
+-- 11. Inventario de insumos
 -- ============================================================
 
 CREATE TABLE insumo (

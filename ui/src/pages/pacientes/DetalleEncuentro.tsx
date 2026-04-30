@@ -1,7 +1,13 @@
 import { useNavigate, useParams } from 'react-router'
-import { FileText, Activity, Receipt } from 'lucide-react'
+import { FileText, Activity, Receipt, ScrollText, Download, Printer } from 'lucide-react'
+import { useState } from 'react'
+import { pdf, PDFDownloadLink } from '@react-pdf/renderer'
 import { useEncuentro } from '../../api/encuentros'
 import { useAuditoriaEncuentro } from '../../api/auditoria'
+import { usePaciente } from '../../api/pacientes'
+import { usePlantillas, useConsentimientoEncuentro, useRegistrarConsentimiento } from '../../api/consentimientos'
+import { useMedico } from '../../context/MedicoContext'
+import ConsentimientoPDF from '../../components/pdf/ConsentimientoPDF'
 
 const finalidades: Record<string, string> = {
   '10': 'Consulta de primera vez',
@@ -27,11 +33,26 @@ const colorAccion: Record<string, string> = {
   DELETE: 'bg-red-100 text-red-700',
 }
 
+function renderContenido(contenido: string, vars: Record<string, string>) {
+  return Object.entries(vars).reduce(
+    (text, [key, val]) => text.replaceAll(`{{${key}}}`, val),
+    contenido,
+  )
+}
+
 export default function DetalleEncuentro() {
   const { id, encId } = useParams()
   const navigate = useNavigate()
+  const { medico } = useMedico()
+  const [plantillaSeleccionada, setPlantillaSeleccionada] = useState('')
+  const [imprimiendo, setImprimiendo] = useState(false)
+
   const { data: e, isLoading, isError } = useEncuentro(id ?? '', encId ?? '')
   const { data: logs = [] } = useAuditoriaEncuentro(encId ?? '')
+  const { data: paciente } = usePaciente(id ?? '')
+  const { data: plantillas = [] } = usePlantillas()
+  const { data: consentimientoPrevio } = useConsentimientoEncuentro(id ?? '', encId ?? '')
+  const registrar = useRegistrarConsentimiento(id ?? '', encId ?? '')
 
   if (isLoading) {
     return <div className="p-6 text-sm text-slate-400">Cargando encuentro...</div>
@@ -42,6 +63,57 @@ export default function DetalleEncuentro() {
   }
 
   const diagnostico = [e.codigo_diagnostico_principal, e.descripcion_diagnostico].filter(Boolean).join(' - ')
+
+  const pacienteNombre = paciente
+    ? [paciente.nombre_primero, paciente.nombre_segundo, paciente.apellido_primero, paciente.apellido_segundo]
+        .filter(Boolean).join(' ')
+    : id ?? ''
+
+  const plantillaActiva = plantillas.find((p) => p.id === plantillaSeleccionada)
+  const fecha = new Date(e.fecha_atencion).toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' })
+
+  const vars: Record<string, string> = {
+    paciente_nombre: pacienteNombre,
+    paciente_documento: paciente?.numero_documento ?? id ?? '',
+    tipo_documento: paciente?.tipo_documento ?? '',
+    medico_nombre: medico.nombre,
+    consultorio: medico.nombreConsultorio,
+    ciudad: medico.ciudad,
+    fecha,
+  }
+
+  const contenidoRenderizado = plantillaActiva ? renderContenido(plantillaActiva.contenido, vars) : ''
+
+  const docPDF = contenidoRenderizado ? (
+    <ConsentimientoPDF
+      medico={medico}
+      pacienteNombre={pacienteNombre}
+      pacienteDocumento={paciente?.numero_documento ?? id ?? ''}
+      tipoDocumento={paciente?.tipo_documento ?? ''}
+      contenidoRenderizado={contenidoRenderizado}
+      fecha={fecha}
+    />
+  ) : null
+
+  async function handleImprimir() {
+    if (!docPDF) return
+    setImprimiendo(true)
+    try {
+      const blob = await pdf(docPDF).toBlob()
+      const url = URL.createObjectURL(blob)
+      const ventana = window.open(url)
+      if (ventana) {
+        ventana.addEventListener('load', () => {
+          ventana.focus()
+          ventana.print()
+          ventana.addEventListener('afterprint', () => URL.revokeObjectURL(url))
+        })
+      }
+      await registrar.mutateAsync({ plantilla_id: plantillaSeleccionada, contenido_renderizado: contenidoRenderizado })
+    } finally {
+      setImprimiendo(false)
+    }
+  }
 
   return (
     <div className="space-y-4 max-w-2xl">
@@ -99,6 +171,61 @@ export default function DetalleEncuentro() {
               Generar factura
             </button>
           </div>
+        </div>
+      </div>
+
+      {/* Consentimiento informado */}
+      <div className="bg-white rounded-xl border border-slate-200 p-5 space-y-4">
+        <div className="flex items-center gap-2">
+          <ScrollText size={16} className="text-slate-400" />
+          <h3 className="text-sm font-medium text-slate-700">Consentimiento informado</h3>
+          {consentimientoPrevio && (
+            <span className="ml-auto text-xs text-slate-400">
+              Generado el {new Date(consentimientoPrevio.fecha_generacion).toLocaleDateString('es-CO')}
+            </span>
+          )}
+        </div>
+
+        <div className="flex items-end gap-3">
+          <div className="flex-1">
+            <label className="label-hce">Plantilla</label>
+            <select
+              value={plantillaSeleccionada}
+              onChange={(e) => setPlantillaSeleccionada(e.target.value)}
+              className="input-hce"
+            >
+              <option value="">Seleccioná una plantilla…</option>
+              {plantillas.filter((p) => p.esta_activo).map((p) => (
+                <option key={p.id} value={p.id}>{p.nombre}</option>
+              ))}
+            </select>
+          </div>
+
+          <button
+            onClick={handleImprimir}
+            disabled={!plantillaSeleccionada || imprimiendo}
+            className="flex items-center gap-2 text-sm px-4 py-2 rounded-md border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors disabled:opacity-40"
+          >
+            <Printer size={14} />
+            {imprimiendo ? 'Preparando...' : 'Imprimir'}
+          </button>
+
+          {docPDF && (
+            <PDFDownloadLink
+              document={docPDF}
+              fileName={`consentimiento_${paciente?.numero_documento ?? id}_${Date.now()}.pdf`}
+            >
+              {({ loading }) => (
+                <button
+                  disabled={loading || !plantillaSeleccionada}
+                  className="flex items-center gap-2 text-sm px-4 py-2 rounded-md border border-blue-700 text-blue-700 hover:bg-blue-50 transition-colors disabled:opacity-40"
+                >
+                  <Download size={14} />
+                  {loading ? 'Generando...' : 'Descargar PDF'}
+                </button>
+              )}
+            </PDFDownloadLink>
+          )}
         </div>
       </div>
 

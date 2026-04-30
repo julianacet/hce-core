@@ -1,6 +1,13 @@
 import { useState, useRef } from 'react'
 import { useTema, DEFAULTS, type Tema } from '../../context/TemaContext'
-import { Upload, Trash2, CheckCircle, RotateCcw } from 'lucide-react'
+import { Upload, Trash2, CheckCircle, RotateCcw, Plus, Pencil, X } from 'lucide-react'
+import {
+  usePlantillas,
+  useCrearPlantilla,
+  useActualizarPlantilla,
+  useDesactivarPlantilla,
+  type PlantillaConsentimiento,
+} from '../../api/consentimientos'
 
 const PALETAS = [
   {
@@ -44,10 +51,135 @@ const CAMPOS_COLOR: Campo[] = [
   { key: 'colorTextoMuted', label: 'Texto secundario / labels', tipo: 'color' },
 ]
 
+function PlantillasAdmin() {
+  const { data: plantillas = [] } = usePlantillas()
+  const crear = useCrearPlantilla()
+  const desactivar = useDesactivarPlantilla()
+  const [editando, setEditando] = useState<PlantillaConsentimiento | null>(null)
+  const [nueva, setNueva] = useState(false)
+  const [formP, setFormP] = useState({ nombre: '', contenido: '' })
+  const actualizar = useActualizarPlantilla(editando?.id ?? '')
+
+  function abrirNueva() {
+    setEditando(null)
+    setFormP({ nombre: '', contenido: '' })
+    setNueva(true)
+  }
+
+  function abrirEditar(p: PlantillaConsentimiento) {
+    setNueva(false)
+    setFormP({ nombre: p.nombre, contenido: p.contenido })
+    setEditando(p)
+  }
+
+  function cerrar() {
+    setNueva(false)
+    setEditando(null)
+    setFormP({ nombre: '', contenido: '' })
+  }
+
+  async function guardarPlantilla() {
+    if (!formP.nombre.trim() || !formP.contenido.trim()) return
+    if (editando) {
+      await actualizar.mutateAsync(formP)
+    } else {
+      await crear.mutateAsync(formP)
+    }
+    cerrar()
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-xs text-slate-500">
+            Variables disponibles: <code className="bg-slate-100 px-1 rounded">{'{{paciente_nombre}}'}</code>{' '}
+            <code className="bg-slate-100 px-1 rounded">{'{{paciente_documento}}'}</code>{' '}
+            <code className="bg-slate-100 px-1 rounded">{'{{tipo_documento}}'}</code>{' '}
+            <code className="bg-slate-100 px-1 rounded">{'{{medico_nombre}}'}</code>{' '}
+            <code className="bg-slate-100 px-1 rounded">{'{{consultorio}}'}</code>{' '}
+            <code className="bg-slate-100 px-1 rounded">{'{{fecha}}'}</code>
+          </p>
+        </div>
+        <button onClick={abrirNueva} className="btn-primary">
+          <Plus size={14} /> Nueva plantilla
+        </button>
+      </div>
+
+      {/* Lista */}
+      <div className="card-hce divide-y divide-slate-100">
+        {plantillas.length === 0 && (
+          <p className="px-4 py-6 text-center text-sm text-slate-400">Sin plantillas.</p>
+        )}
+        {plantillas.map((p) => (
+          <div key={p.id} className="px-4 py-3 flex items-center justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              <p className={`text-sm font-medium ${p.esta_activo ? 'text-slate-700' : 'text-slate-400 line-through'}`}>
+                {p.nombre}
+              </p>
+              <p className="text-xs text-slate-400 truncate mt-0.5">{p.contenido.slice(0, 80)}…</p>
+            </div>
+            <div className="flex gap-2 shrink-0">
+              <button onClick={() => abrirEditar(p)}
+                className="p-1.5 text-slate-400 hover:text-slate-700 transition-colors">
+                <Pencil size={14} />
+              </button>
+              {p.esta_activo && (
+                <button onClick={() => desactivar.mutateAsync(p.id)}
+                  className="p-1.5 text-slate-400 hover:text-red-500 transition-colors">
+                  <Trash2 size={14} />
+                </button>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Formulario */}
+      {(nueva || editando) && (
+        <div className="card-hce p-5 space-y-4">
+          <div className="flex items-center justify-between">
+            <h4 className="text-sm font-semibold text-slate-700">
+              {editando ? 'Editar plantilla' : 'Nueva plantilla'}
+            </h4>
+            <button onClick={cerrar} className="text-slate-400 hover:text-slate-600">
+              <X size={16} />
+            </button>
+          </div>
+          <div>
+            <label className="label-hce">Nombre</label>
+            <input value={formP.nombre} onChange={(e) => setFormP((f) => ({ ...f, nombre: e.target.value }))}
+              placeholder="Ej: Consentimiento informado general"
+              className="input-hce" />
+          </div>
+          <div>
+            <label className="label-hce">Contenido</label>
+            <textarea
+              value={formP.contenido}
+              onChange={(e) => setFormP((f) => ({ ...f, contenido: e.target.value }))}
+              rows={12}
+              className="input-hce font-mono text-xs resize-y"
+              placeholder="Por medio del presente documento, yo, {{paciente_nombre}}..."
+            />
+          </div>
+          <div className="flex justify-end gap-2">
+            <button onClick={cerrar} className="btn-secondary">Cancelar</button>
+            <button onClick={guardarPlantilla} className="btn-primary"
+              disabled={crear.isPending || actualizar.isPending}>
+              {crear.isPending || actualizar.isPending ? 'Guardando...' : 'Guardar'}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function PanelAdmin() {
   const { tema, guardarTema } = useTema()
   const [form, setForm] = useState<Tema>(tema)
   const [guardado, setGuardado] = useState(false)
+  const [tab, setTab] = useState<'apariencia' | 'consentimientos'>('apariencia')
   const inputLogo = useRef<HTMLInputElement>(null)
 
   function set<K extends keyof Tema>(key: K, value: Tema[K]) {
@@ -86,10 +218,28 @@ export default function PanelAdmin() {
     <div className="p-6 max-w-2xl mx-auto">
       <div className="mb-6">
         <h2 className="text-xl font-semibold" style={{ color: 'var(--hce-text)' }}>Panel de administración</h2>
-        <p className="text-sm mt-1" style={{ color: 'var(--hce-text-muted)' }}>Personalización visual completa del sistema</p>
       </div>
 
-      <form onSubmit={guardar} className="space-y-6">
+      {/* Tabs */}
+      <div className="flex gap-1 mb-6 border-b border-slate-200">
+        {(['apariencia', 'consentimientos'] as const).map((t) => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px capitalize ${
+              tab === t
+                ? 'border-blue-700 text-blue-700'
+                : 'border-transparent text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            {t === 'apariencia' ? 'Apariencia' : 'Consentimientos'}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'consentimientos' && <PlantillasAdmin />}
+
+      {tab === 'apariencia' && <form onSubmit={guardar} className="space-y-6">
 
         {/* Identidad */}
         <div className="card-hce p-5 space-y-4">
@@ -239,7 +389,7 @@ export default function PanelAdmin() {
             <button type="submit" className="btn-primary">Guardar cambios</button>
           </div>
         </div>
-      </form>
+      </form>}
     </div>
   )
 }

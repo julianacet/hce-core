@@ -66,6 +66,7 @@ func main() {
 		r.Mount("/auditoria", handlers.AuditoriaRouter(db))
 		r.Mount("/cups", handlers.CupsRouter(db))
 		r.Mount("/rips", handlers.RipsMensualRouter(db))
+		r.Mount("/consentimientos/plantillas", handlers.PlantillasRouter(db))
 
 		// Solo admin
 		// r.With(appmiddleware.RequiereRol("admin")).Mount("/usuarios", handlers.UsuariosRouter(db))
