@@ -18,6 +18,7 @@ import NuevaFactura from './pages/pacientes/NuevaFactura'
 import DetalleFactura from './pages/pacientes/DetalleFactura'
 import NuevoPaciente from './pages/NuevoPaciente'
 import RipsMensual from './pages/RipsMensual'
+import Encuestas from './pages/Encuestas'
 
 const router = createBrowserRouter([
   { path: '/login', element: <Login /> },
@@ -36,6 +37,7 @@ const router = createBrowserRouter([
           { path: 'pacientes/nuevo', element: <NuevoPaciente /> },
           { path: 'configuracion', element: <Configuracion /> },
           { path: 'rips-mensual', element: <RipsMensual /> },
+          { path: 'encuestas', element: <Encuestas /> },
 
           // Solo admin
           {

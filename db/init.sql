@@ -119,6 +119,17 @@ CREATE TABLE encuentro_clinico (
 
     -- Contenido clínico (Res. 866/2021)
     motivo_consulta              TEXT       NOT NULL,
+
+    -- Signos vitales (todos opcionales)
+    ta_sistolica          SMALLINT,        -- mmHg
+    ta_diastolica         SMALLINT,        -- mmHg
+    frecuencia_cardiaca   SMALLINT,        -- lpm
+    frecuencia_respiratoria SMALLINT,      -- rpm
+    temperatura           NUMERIC(4,1),   -- °C
+    saturacion_o2         SMALLINT,        -- %
+    peso                  NUMERIC(5,1),   -- kg
+    talla                 NUMERIC(5,1),   -- cm
+
     examen_fisico                TEXT,
     codigo_diagnostico_principal VARCHAR(5) NOT NULL,  -- CIE-10
     descripcion_diagnostico      TEXT,

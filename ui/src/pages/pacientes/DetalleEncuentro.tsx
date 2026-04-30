@@ -142,6 +142,73 @@ export default function DetalleEncuentro() {
         <div className="border-t border-slate-100 pt-4 space-y-4">
           {[
             ['Motivo de consulta', e.motivo_consulta],
+          ].filter(([, v]) => v).map(([label, value]) => (
+            <div key={label}>
+              <p className="text-xs text-slate-400 mb-1">{label}</p>
+              <p className="text-sm text-slate-800 leading-relaxed">{value}</p>
+            </div>
+          ))}
+
+          {/* Signos vitales */}
+          {(e.ta_sistolica || e.frecuencia_cardiaca || e.temperatura || e.saturacion_o2 || e.peso) && (
+            <div>
+              <p className="text-xs text-slate-400 mb-2">Signos vitales</p>
+              <div className="grid grid-cols-4 gap-3">
+                {e.ta_sistolica && e.ta_diastolica && (
+                  <div className="bg-slate-50 rounded-lg p-2 text-center">
+                    <p className="text-sm font-semibold text-slate-800">{e.ta_sistolica}/{e.ta_diastolica}</p>
+                    <p className="text-xs text-slate-400">TA mmHg</p>
+                  </div>
+                )}
+                {e.frecuencia_cardiaca && (
+                  <div className="bg-slate-50 rounded-lg p-2 text-center">
+                    <p className="text-sm font-semibold text-slate-800">{e.frecuencia_cardiaca}</p>
+                    <p className="text-xs text-slate-400">FC lpm</p>
+                  </div>
+                )}
+                {e.frecuencia_respiratoria && (
+                  <div className="bg-slate-50 rounded-lg p-2 text-center">
+                    <p className="text-sm font-semibold text-slate-800">{e.frecuencia_respiratoria}</p>
+                    <p className="text-xs text-slate-400">FR rpm</p>
+                  </div>
+                )}
+                {e.temperatura && (
+                  <div className="bg-slate-50 rounded-lg p-2 text-center">
+                    <p className="text-sm font-semibold text-slate-800">{e.temperatura}°C</p>
+                    <p className="text-xs text-slate-400">Temperatura</p>
+                  </div>
+                )}
+                {e.saturacion_o2 && (
+                  <div className="bg-slate-50 rounded-lg p-2 text-center">
+                    <p className="text-sm font-semibold text-slate-800">{e.saturacion_o2}%</p>
+                    <p className="text-xs text-slate-400">SpO₂</p>
+                  </div>
+                )}
+                {e.peso && (
+                  <div className="bg-slate-50 rounded-lg p-2 text-center">
+                    <p className="text-sm font-semibold text-slate-800">{e.peso} kg</p>
+                    <p className="text-xs text-slate-400">Peso</p>
+                  </div>
+                )}
+                {e.talla && (
+                  <div className="bg-slate-50 rounded-lg p-2 text-center">
+                    <p className="text-sm font-semibold text-slate-800">{e.talla} cm</p>
+                    <p className="text-xs text-slate-400">Talla</p>
+                  </div>
+                )}
+                {e.peso && e.talla && (
+                  <div className="bg-slate-50 rounded-lg p-2 text-center">
+                    <p className="text-sm font-semibold text-slate-800">
+                      {(e.peso / Math.pow(e.talla / 100, 2)).toFixed(1)}
+                    </p>
+                    <p className="text-xs text-slate-400">IMC kg/m²</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {[
             ['Examen físico', e.examen_fisico],
             ['Diagnóstico principal', diagnostico],
             ['Plan de manejo', e.plan_manejo],

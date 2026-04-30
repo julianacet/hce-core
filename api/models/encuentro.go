@@ -15,6 +15,14 @@ type Encuentro struct {
 	FinalidadConsulta          string     `json:"finalidad_consulta"`
 	ViaIngreso                 string     `json:"via_ingreso"`
 	MotivoConsulta             string     `json:"motivo_consulta"`
+	TASistolica                *int16     `json:"ta_sistolica"`
+	TADiastolica               *int16     `json:"ta_diastolica"`
+	FrecuenciaCardiaca         *int16     `json:"frecuencia_cardiaca"`
+	FrecuenciaRespiratoria     *int16     `json:"frecuencia_respiratoria"`
+	Temperatura                *float64   `json:"temperatura"`
+	SaturacionO2               *int16     `json:"saturacion_o2"`
+	Peso                       *float64   `json:"peso"`
+	Talla                      *float64   `json:"talla"`
 	ExamenFisico               *string    `json:"examen_fisico"`
 	CodigoDiagnosticoPrincipal string     `json:"codigo_diagnostico_principal"`
 	DescripcionDiagnostico     *string    `json:"descripcion_diagnostico"`
@@ -31,9 +39,17 @@ type EncuentroInput struct {
 	CausaExterna               string  `json:"causa_externa"`
 	FinalidadConsulta          string  `json:"finalidad_consulta"`
 	ViaIngreso                 string  `json:"via_ingreso"`
-	MotivoConsulta             string  `json:"motivo_consulta"`
-	ExamenFisico               *string `json:"examen_fisico"`
-	CodigoDiagnosticoPrincipal string  `json:"codigo_diagnostico_principal"`
+	MotivoConsulta             string   `json:"motivo_consulta"`
+	TASistolica                *int16   `json:"ta_sistolica"`
+	TADiastolica               *int16   `json:"ta_diastolica"`
+	FrecuenciaCardiaca         *int16   `json:"frecuencia_cardiaca"`
+	FrecuenciaRespiratoria     *int16   `json:"frecuencia_respiratoria"`
+	Temperatura                *float64 `json:"temperatura"`
+	SaturacionO2               *int16   `json:"saturacion_o2"`
+	Peso                       *float64 `json:"peso"`
+	Talla                      *float64 `json:"talla"`
+	ExamenFisico               *string  `json:"examen_fisico"`
+	CodigoDiagnosticoPrincipal string   `json:"codigo_diagnostico_principal"`
 	DescripcionDiagnostico     *string `json:"descripcion_diagnostico"`
 	PlanManejo                 *string `json:"plan_manejo"`
 }
