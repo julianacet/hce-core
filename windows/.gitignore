@@ -1,0 +1,5 @@
+pgsql/
+dist/
+hce-api.exe
+hce-web.exe
+HCE-Consultorio-Setup.exe
