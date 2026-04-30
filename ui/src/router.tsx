@@ -19,6 +19,7 @@ import DetalleFactura from './pages/pacientes/DetalleFactura'
 import NuevoPaciente from './pages/NuevoPaciente'
 import RipsMensual from './pages/RipsMensual'
 import Encuestas from './pages/Encuestas'
+import Inventario from './pages/Inventario'
 
 const router = createBrowserRouter([
   { path: '/login', element: <Login /> },
@@ -38,6 +39,7 @@ const router = createBrowserRouter([
           { path: 'configuracion', element: <Configuracion /> },
           { path: 'rips-mensual', element: <RipsMensual /> },
           { path: 'encuestas', element: <Encuestas /> },
+          { path: 'inventario', element: <Inventario /> },
 
           // Solo admin
           {
