@@ -371,6 +371,90 @@ CREATE INDEX idx_insumo_movimiento_insumo ON insumo_movimiento(insumo_id);
 CREATE INDEX idx_insumo_movimiento_fecha  ON insumo_movimiento(fecha_movimiento DESC);
 
 -- ============================================================
+-- 12. Eventos adversos (PAMEC / Res. 2003/2014)
+-- ============================================================
+
+CREATE TABLE tipo_evento_adverso (
+    id           UUID         PRIMARY KEY DEFAULT uuid_generate_v4(),
+    nombre       VARCHAR(120) NOT NULL,
+    descripcion  TEXT,
+    requiere_reporte_invima BOOLEAN NOT NULL DEFAULT FALSE,
+    esta_activo  BOOLEAN      NOT NULL DEFAULT TRUE,
+    fecha_creacion TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    creado_por   TEXT         NOT NULL
+);
+
+CREATE SEQUENCE evento_adverso_numero_seq START 1;
+
+CREATE TABLE evento_adverso (
+    id      UUID    PRIMARY KEY DEFAULT uuid_generate_v4(),
+    numero  BIGINT  NOT NULL DEFAULT nextval('evento_adverso_numero_seq'),
+    tipo_id UUID    REFERENCES tipo_evento_adverso(id),
+    fecha_evento TIMESTAMPTZ NOT NULL,
+    paciente_documento TEXT,
+    diagnostico_activo TEXT,
+    clasificacion  VARCHAR(30) NOT NULL
+        CHECK (clasificacion IN ('incidente', 'adverso_prevenible', 'adverso_no_prevenible', 'centinela')),
+    categoria_danio VARCHAR(20) NOT NULL
+        CHECK (categoria_danio IN ('sin_danio', 'leve', 'moderado', 'grave', 'muerte')),
+    se_informo_paciente BOOLEAN,
+    descripcion        TEXT NOT NULL,
+    como_se_detecto    TEXT,
+    factores_contribuyentes JSONB,
+    acciones_inmediatas     TEXT,
+    requiere_causa_raiz     BOOLEAN NOT NULL DEFAULT FALSE,
+    analisis_causa_raiz     TEXT,
+    acciones_mejora         TEXT,
+    responsable_seguimiento TEXT,
+    fecha_limite_mejora     DATE,
+    estado VARCHAR(20) NOT NULL DEFAULT 'abierto'
+        CHECK (estado IN ('abierto', 'en_seguimiento', 'cerrado')),
+    fecha_cierre  TIMESTAMPTZ,
+    cerrado_por   TEXT,
+    creado_por     TEXT        NOT NULL,
+    fecha_creacion TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_ea_fecha   ON evento_adverso(fecha_evento DESC);
+CREATE INDEX idx_ea_estado  ON evento_adverso(estado);
+CREATE INDEX idx_ea_tipo    ON evento_adverso(tipo_id);
+
+INSERT INTO tipo_evento_adverso (nombre, descripcion, requiere_reporte_invima, creado_por) VALUES
+    ('Medicación',
+     'Errores en prescripción, dispensación o administración de medicamentos.',
+     FALSE, 'sistema'),
+    ('Procedimiento clínico',
+     'Complicaciones o errores durante un procedimiento diagnóstico o terapéutico.',
+     FALSE, 'sistema'),
+    ('Caída del paciente',
+     'Caída accidental del paciente dentro del consultorio.',
+     FALSE, 'sistema'),
+    ('Identificación errónea del paciente',
+     'Confusión en la identidad del paciente, sus muestras o resultados.',
+     FALSE, 'sistema'),
+    ('Infección asociada a la atención',
+     'Infección adquirida durante o como consecuencia de la atención prestada.',
+     FALSE, 'sistema'),
+    ('Error diagnóstico',
+     'Diagnóstico incorrecto, omitido o tardío que causó o pudo causar daño.',
+     FALSE, 'sistema'),
+    ('Comunicación o información',
+     'Falla en la transmisión de información clínica entre el equipo o con el paciente.',
+     FALSE, 'sistema'),
+    ('Equipos o dispositivos médicos',
+     'Falla o uso inadecuado de un equipo o dispositivo médico.',
+     TRUE, 'sistema'),
+    ('Reacción adversa a medicamento (RAM)',
+     'Reacción inesperada a un medicamento en dosis normales. Reporte obligatorio a INVIMA.',
+     TRUE, 'sistema'),
+    ('Accidente con material cortopunzante',
+     'Pinchazo, corte u otro accidente con material potencialmente biocontaminado.',
+     FALSE, 'sistema'),
+    ('Otro',
+     'Evento que no corresponde a las categorías anteriores.',
+     FALSE, 'sistema');
+
+-- ============================================================
 -- 10. Log de auditoría
 -- ============================================================
 

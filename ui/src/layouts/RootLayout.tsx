@@ -1,5 +1,5 @@
 import { Outlet, NavLink, useNavigate } from 'react-router'
-import { LayoutDashboard, UserSearch, Users, Settings, ShieldCheck, LogOut, FileCode2, Star, Package } from 'lucide-react'
+import { LayoutDashboard, UserSearch, Users, Settings, ShieldCheck, LogOut, FileCode2, Star, Package, AlertTriangle } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useTema } from '../context/TemaContext'
 
@@ -20,6 +20,7 @@ export default function RootLayout() {
     { to: '/rips-mensual', label: 'RIPS Mensual', icon: FileCode2 },
     { to: '/encuestas', label: 'Encuestas', icon: Star },
     { to: '/inventario', label: 'Inventario', icon: Package },
+    { to: '/eventos-adversos', label: 'Eventos adversos', icon: AlertTriangle },
   ]
 
   return (

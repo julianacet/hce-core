@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react'
 import { useTema, DEFAULTS, type Tema } from '../../context/TemaContext'
-import { Upload, Trash2, CheckCircle, RotateCcw, Plus, Pencil, X, ShieldCheck, Stethoscope, Users } from 'lucide-react'
+import { Upload, Trash2, CheckCircle, RotateCcw, Plus, Pencil, X, ShieldCheck, Stethoscope, Users, AlertTriangle, ExternalLink } from 'lucide-react'
 import {
   usePlantillas,
   useCrearPlantilla,
@@ -16,6 +16,14 @@ import {
   type Usuario,
   type UsuarioInput,
 } from '../../api/usuarios'
+import {
+  useTiposEventoAdverso,
+  useCrearTipo,
+  useActualizarTipo,
+  useToggleTipo,
+  type TipoEventoAdverso,
+  type TipoInput,
+} from '../../api/eventos_adversos'
 
 const PALETAS = [
   {
@@ -58,6 +66,163 @@ const CAMPOS_COLOR: Campo[] = [
   { key: 'colorTexto', label: 'Texto principal', tipo: 'color' },
   { key: 'colorTextoMuted', label: 'Texto secundario / labels', tipo: 'color' },
 ]
+
+// ── Gestión de tipos de eventos adversos ──────────────────────────────────────
+
+function TiposEventoAdversoAdmin() {
+  const { data: tipos = [] } = useTiposEventoAdverso(true)
+  const crear = useCrearTipo()
+  const [editando, setEditando] = useState<TipoEventoAdverso | null>(null)
+  const actualizar = useActualizarTipo(editando?.id ?? '')
+  const [form, setForm] = useState<TipoInput>({ nombre: '', descripcion: null, requiere_reporte_invima: false })
+  const [mostrarForm, setMostrarForm] = useState(false)
+  const [error, setError] = useState('')
+
+  function abrirNuevo() {
+    setEditando(null)
+    setForm({ nombre: '', descripcion: null, requiere_reporte_invima: false })
+    setMostrarForm(true)
+    setError('')
+  }
+
+  function abrirEditar(t: TipoEventoAdverso) {
+    setEditando(t)
+    setForm({ nombre: t.nombre, descripcion: t.descripcion, requiere_reporte_invima: t.requiere_reporte_invima })
+    setMostrarForm(true)
+    setError('')
+  }
+
+  function cerrar() {
+    setMostrarForm(false)
+    setEditando(null)
+    setError('')
+  }
+
+  async function guardar() {
+    if (!form.nombre.trim()) { setError('El nombre es obligatorio.'); return }
+    setError('')
+    try {
+      if (editando) await actualizar.mutateAsync(form)
+      else await crear.mutateAsync(form)
+      cerrar()
+    } catch {
+      setError('Error al guardar.')
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm" style={{ color: 'var(--hce-text-muted)' }}>
+            Configura qué tipos de eventos adversos puede seleccionar el personal al reportar.
+            Los tipos marcados con INVIMA indican que requieren reporte externo a Farmacovigilancia o Tecnovigilancia.
+          </p>
+        </div>
+        <button onClick={abrirNuevo} className="btn-hce flex items-center gap-2 px-3 py-1.5 text-sm">
+          <Plus className="w-4 h-4" /> Nuevo tipo
+        </button>
+      </div>
+
+      {/* Formulario */}
+      {mostrarForm && (
+        <div className="card-hce p-4 space-y-3 border-2" style={{ borderColor: 'var(--hce-primary)' }}>
+          <div className="flex items-center justify-between">
+            <h4 className="text-sm font-semibold" style={{ color: 'var(--hce-text)' }}>
+              {editando ? 'Editar tipo' : 'Nuevo tipo de evento adverso'}
+            </h4>
+            <button onClick={cerrar}><X className="w-4 h-4 text-slate-400" /></button>
+          </div>
+          <div>
+            <label className="label-hce">Nombre *</label>
+            <input className="input-hce" value={form.nombre}
+              onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))}
+              placeholder="Ej: Caída del paciente" />
+          </div>
+          <div>
+            <label className="label-hce">Descripción / orientación para el personal</label>
+            <textarea className="input-hce" rows={2}
+              value={form.descripcion ?? ''}
+              onChange={e => setForm(f => ({ ...f, descripcion: e.target.value || null }))}
+              placeholder="Cuándo usar este tipo de reporte..." />
+          </div>
+          <label className="flex items-center gap-2 text-sm cursor-pointer" style={{ color: 'var(--hce-text)' }}>
+            <input type="checkbox" checked={form.requiere_reporte_invima}
+              onChange={e => setForm(f => ({ ...f, requiere_reporte_invima: e.target.checked }))} />
+            Requiere reporte externo a INVIMA (Farmacovigilancia / Tecnovigilancia)
+          </label>
+          {error && <p className="text-xs text-red-600">{error}</p>}
+          <div className="flex justify-end gap-2">
+            <button onClick={cerrar} className="px-3 py-1.5 text-sm rounded border"
+              style={{ borderColor: 'var(--hce-border)', color: 'var(--hce-text-muted)' }}>
+              Cancelar
+            </button>
+            <button onClick={guardar} disabled={crear.isPending || actualizar.isPending}
+              className="btn-hce px-4 py-1.5 text-sm">
+              Guardar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Lista */}
+      <div className="card-hce divide-y" style={{ borderColor: 'var(--hce-border)' }}>
+        {tipos.length === 0 && (
+          <p className="text-sm text-center py-6" style={{ color: 'var(--hce-text-muted)' }}>
+            No hay tipos configurados.
+          </p>
+        )}
+        {tipos.map(t => (
+          <TipoRow key={t.id} tipo={t} onEditar={() => abrirEditar(t)} />
+        ))}
+      </div>
+
+      <p className="text-xs" style={{ color: 'var(--hce-text-muted)' }}>
+        Tipos marcados con INVIMA: asegúrate de completar el reporte en
+        {' '}<span className="font-medium">reportesalud.minsalud.gov.co</span>{' '}
+        o en el sistema de farmacovigilancia correspondiente.
+      </p>
+    </div>
+  )
+}
+
+function TipoRow({ tipo, onEditar }: { tipo: TipoEventoAdverso; onEditar: () => void }) {
+  const toggle = useToggleTipo(tipo.id)
+  return (
+    <div className={`flex items-start gap-3 px-4 py-3 ${!tipo.esta_activo ? 'opacity-50' : ''}`}>
+      <AlertTriangle className={`w-4 h-4 mt-0.5 shrink-0 ${tipo.esta_activo ? 'text-orange-400' : 'text-slate-300'}`} />
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium" style={{ color: 'var(--hce-text)' }}>{tipo.nombre}</span>
+          {tipo.requiere_reporte_invima && (
+            <span className="px-1.5 py-0.5 rounded text-xs bg-red-100 text-red-700 flex items-center gap-1">
+              <ExternalLink className="w-3 h-3" /> INVIMA
+            </span>
+          )}
+          {!tipo.esta_activo && (
+            <span className="px-1.5 py-0.5 rounded text-xs bg-slate-100 text-slate-500">Inactivo</span>
+          )}
+        </div>
+        {tipo.descripcion && (
+          <p className="text-xs mt-0.5 truncate" style={{ color: 'var(--hce-text-muted)' }}>{tipo.descripcion}</p>
+        )}
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
+        <button onClick={onEditar} className="text-slate-400 hover:text-slate-600">
+          <Pencil className="w-3.5 h-3.5" />
+        </button>
+        <button onClick={() => toggle.mutate()}
+          className={`text-xs px-2 py-0.5 rounded border transition-colors ${
+            tipo.esta_activo
+              ? 'border-slate-200 text-slate-500 hover:border-red-300 hover:text-red-600'
+              : 'border-green-200 text-green-600 hover:bg-green-50'
+          }`}>
+          {tipo.esta_activo ? 'Desactivar' : 'Activar'}
+        </button>
+      </div>
+    </div>
+  )
+}
 
 function PlantillasAdmin() {
   const { data: plantillas = [] } = usePlantillas()
@@ -395,7 +560,7 @@ export default function PanelAdmin() {
   const { tema, guardarTema } = useTema()
   const [form, setForm] = useState<Tema>(tema)
   const [guardado, setGuardado] = useState(false)
-  const [tab, setTab] = useState<'apariencia' | 'consentimientos' | 'usuarios'>('apariencia')
+  const [tab, setTab] = useState<'apariencia' | 'consentimientos' | 'usuarios' | 'eventos'>('apariencia')
   const inputLogo = useRef<HTMLInputElement>(null)
 
   function set<K extends keyof Tema>(key: K, value: Tema[K]) {
@@ -442,6 +607,7 @@ export default function PanelAdmin() {
           { id: 'apariencia', label: 'Apariencia' },
           { id: 'consentimientos', label: 'Consentimientos' },
           { id: 'usuarios', label: 'Usuarios' },
+          { id: 'eventos', label: 'Eventos adversos' },
         ] as const).map(({ id, label }) => (
           <button
             key={id}
@@ -459,6 +625,7 @@ export default function PanelAdmin() {
 
       {tab === 'consentimientos' && <PlantillasAdmin />}
       {tab === 'usuarios' && <UsuariosAdmin />}
+      {tab === 'eventos' && <TiposEventoAdversoAdmin />}
 
       {tab === 'apariencia' && <form onSubmit={guardar} className="space-y-6">
 
