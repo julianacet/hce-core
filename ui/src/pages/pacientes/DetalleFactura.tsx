@@ -92,7 +92,7 @@ export default function DetalleFactura() {
       codPrestador: medico.codPrestador,
       tipoDiagnosticoPrincipal: '01',
     })
-    descargarJSON(resultado.datos_json, `rips_${factura.paciente_documento}_${Date.now()}.json`)
+    descargarJSON(resultado.datos_json, `rips_${factura!.paciente_documento}_${Date.now()}.json`)
   }
 
   return (

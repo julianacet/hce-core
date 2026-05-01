@@ -371,7 +371,39 @@ CREATE INDEX idx_insumo_movimiento_insumo ON insumo_movimiento(insumo_id);
 CREATE INDEX idx_insumo_movimiento_fecha  ON insumo_movimiento(fecha_movimiento DESC);
 
 -- ============================================================
--- 12. Eventos adversos (PAMEC / Res. 2003/2014)
+-- 12. Directorio de proveedores
+-- ============================================================
+
+CREATE TABLE proveedor (
+    id                    UUID        PRIMARY KEY DEFAULT uuid_generate_v4(),
+    razon_social          TEXT        NOT NULL,
+    nit                   VARCHAR(20),
+    tipo                  VARCHAR(40) NOT NULL
+        CHECK (tipo IN (
+            'insumos_medicos', 'medicamentos', 'equipos_medicos',
+            'laboratorio', 'mantenimiento', 'servicios_generales', 'otro'
+        )),
+    contacto_nombre       TEXT,
+    contacto_cargo        TEXT,
+    telefono              VARCHAR(20),
+    telefono_alt          VARCHAR(20),
+    correo                TEXT,
+    direccion             TEXT,
+    ciudad                TEXT,
+    sitio_web             TEXT,
+    descripcion_servicios TEXT,
+    condiciones_pago      TEXT,
+    notas                 TEXT,
+    esta_activo           BOOLEAN     NOT NULL DEFAULT TRUE,
+    fecha_creacion        TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    creado_por            TEXT        NOT NULL
+);
+
+CREATE INDEX idx_proveedor_razon ON proveedor(razon_social);
+CREATE INDEX idx_proveedor_tipo  ON proveedor(tipo);
+
+-- ============================================================
+-- 13. Eventos adversos (PAMEC / Res. 2003/2014)
 -- ============================================================
 
 CREATE TABLE tipo_evento_adverso (

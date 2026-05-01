@@ -21,6 +21,7 @@ import RipsMensual from './pages/RipsMensual'
 import Encuestas from './pages/Encuestas'
 import Inventario from './pages/Inventario'
 import EventosAdversos from './pages/EventosAdversos'
+import Proveedores from './pages/Proveedores'
 
 const router = createBrowserRouter([
   { path: '/login', element: <Login /> },
@@ -42,6 +43,7 @@ const router = createBrowserRouter([
           { path: 'encuestas', element: <Encuestas /> },
           { path: 'inventario', element: <Inventario /> },
           { path: 'eventos-adversos', element: <EventosAdversos /> },
+          { path: 'proveedores', element: <Proveedores /> },
 
           // Solo admin
           {

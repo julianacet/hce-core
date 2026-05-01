@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { FileCode2, Download, AlertCircle, Users, Calendar, FileCheck, FileX } from 'lucide-react'
+import { FileCode2, AlertCircle, Users, Calendar, FileCheck, FileX } from 'lucide-react'
 import { useMedico } from '../context/MedicoContext'
 import {
   useRipsMensualResumen,

@@ -268,9 +268,6 @@ function ModalSeguimiento({ evento, onCerrar }: { evento: EventoAdverso; onCerra
   const [estado, setEstado] = useState(evento.estado)
   const [error, setError] = useState('')
 
-  const tipo = tipos.find(t => t.id === evento.tipo_id)
-  const { data: tipos = [] } = useTiposEventoAdverso()
-
   async function guardar(e: React.FormEvent) {
     e.preventDefault()
     setError('')
@@ -385,7 +382,7 @@ function ModalSeguimiento({ evento, onCerrar }: { evento: EventoAdverso; onCerra
 
             <div>
               <label className="label-hce">Estado del reporte</label>
-              <select className="input-hce" value={estado} onChange={e => setEstado(e.target.value)}>
+              <select className="input-hce" value={estado} onChange={e => setEstado(e.target.value as typeof estado)}>
                 <option value="abierto">Abierto</option>
                 <option value="en_seguimiento">En seguimiento</option>
                 <option value="cerrado">Cerrado</option>

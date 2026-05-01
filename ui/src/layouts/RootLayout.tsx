@@ -1,5 +1,5 @@
 import { Outlet, NavLink, useNavigate } from 'react-router'
-import { LayoutDashboard, UserSearch, Users, Settings, ShieldCheck, LogOut, FileCode2, Star, Package, AlertTriangle } from 'lucide-react'
+import { LayoutDashboard, UserSearch, Users, Settings, ShieldCheck, LogOut, FileCode2, Star, Package, AlertTriangle, Building2 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useTema } from '../context/TemaContext'
 
@@ -21,6 +21,7 @@ export default function RootLayout() {
     { to: '/encuestas', label: 'Encuestas', icon: Star },
     { to: '/inventario', label: 'Inventario', icon: Package },
     { to: '/eventos-adversos', label: 'Eventos adversos', icon: AlertTriangle },
+    { to: '/proveedores', label: 'Proveedores', icon: Building2 },
   ]
 
   return (
