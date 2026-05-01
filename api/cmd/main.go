@@ -73,6 +73,7 @@ func main() {
 		r.Mount("/tipos-evento-adverso", handlers.TiposEventoAdversoRouter(db))
 		r.Mount("/eventos-adversos", handlers.EventosAdversosRouter(db))
 		r.Mount("/proveedores", handlers.ProveedoresRouter(db))
+		r.Mount("/citas", handlers.CitasRouter(db))
 
 		// Solo admin
 		r.With(appmiddleware.RequiereRol("admin")).Mount("/usuarios", handlers.UsuariosRouter(db))

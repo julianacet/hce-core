@@ -22,6 +22,7 @@ import Encuestas from './pages/Encuestas'
 import Inventario from './pages/Inventario'
 import EventosAdversos from './pages/EventosAdversos'
 import Proveedores from './pages/Proveedores'
+import Agenda from './pages/Agenda'
 
 const router = createBrowserRouter([
   { path: '/login', element: <Login /> },
@@ -44,6 +45,7 @@ const router = createBrowserRouter([
           { path: 'inventario', element: <Inventario /> },
           { path: 'eventos-adversos', element: <EventosAdversos /> },
           { path: 'proveedores', element: <Proveedores /> },
+          { path: 'agenda', element: <Agenda /> },
 
           // Solo admin
           {

@@ -1,5 +1,5 @@
 import { Outlet, NavLink, useNavigate } from 'react-router'
-import { LayoutDashboard, UserSearch, Users, Settings, ShieldCheck, LogOut, FileCode2, Star, Package, AlertTriangle, Building2 } from 'lucide-react'
+import { LayoutDashboard, UserSearch, Users, Settings, ShieldCheck, LogOut, FileCode2, Star, Package, AlertTriangle, Building2, CalendarDays } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useTema } from '../context/TemaContext'
 
@@ -15,6 +15,7 @@ export default function RootLayout() {
 
   const navItems = [
     { to: '/', label: 'Inicio', icon: LayoutDashboard, end: true },
+    { to: '/agenda', label: 'Agenda', icon: CalendarDays },
     { to: '/nueva-consulta', label: 'Nueva consulta', icon: UserSearch },
     { to: '/pacientes', label: 'Pacientes', icon: Users },
     { to: '/rips-mensual', label: 'RIPS Mensual', icon: FileCode2 },
