@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
@@ -42,10 +43,14 @@ func main() {
 	r.Use(chimiddleware.Logger)
 	r.Use(chimiddleware.Recoverer)
 
-	if allowedOrigin := os.Getenv("ALLOWED_ORIGIN"); allowedOrigin != "" {
+	if allowedOrigins := os.Getenv("ALLOWED_ORIGIN"); allowedOrigins != "" {
+		origins := strings.Split(allowedOrigins, ",")
+		for i, o := range origins {
+			origins[i] = strings.TrimSpace(o)
+		}
 		r.Use(cors.Handler(cors.Options{
-			AllowedOrigins: []string{allowedOrigin},
-			AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+			AllowedOrigins: origins,
+			AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"},
 			AllowedHeaders: []string{"Accept", "Authorization", "Content-Type"},
 		}))
 	}
