@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, type ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, type ReactNode } from 'react'
+import { apiFetch } from '../api/client'
 
 export type DatosMedico = {
   nombre: string
@@ -8,13 +9,13 @@ export type DatosMedico = {
   telefono: string
   ciudad: string
   nombreConsultorio: string
-  correoElectronico: string   // para futura integración con Google Drive
-  nit: string                 // NIT del consultorio — requerido para RIPS y FEV
-  codPrestador: string        // código de habilitación ante el MinSalud (10 dígitos)
+  correoElectronico: string
+  nit: string
+  codPrestador: string
   firmaBase64: string | null
 }
 
-const defaults: DatosMedico = {
+const DEFAULTS: DatosMedico = {
   nombre: '',
   especialidad: '',
   tarjetaProfesional: '',
@@ -35,15 +36,36 @@ type MedicoContextType = {
 
 const MedicoContext = createContext<MedicoContextType | null>(null)
 
+function fromCache(): DatosMedico {
+  try {
+    const raw = localStorage.getItem('hce_medico')
+    return raw ? { ...DEFAULTS, ...JSON.parse(raw) } : DEFAULTS
+  } catch {
+    return DEFAULTS
+  }
+}
+
 export function MedicoProvider({ children }: { children: ReactNode }) {
-  const [medico, setMedico] = useState<DatosMedico>(() => {
-    const guardado = localStorage.getItem('hce_medico')
-    return guardado ? JSON.parse(guardado) : defaults
-  })
+  const [medico, setMedico] = useState<DatosMedico>(fromCache)
+
+  // Sincronizar desde el servidor al montar
+  useEffect(() => {
+    fetch(`${import.meta.env.VITE_API_URL}/configuracion`)
+      .then(r => r.ok ? r.json() : null)
+      .catch(() => null)
+      .then((data: { medico?: Partial<DatosMedico> } | null) => {
+        if (!data?.medico || Object.keys(data.medico).length === 0) return
+        const m = { ...DEFAULTS, ...data.medico }
+        setMedico(m)
+        localStorage.setItem('hce_medico', JSON.stringify(m))
+      })
+  }, [])
 
   function guardar(datos: DatosMedico) {
     setMedico(datos)
     localStorage.setItem('hce_medico', JSON.stringify(datos))
+    apiFetch('/configuracion/medico', { method: 'PUT', body: JSON.stringify(datos) })
+      .catch(err => console.error('Error al guardar datos del médico:', err))
   }
 
   return (

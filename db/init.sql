@@ -564,3 +564,43 @@ INSERT INTO cups_codigo (codigo, descripcion) VALUES
     ('893901', 'Teleconsulta de control o seguimiento por medicina general'),
     ('271501', 'Toma de muestras de sangre venosa'),
     ('901501', 'Electrocardiograma de 12 derivaciones e interpretación');
+
+-- ============================================================
+-- 14. Agenda de citas
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS cita (
+  id                  UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+  fecha               DATE         NOT NULL,
+  hora_inicio         TIME         NOT NULL,
+  duracion_minutos    INT          NOT NULL DEFAULT 30,
+  paciente_documento  VARCHAR(20),
+  paciente_nombre     VARCHAR(200) NOT NULL,
+  paciente_telefono   VARCHAR(20),
+  motivo              VARCHAR(300),
+  estado              VARCHAR(20)  NOT NULL DEFAULT 'programada'
+                      CHECK (estado IN ('programada','confirmada','cancelada','no_asistio','completada')),
+  notas               TEXT,
+  creado_por          VARCHAR(100) NOT NULL,
+  fecha_creacion      TIMESTAMPTZ  NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_cita_fecha ON cita(fecha);
+CREATE INDEX IF NOT EXISTS idx_cita_paciente_doc ON cita(paciente_documento) WHERE paciente_documento IS NOT NULL;
+
+-- ============================================================
+-- 15. Configuración del sistema (tema + datos del médico)
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS configuracion_sistema (
+  id                  INT          PRIMARY KEY DEFAULT 1,
+  tema                JSONB        NOT NULL DEFAULT '{}',
+  medico              JSONB        NOT NULL DEFAULT '{}',
+  actualizado_por     VARCHAR(100),
+  fecha_actualizacion TIMESTAMPTZ  NOT NULL DEFAULT now(),
+  CONSTRAINT solo_una_fila CHECK (id = 1)
+);
+
+INSERT INTO configuracion_sistema (id, tema, medico)
+VALUES (1, '{}', '{}')
+ON CONFLICT DO NOTHING;

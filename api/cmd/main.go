@@ -56,6 +56,7 @@ func main() {
 
 	// Rutas públicas
 	r.Mount("/auth", handlers.AuthRouter(db, jwtSecreto))
+	r.Get("/configuracion", handlers.GetConfiguracion(db))
 
 	// Rutas protegidas — requieren token JWT
 	r.Group(func(r chi.Router) {
@@ -74,6 +75,8 @@ func main() {
 		r.Mount("/eventos-adversos", handlers.EventosAdversosRouter(db))
 		r.Mount("/proveedores", handlers.ProveedoresRouter(db))
 		r.Mount("/citas", handlers.CitasRouter(db))
+		r.Put("/configuracion/tema", handlers.PutConfiguracionTema(db))
+		r.Put("/configuracion/medico", handlers.PutConfiguracionMedico(db))
 
 		// Solo admin
 		r.With(appmiddleware.RequiereRol("admin")).Mount("/usuarios", handlers.UsuariosRouter(db))
