@@ -2,7 +2,9 @@ import { useState } from 'react'
 import { useParams } from 'react-router'
 import { usePaciente, useActualizarPaciente, type PacienteInput } from '../../api/pacientes'
 import { SelectorMunicipioCol, SelectorPais } from '../../components/SelectorUbicacion'
+import { SelectorOcupacion } from '../../components/SelectorOcupacion'
 import { useMunicipio } from '../../api/divipola'
+import { useOcupacion } from '../../api/ocupaciones'
 import { nombrePais } from '../../data/paises'
 
 const inputCls = 'w-full border border-slate-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500'
@@ -23,11 +25,14 @@ export default function FichaPaciente() {
   const [editando, setEditando] = useState(false)
   const [form, setForm] = useState<Partial<PacienteInput>>({})
   const { data: municipioNombre } = useMunicipio(p?.codigo_municipio_residencia ?? '')
+  const { data: ocupacionData } = useOcupacion(p?.ocupacion ?? '')
+  const [editOcupacionNombre, setEditOcupacionNombre] = useState('')
 
   if (isLoading) return <div className="p-6 text-sm text-slate-400">Cargando datos del paciente...</div>
   if (isError || !p) return <div className="p-6 text-sm text-red-500">Error al cargar los datos del paciente.</div>
 
   function iniciarEdicion() {
+    setEditOcupacionNombre(ocupacionData?.nombre ?? '')
     setForm({
       tipo_documento: p!.tipo_documento,
       nombre_primero: p!.nombre_primero,
@@ -87,7 +92,7 @@ export default function FichaPaciente() {
       ['Fecha de nacimiento', new Date(p.fecha_nacimiento).toLocaleDateString('es-CO')],
       ['Género', p.genero === 'M' ? 'Masculino' : p.genero === 'F' ? 'Femenino' : 'Intersexual'],
       ['Estado civil', p.estado_civil],
-      ['Ocupación', p.ocupacion],
+      ['Ocupación', ocupacionData?.nombre ?? p.ocupacion],
       ['Municipio de residencia', municipioNombre ?? p.codigo_municipio_residencia],
       ['País de origen', nombrePais(p.codigo_pais_origen)],
       ['Zona de residencia', p.zona_residencia === 'U' ? 'Urbana' : 'Rural'],
@@ -194,8 +199,12 @@ export default function FichaPaciente() {
           </select>
         </Campo>
         <Campo label="Ocupación">
-          <input type="text" value={form.ocupacion ?? ''} onChange={(e) => set('ocupacion', e.target.value)}
-            className={inputCls} />
+          <SelectorOcupacion
+            value={form.ocupacion ?? ''}
+            nombre={editOcupacionNombre}
+            onChange={(codigo, nombre) => { set('ocupacion', codigo); setEditOcupacionNombre(nombre) }}
+            className={inputCls}
+          />
         </Campo>
       </div>
 

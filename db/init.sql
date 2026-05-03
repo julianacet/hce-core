@@ -621,3 +621,12 @@ CREATE TABLE IF NOT EXISTS municipio (
 );
 
 CREATE INDEX IF NOT EXISTS idx_municipio_departamento ON municipio(departamento);
+
+-- ============================================================
+-- 17. CNO — Clasificación Nacional de Ocupaciones
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS ocupacion (
+  codigo  VARCHAR(10)   PRIMARY KEY,
+  nombre  VARCHAR(300)  NOT NULL
+);

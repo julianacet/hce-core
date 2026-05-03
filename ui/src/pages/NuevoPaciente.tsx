@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router'
 import { useCrearPaciente, type PacienteInput } from '../api/pacientes'
 import { SelectorMunicipioCol, SelectorPais } from '../components/SelectorUbicacion'
+import { SelectorOcupacion } from '../components/SelectorOcupacion'
 
 const initialForm: PacienteInput = {
   tipo_documento: 'CC',
@@ -56,6 +57,7 @@ export default function NuevoPaciente() {
   const navigate = useNavigate()
   const crear = useCrearPaciente()
   const [form, setForm] = useState<PacienteInput>(initialForm)
+  const [ocupacionNombre, setOcupacionNombre] = useState('')
 
   function set(campo: keyof PacienteInput, valor: string | boolean) {
     setForm((prev) => ({ ...prev, [campo]: valor }))
@@ -157,8 +159,12 @@ export default function NuevoPaciente() {
               </select>
             </Campo>
             <Campo label="Ocupación">
-              <input type="text" value={form.ocupacion} onChange={(e) => set('ocupacion', e.target.value)}
-                placeholder="Ej: Docente" className={inputCls} />
+              <SelectorOcupacion
+                value={form.ocupacion}
+                nombre={ocupacionNombre}
+                onChange={(codigo, nombre) => { set('ocupacion', codigo); setOcupacionNombre(nombre) }}
+                className={inputCls}
+              />
             </Campo>
           </div>
         </Seccion>

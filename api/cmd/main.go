@@ -63,6 +63,7 @@ func main() {
 	r.Mount("/auth", handlers.AuthRouter(db, jwtSecreto))
 	r.Get("/configuracion", handlers.GetConfiguracion(db))
 	r.Mount("/divipola", handlers.DivipolaRouter(db))
+	r.Mount("/ocupaciones", handlers.OcupacionesRouter(db))
 
 	// Rutas protegidas — requieren token JWT
 	r.Group(func(r chi.Router) {
