@@ -604,3 +604,20 @@ CREATE TABLE IF NOT EXISTS configuracion_sistema (
 INSERT INTO configuracion_sistema (id, tema, medico)
 VALUES (1, '{}', '{}')
 ON CONFLICT DO NOTHING;
+
+-- ============================================================
+-- 16. DIVIPOLA — División Político-Administrativa de Colombia
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS departamento (
+  codigo  CHAR(2)       PRIMARY KEY,
+  nombre  VARCHAR(100)  NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS municipio (
+  codigo        CHAR(5)       PRIMARY KEY,
+  nombre        VARCHAR(100)  NOT NULL,
+  departamento  CHAR(2)       NOT NULL REFERENCES departamento(codigo)
+);
+
+CREATE INDEX IF NOT EXISTS idx_municipio_departamento ON municipio(departamento);

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router'
 import { useCrearPaciente, type PacienteInput } from '../api/pacientes'
+import { SelectorMunicipioCol, SelectorPais } from '../components/SelectorUbicacion'
 
 const initialForm: PacienteInput = {
   tipo_documento: 'CC',
@@ -173,15 +174,14 @@ export default function NuevoPaciente() {
               <input type="email" value={form.correo_electronico} onChange={(e) => set('correo_electronico', e.target.value)}
                 placeholder="Ej: correo@ejemplo.com" className={inputCls} />
             </Campo>
+            <SelectorMunicipioCol
+              value={form.codigo_municipio_residencia}
+              onChange={(v) => set('codigo_municipio_residencia', v)}
+              required
+            />
             <Campo label="Dirección">
               <input type="text" value={form.direccion} onChange={(e) => set('direccion', e.target.value)}
                 placeholder="Ej: Cra 10 # 20-30" className={inputCls} />
-            </Campo>
-            <Campo label="Municipio de residencia" required>
-              <input type="text" value={form.codigo_municipio_residencia}
-                onChange={(e) => set('codigo_municipio_residencia', e.target.value)}
-                required placeholder="Código DIVIPOLA — ej: 11001 (Bogotá), 73001 (Ibagué)"
-                maxLength={5} className={inputCls} />
             </Campo>
             <Campo label="Zona de residencia" required>
               <select value={form.zona_residencia} onChange={(e) => set('zona_residencia', e.target.value)} className={inputCls}>
@@ -189,9 +189,13 @@ export default function NuevoPaciente() {
                 <option value="R">Rural</option>
               </select>
             </Campo>
-            <Campo label="País de origen (código)" required>
-              <input type="text" value={form.codigo_pais_origen} onChange={(e) => set('codigo_pais_origen', e.target.value)}
-                required placeholder="170 = Colombia" className={inputCls} />
+            <Campo label="País de origen" required>
+              <SelectorPais
+                value={form.codigo_pais_origen}
+                onChange={(v) => set('codigo_pais_origen', v)}
+                required
+                className={inputCls}
+              />
             </Campo>
           </div>
         </Seccion>

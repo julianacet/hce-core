@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import { useParams } from 'react-router'
 import { usePaciente, useActualizarPaciente, type PacienteInput } from '../../api/pacientes'
+import { SelectorMunicipioCol, SelectorPais } from '../../components/SelectorUbicacion'
+import { useMunicipio } from '../../api/divipola'
+import { nombrePais } from '../../data/paises'
 
 const inputCls = 'w-full border border-slate-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500'
 
@@ -19,6 +22,7 @@ export default function FichaPaciente() {
   const actualizar = useActualizarPaciente(id ?? '')
   const [editando, setEditando] = useState(false)
   const [form, setForm] = useState<Partial<PacienteInput>>({})
+  const { data: municipioNombre } = useMunicipio(p?.codigo_municipio_residencia ?? '')
 
   if (isLoading) return <div className="p-6 text-sm text-slate-400">Cargando datos del paciente...</div>
   if (isError || !p) return <div className="p-6 text-sm text-red-500">Error al cargar los datos del paciente.</div>
@@ -84,7 +88,8 @@ export default function FichaPaciente() {
       ['Género', p.genero === 'M' ? 'Masculino' : p.genero === 'F' ? 'Femenino' : 'Intersexual'],
       ['Estado civil', p.estado_civil],
       ['Ocupación', p.ocupacion],
-      ['Municipio de residencia', p.codigo_municipio_residencia],
+      ['Municipio de residencia', municipioNombre ?? p.codigo_municipio_residencia],
+      ['País de origen', nombrePais(p.codigo_pais_origen)],
       ['Zona de residencia', p.zona_residencia === 'U' ? 'Urbana' : 'Rural'],
       ['Tipo de usuario', p.tipo_usuario],
       ['EPS', p.codigo_eps],
@@ -204,14 +209,14 @@ export default function FichaPaciente() {
           <input type="email" value={form.correo_electronico ?? ''} onChange={(e) => set('correo_electronico', e.target.value)}
             className={inputCls} />
         </Campo>
+        <SelectorMunicipioCol
+          value={form.codigo_municipio_residencia ?? ''}
+          onChange={(v) => set('codigo_municipio_residencia', v)}
+          required
+        />
         <Campo label="Dirección">
           <input type="text" value={form.direccion ?? ''} onChange={(e) => set('direccion', e.target.value)}
             className={inputCls} />
-        </Campo>
-        <Campo label="Municipio (código DIVIPOLA)">
-          <input type="text" value={form.codigo_municipio_residencia ?? ''} maxLength={5}
-            onChange={(e) => set('codigo_municipio_residencia', e.target.value)}
-            required className={inputCls} />
         </Campo>
         <Campo label="Zona de residencia *">
           <select value={form.zona_residencia} onChange={(e) => set('zona_residencia', e.target.value)} className={inputCls}>
@@ -219,9 +224,13 @@ export default function FichaPaciente() {
             <option value="R">Rural</option>
           </select>
         </Campo>
-        <Campo label="País de origen (código)">
-          <input type="text" value={form.codigo_pais_origen ?? ''} onChange={(e) => set('codigo_pais_origen', e.target.value)}
-            required className={inputCls} />
+        <Campo label="País de origen">
+          <SelectorPais
+            value={form.codigo_pais_origen ?? '170'}
+            onChange={(v) => set('codigo_pais_origen', v)}
+            required
+            className={inputCls}
+          />
         </Campo>
       </div>
 
