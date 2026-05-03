@@ -12,6 +12,7 @@ services:
       - ./db/init.sql:/docker-entrypoint-initdb.d/01_init.sql
       - ./db/seed_divipola.sql:/docker-entrypoint-initdb.d/02_seed_divipola.sql
       - ./db/seed_ocupaciones.sql:/docker-entrypoint-initdb.d/03_seed_ocupaciones.sql
+      - ./db/seed_eps.sql:/docker-entrypoint-initdb.d/04_seed_eps.sql
     ports:
       - "${DB_PORT}:5432"
 

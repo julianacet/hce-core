@@ -1,0 +1,64 @@
+import { useState, useEffect } from 'react'
+import { useRegimenes, useEps, useEpsInfo } from '../api/eps'
+
+const selectCls = 'w-full border border-slate-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed'
+const labelCls = 'block text-xs text-slate-500 mb-1'
+
+interface Props {
+  value: string
+  onChange: (codigo: string) => void
+  required?: boolean
+}
+
+// Renders as two sibling divs — place directly inside a grid grid-cols-2 container
+export function SelectorEps({ value, onChange, required }: Props) {
+  const [regimen, setRegimen] = useState('')
+  const { data: regimenes = [], isLoading: loadingReg } = useRegimenes()
+  const { data: entidades = [], isLoading: loadingEps } = useEps(regimen)
+  const { data: epsInfo } = useEpsInfo(value)
+
+  // Cuando carga el dato de la EPS actual, inicializar el régimen
+  useEffect(() => {
+    if (epsInfo?.regimen && !regimen) setRegimen(epsInfo.regimen)
+  }, [epsInfo])
+
+  function handleRegimen(nuevoRegimen: string) {
+    setRegimen(nuevoRegimen)
+    onChange('')
+  }
+
+  return (
+    <>
+      <div>
+        <label className={labelCls}>Régimen</label>
+        <select
+          value={regimen}
+          onChange={e => handleRegimen(e.target.value)}
+          className={selectCls}
+          disabled={loadingReg}
+        >
+          <option value="">{loadingReg ? 'Cargando...' : '— Seleccionar —'}</option>
+          {regimenes.map(r => (
+            <option key={r.codigo} value={r.codigo}>{r.nombre}</option>
+          ))}
+        </select>
+      </div>
+      <div>
+        <label className={labelCls}>
+          EPS / Aseguradora{required && <span className="text-red-400 ml-0.5">*</span>}
+        </label>
+        <select
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          className={selectCls}
+          disabled={!regimen || loadingEps}
+        >
+          <option value="">{loadingEps ? 'Cargando...' : '— Seleccionar —'}</option>
+          {entidades.map(e => (
+            <option key={`${e.codigo}-${e.regimen}`} value={e.codigo}>{e.nombre}</option>
+          ))}
+        </select>
+      </div>
+    </>
+  )
+}

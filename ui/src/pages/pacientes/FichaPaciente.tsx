@@ -3,8 +3,10 @@ import { useParams } from 'react-router'
 import { usePaciente, useActualizarPaciente, type PacienteInput } from '../../api/pacientes'
 import { SelectorMunicipioCol, SelectorPais } from '../../components/SelectorUbicacion'
 import { SelectorOcupacion } from '../../components/SelectorOcupacion'
+import { SelectorEps } from '../../components/SelectorEps'
 import { useMunicipio } from '../../api/divipola'
 import { useOcupacion } from '../../api/ocupaciones'
+import { useEpsInfo } from '../../api/eps'
 import { nombrePais } from '../../data/paises'
 
 const inputCls = 'w-full border border-slate-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500'
@@ -26,6 +28,7 @@ export default function FichaPaciente() {
   const [form, setForm] = useState<Partial<PacienteInput>>({})
   const { data: municipioNombre } = useMunicipio(p?.codigo_municipio_residencia ?? '')
   const { data: ocupacionData } = useOcupacion(p?.ocupacion ?? '')
+  const { data: epsData } = useEpsInfo(p?.codigo_eps ?? '')
   const [editOcupacionNombre, setEditOcupacionNombre] = useState('')
 
   if (isLoading) return <div className="p-6 text-sm text-slate-400">Cargando datos del paciente...</div>
@@ -97,7 +100,7 @@ export default function FichaPaciente() {
       ['País de origen', nombrePais(p.codigo_pais_origen)],
       ['Zona de residencia', p.zona_residencia === 'U' ? 'Urbana' : 'Rural'],
       ['Tipo de usuario', p.tipo_usuario],
-      ['EPS', p.codigo_eps],
+      ['EPS', epsData ? `${epsData.nombre}` : p.codigo_eps],
       ['Dirección', p.direccion],
       ['Teléfono', p.telefono],
       ['Correo electrónico', p.correo_electronico],
@@ -271,10 +274,10 @@ export default function FichaPaciente() {
             <option value="06">No asegurado</option>
           </select>
         </Campo>
-        <Campo label="EPS / Aseguradora">
-          <input type="text" value={form.codigo_eps ?? ''} onChange={(e) => set('codigo_eps', e.target.value)}
-            className={inputCls} />
-        </Campo>
+        <SelectorEps
+          value={form.codigo_eps ?? ''}
+          onChange={(v) => set('codigo_eps', v)}
+        />
         <Campo label="Pertenencia étnica *">
           <select value={form.codigo_etnia} onChange={(e) => set('codigo_etnia', e.target.value)} className={inputCls}>
             <option value="00">Sin pertenencia étnica</option>

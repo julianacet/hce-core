@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router'
 import { useCrearPaciente, type PacienteInput } from '../api/pacientes'
 import { SelectorMunicipioCol, SelectorPais } from '../components/SelectorUbicacion'
 import { SelectorOcupacion } from '../components/SelectorOcupacion'
+import { SelectorEps } from '../components/SelectorEps'
 
 const initialForm: PacienteInput = {
   tipo_documento: 'CC',
@@ -160,7 +161,7 @@ export default function NuevoPaciente() {
             </Campo>
             <Campo label="Ocupación">
               <SelectorOcupacion
-                value={form.ocupacion}
+                value={form.ocupacion ?? ''}
                 nombre={ocupacionNombre}
                 onChange={(codigo, nombre) => { set('ocupacion', codigo); setOcupacionNombre(nombre) }}
                 className={inputCls}
@@ -237,10 +238,10 @@ export default function NuevoPaciente() {
                 <option value="06">No asegurado</option>
               </select>
             </Campo>
-            <Campo label="EPS / Aseguradora">
-              <input type="text" value={form.codigo_eps} onChange={(e) => set('codigo_eps', e.target.value)}
-                placeholder="Ej: EPS001" className={inputCls} />
-            </Campo>
+            <SelectorEps
+              value={form.codigo_eps ?? ''}
+              onChange={(v) => set('codigo_eps', v)}
+            />
             <Campo label="Pertenencia étnica" required>
               <select value={form.codigo_etnia} onChange={(e) => set('codigo_etnia', e.target.value)} className={inputCls}>
                 <option value="00">Sin pertenencia étnica</option>

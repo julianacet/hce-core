@@ -630,3 +630,23 @@ CREATE TABLE IF NOT EXISTS ocupacion (
   codigo  VARCHAR(10)   PRIMARY KEY,
   nombre  VARCHAR(300)  NOT NULL
 );
+
+-- ============================================================
+-- 18. EPS — Entidades del Sistema General de Seguridad Social
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS regimen_salud (
+  codigo  VARCHAR(10)   PRIMARY KEY,
+  nombre  VARCHAR(100)  NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS eps (
+  id       SERIAL        PRIMARY KEY,
+  codigo   VARCHAR(20)   NOT NULL,
+  nombre   VARCHAR(400)  NOT NULL,
+  regimen  VARCHAR(10)   NOT NULL REFERENCES regimen_salud(codigo),
+  UNIQUE (codigo, regimen)
+);
+
+CREATE INDEX IF NOT EXISTS idx_eps_regimen ON eps(regimen);
+CREATE INDEX IF NOT EXISTS idx_eps_codigo  ON eps(codigo);
