@@ -54,7 +54,8 @@ func (h *PacienteHandler) listar(w http.ResponseWriter, r *http.Request) {
 		       codigo_pais_origen, codigo_municipio_residencia, zona_residencia,
 		       tipo_usuario, codigo_etnia, codigo_discapacidad, codigo_eps,
 		       telefono, correo_electronico, politica_datos_aceptada,
-		       fecha_creacion, creado_por
+		       fecha_creacion, creado_por,
+		       EXTRACT(YEAR FROM AGE(NOW(), fecha_nacimiento))::int AS edad
 		FROM paciente
 		WHERE es_ultima_version = TRUE AND esta_activo = TRUE`
 
@@ -114,7 +115,8 @@ func (h *PacienteHandler) obtener(w http.ResponseWriter, r *http.Request) {
 		       codigo_pais_origen, codigo_municipio_residencia, zona_residencia,
 		       tipo_usuario, codigo_etnia, codigo_discapacidad, codigo_eps,
 		       telefono, correo_electronico, politica_datos_aceptada,
-		       fecha_creacion, creado_por
+		       fecha_creacion, creado_por,
+		       EXTRACT(YEAR FROM AGE(NOW(), fecha_nacimiento))::int AS edad
 		FROM paciente
 		WHERE numero_documento = $1 AND es_ultima_version = TRUE AND esta_activo = TRUE`,
 		documento,
@@ -229,7 +231,7 @@ func escanearPaciente(row scanner) (models.Paciente, error) {
 		&p.CodigoPaisOrigen, &p.CodigoMunicipioResidencia, &p.ZonaResidencia,
 		&p.TipoUsuario, &p.CodigoEtnia, &p.CodigoDiscapacidad, &p.CodigoEps,
 		&p.Telefono, &p.CorreoElectronico, &p.PoliticaDatosAceptada,
-		&p.FechaCreacion, &p.CreadoPor,
+		&p.FechaCreacion, &p.CreadoPor, &p.Edad,
 	)
 	if err != nil {
 		return models.Paciente{}, err
@@ -264,7 +266,8 @@ func insertarPaciente(ctx context.Context, db queryRower, input models.PacienteI
 		          codigo_pais_origen, codigo_municipio_residencia, zona_residencia,
 		          tipo_usuario, codigo_etnia, codigo_discapacidad, codigo_eps,
 		          telefono, correo_electronico, politica_datos_aceptada,
-		          fecha_creacion, creado_por`,
+		          fecha_creacion, creado_por,
+		          EXTRACT(YEAR FROM AGE(NOW(), fecha_nacimiento))::int AS edad`,
 		version,
 		input.TipoDocumento, input.NumeroDocumento, input.NombrePrimero, input.NombreSegundo,
 		input.ApellidoPrimero, input.ApellidoSegundo, input.FechaNacimiento, input.Genero,

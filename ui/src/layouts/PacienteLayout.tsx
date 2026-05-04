@@ -34,7 +34,9 @@ export default function PacienteLayout() {
             <p className="section-title mb-0.5">Paciente</p>
             <h2 className="page-title" style={{ fontSize: 'var(--hce-font-lg)' }}>{nombreCompleto}</h2>
             <p className="page-desc" style={{ marginTop: '0.125rem' }}>
-              {paciente ? `${paciente.tipo_documento} ${paciente.numero_documento}` : id}
+              {paciente
+                ? `${paciente.tipo_documento} ${paciente.numero_documento} · ${paciente.edad} años`
+                : id}
             </p>
           </div>
           <button

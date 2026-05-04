@@ -32,6 +32,16 @@ const initialForm: PacienteInput = {
   politica_datos_aceptada: false,
 }
 
+function calcularEdad(fechaStr: string): number | null {
+  if (!fechaStr) return null
+  const hoy = new Date()
+  const nac = new Date(fechaStr)
+  let edad = hoy.getFullYear() - nac.getFullYear()
+  const m = hoy.getMonth() - nac.getMonth()
+  if (m < 0 || (m === 0 && hoy.getDate() < nac.getDate())) edad--
+  return edad >= 0 ? edad : null
+}
+
 function Seccion({ titulo, children }: { titulo: string; children: React.ReactNode }) {
   return (
     <div className="card-hce p-6 space-y-4">
@@ -141,11 +151,17 @@ export default function NuevoPaciente() {
               <input type="date" value={form.fecha_nacimiento} onChange={(e) => set('fecha_nacimiento', e.target.value)}
                 required className="input-hce" />
             </Campo>
+            <Campo label="Edad">
+              <input type="text" readOnly
+                value={form.fecha_nacimiento ? (calcularEdad(form.fecha_nacimiento) !== null ? `${calcularEdad(form.fecha_nacimiento)} años` : '') : ''}
+                placeholder="Se calcula automáticamente"
+                className="input-hce bg-slate-50 text-slate-500 cursor-default" />
+            </Campo>
             <Campo label="Género" required>
               <select value={form.genero} onChange={(e) => set('genero', e.target.value)} className="input-hce">
                 <option value="M">Masculino</option>
                 <option value="F">Femenino</option>
-                <option value="I">Intersexual</option>
+                <option value="X">Otro</option>
               </select>
             </Campo>
             <Campo label="Estado civil">

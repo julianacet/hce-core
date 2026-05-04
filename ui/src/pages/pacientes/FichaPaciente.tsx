@@ -9,6 +9,16 @@ import { useOcupacion } from '../../api/ocupaciones'
 import { useEpsInfo } from '../../api/eps'
 import { nombrePais } from '../../data/paises'
 
+function calcularEdad(fechaStr: string): number | null {
+  if (!fechaStr) return null
+  const hoy = new Date()
+  const nac = new Date(fechaStr)
+  let edad = hoy.getFullYear() - nac.getFullYear()
+  const m = hoy.getMonth() - nac.getMonth()
+  if (m < 0 || (m === 0 && hoy.getDate() < nac.getDate())) edad--
+  return edad >= 0 ? edad : null
+}
+
 function Campo({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
@@ -91,7 +101,8 @@ export default function FichaPaciente() {
       ['Primer apellido', p.apellido_primero],
       ['Segundo apellido', p.apellido_segundo],
       ['Fecha de nacimiento', new Date(p.fecha_nacimiento).toLocaleDateString('es-CO')],
-      ['Género', p.genero === 'M' ? 'Masculino' : p.genero === 'F' ? 'Femenino' : 'Intersexual'],
+      ['Edad', `${p.edad} años`],
+      ['Género', p.genero === 'M' ? 'Masculino' : p.genero === 'F' ? 'Femenino' : 'Otro'],
       ['Estado civil', p.estado_civil],
       ['Ocupación', ocupacionData?.nombre ?? p.ocupacion],
       ['Municipio de residencia', municipioNombre ?? p.codigo_municipio_residencia],
@@ -180,11 +191,17 @@ export default function FichaPaciente() {
           <input type="date" value={form.fecha_nacimiento ?? ''} onChange={(e) => set('fecha_nacimiento', e.target.value)}
             required className="input-hce" />
         </Campo>
+        <Campo label="Edad">
+          <input type="text" readOnly
+            value={form.fecha_nacimiento ? (calcularEdad(form.fecha_nacimiento) !== null ? `${calcularEdad(form.fecha_nacimiento)} años` : '') : ''}
+            placeholder="Se calcula automáticamente"
+            className="input-hce bg-slate-50 text-slate-500 cursor-default" />
+        </Campo>
         <Campo label="Género *">
           <select value={form.genero} onChange={(e) => set('genero', e.target.value)} className="input-hce">
             <option value="M">Masculino</option>
             <option value="F">Femenino</option>
-            <option value="I">Intersexual</option>
+            <option value="X">Otro</option>
           </select>
         </Campo>
         <Campo label="Estado civil">

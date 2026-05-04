@@ -33,6 +33,7 @@ type Paciente struct {
 	PoliticaDatosAceptada     bool       `json:"politica_datos_aceptada"`
 	FechaCreacion             time.Time  `json:"fecha_creacion"`
 	CreadoPor                 string     `json:"creado_por"`
+	Edad                      int        `json:"edad"`
 }
 
 // PacienteInput es lo que llega en el body al crear o actualizar un paciente.

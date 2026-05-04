@@ -30,10 +30,11 @@ export type Paciente = {
   numero_version: number
   fecha_creacion: string
   creado_por: string
+  edad: number
 }
 
 export type PacienteInput = Omit<Paciente,
-  'id' | 'numero_version' | 'es_ultima_version' | 'esta_activo' | 'fecha_creacion' | 'creado_por'
+  'id' | 'numero_version' | 'es_ultima_version' | 'esta_activo' | 'fecha_creacion' | 'creado_por' | 'edad'
 >
 
 export function usePacientes(q?: string) {
