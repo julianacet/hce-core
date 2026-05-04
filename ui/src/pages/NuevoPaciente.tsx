@@ -34,8 +34,8 @@ const initialForm: PacienteInput = {
 
 function Seccion({ titulo, children }: { titulo: string; children: React.ReactNode }) {
   return (
-    <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-4">
-      <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{titulo}</h4>
+    <div className="card-hce p-6 space-y-4">
+      <h4 className="section-title">{titulo}</h4>
       {children}
     </div>
   )
@@ -51,8 +51,6 @@ function Campo({ label, required, children }: { label: string; required?: boolea
     </div>
   )
 }
-
-const inputCls = 'w-full border border-slate-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500'
 
 export default function NuevoPaciente() {
   const navigate = useNavigate()
@@ -80,10 +78,12 @@ export default function NuevoPaciente() {
   }
 
   return (
-    <div className="p-6 max-w-3xl mx-auto space-y-4">
-      <div className="mb-2">
-        <h2 className="text-xl font-semibold text-slate-800">Nuevo paciente</h2>
-        <p className="text-sm text-slate-500 mt-1">Completar los campos obligatorios marcados con *</p>
+    <div className="page-hce space-y-4">
+      <div className="page-header">
+        <div>
+          <h2 className="page-title">Nuevo paciente</h2>
+          <p className="page-desc">Completar los campos obligatorios marcados con *</p>
+        </div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -92,7 +92,7 @@ export default function NuevoPaciente() {
         <Seccion titulo="Identificación">
           <div className="grid grid-cols-2 gap-4">
             <Campo label="Tipo de documento" required>
-              <select value={form.tipo_documento} onChange={(e) => set('tipo_documento', e.target.value)} className={inputCls}>
+              <select value={form.tipo_documento} onChange={(e) => set('tipo_documento', e.target.value)} className="input-hce">
                 <option value="CC">CC — Cédula de Ciudadanía</option>
                 <option value="TI">TI — Tarjeta de Identidad</option>
                 <option value="CE">CE — Cédula de Extranjería</option>
@@ -107,7 +107,7 @@ export default function NuevoPaciente() {
             </Campo>
             <Campo label="Número de documento" required>
               <input type="text" value={form.numero_documento} onChange={(e) => set('numero_documento', e.target.value)}
-                required placeholder="Ej: 1234567890" className={inputCls} />
+                required placeholder="Ej: 1234567890" className="input-hce" />
             </Campo>
           </div>
         </Seccion>
@@ -117,19 +117,19 @@ export default function NuevoPaciente() {
           <div className="grid grid-cols-2 gap-4">
             <Campo label="Primer nombre" required>
               <input type="text" value={form.nombre_primero} onChange={(e) => set('nombre_primero', e.target.value)}
-                required placeholder="Ej: María" className={inputCls} />
+                required placeholder="Ej: María" className="input-hce" />
             </Campo>
             <Campo label="Segundo nombre">
               <input type="text" value={form.nombre_segundo} onChange={(e) => set('nombre_segundo', e.target.value)}
-                placeholder="Opcional" className={inputCls} />
+                placeholder="Opcional" className="input-hce" />
             </Campo>
             <Campo label="Primer apellido" required>
               <input type="text" value={form.apellido_primero} onChange={(e) => set('apellido_primero', e.target.value)}
-                required placeholder="Ej: García" className={inputCls} />
+                required placeholder="Ej: García" className="input-hce" />
             </Campo>
             <Campo label="Segundo apellido">
               <input type="text" value={form.apellido_segundo} onChange={(e) => set('apellido_segundo', e.target.value)}
-                placeholder="Opcional" className={inputCls} />
+                placeholder="Opcional" className="input-hce" />
             </Campo>
           </div>
         </Seccion>
@@ -139,17 +139,17 @@ export default function NuevoPaciente() {
           <div className="grid grid-cols-2 gap-4">
             <Campo label="Fecha de nacimiento" required>
               <input type="date" value={form.fecha_nacimiento} onChange={(e) => set('fecha_nacimiento', e.target.value)}
-                required className={inputCls} />
+                required className="input-hce" />
             </Campo>
             <Campo label="Género" required>
-              <select value={form.genero} onChange={(e) => set('genero', e.target.value)} className={inputCls}>
+              <select value={form.genero} onChange={(e) => set('genero', e.target.value)} className="input-hce">
                 <option value="M">Masculino</option>
                 <option value="F">Femenino</option>
                 <option value="I">Intersexual</option>
               </select>
             </Campo>
             <Campo label="Estado civil">
-              <select value={form.estado_civil} onChange={(e) => set('estado_civil', e.target.value)} className={inputCls}>
+              <select value={form.estado_civil} onChange={(e) => set('estado_civil', e.target.value)} className="input-hce">
                 <option value="">— Seleccionar —</option>
                 <option value="01">Soltero/a</option>
                 <option value="02">Casado/a</option>
@@ -164,7 +164,6 @@ export default function NuevoPaciente() {
                 value={form.ocupacion ?? ''}
                 nombre={ocupacionNombre}
                 onChange={(codigo, nombre) => { set('ocupacion', codigo); setOcupacionNombre(nombre) }}
-                className={inputCls}
               />
             </Campo>
           </div>
@@ -175,11 +174,11 @@ export default function NuevoPaciente() {
           <div className="grid grid-cols-2 gap-4">
             <Campo label="Teléfono">
               <input type="tel" value={form.telefono} onChange={(e) => set('telefono', e.target.value)}
-                placeholder="Ej: 3001234567" className={inputCls} />
+                placeholder="Ej: 3001234567" className="input-hce" />
             </Campo>
             <Campo label="Correo electrónico">
               <input type="email" value={form.correo_electronico} onChange={(e) => set('correo_electronico', e.target.value)}
-                placeholder="Ej: correo@ejemplo.com" className={inputCls} />
+                placeholder="Ej: correo@ejemplo.com" className="input-hce" />
             </Campo>
             <SelectorMunicipioCol
               value={form.codigo_municipio_residencia}
@@ -188,10 +187,10 @@ export default function NuevoPaciente() {
             />
             <Campo label="Dirección">
               <input type="text" value={form.direccion} onChange={(e) => set('direccion', e.target.value)}
-                placeholder="Ej: Cra 10 # 20-30" className={inputCls} />
+                placeholder="Ej: Cra 10 # 20-30" className="input-hce" />
             </Campo>
             <Campo label="Zona de residencia" required>
-              <select value={form.zona_residencia} onChange={(e) => set('zona_residencia', e.target.value)} className={inputCls}>
+              <select value={form.zona_residencia} onChange={(e) => set('zona_residencia', e.target.value)} className="input-hce">
                 <option value="U">Urbana</option>
                 <option value="R">Rural</option>
               </select>
@@ -201,7 +200,6 @@ export default function NuevoPaciente() {
                 value={form.codigo_pais_origen}
                 onChange={(v) => set('codigo_pais_origen', v)}
                 required
-                className={inputCls}
               />
             </Campo>
           </div>
@@ -212,15 +210,15 @@ export default function NuevoPaciente() {
           <div className="grid grid-cols-2 gap-4">
             <Campo label="Nombre del responsable">
               <input type="text" value={form.nombre_responsable} onChange={(e) => set('nombre_responsable', e.target.value)}
-                placeholder="Nombre completo" className={inputCls} />
+                placeholder="Nombre completo" className="input-hce" />
             </Campo>
             <Campo label="Teléfono del responsable">
               <input type="tel" value={form.telefono_responsable} onChange={(e) => set('telefono_responsable', e.target.value)}
-                placeholder="Ej: 3009876543" className={inputCls} />
+                placeholder="Ej: 3009876543" className="input-hce" />
             </Campo>
             <Campo label="Parentesco">
               <input type="text" value={form.parentesco_responsable} onChange={(e) => set('parentesco_responsable', e.target.value)}
-                placeholder="Ej: Madre, Cónyuge" className={inputCls} />
+                placeholder="Ej: Madre, Cónyuge" className="input-hce" />
             </Campo>
           </div>
         </Seccion>
@@ -229,7 +227,7 @@ export default function NuevoPaciente() {
         <Seccion titulo="Información de salud">
           <div className="grid grid-cols-2 gap-4">
             <Campo label="Tipo de usuario" required>
-              <select value={form.tipo_usuario} onChange={(e) => set('tipo_usuario', e.target.value)} className={inputCls}>
+              <select value={form.tipo_usuario} onChange={(e) => set('tipo_usuario', e.target.value)} className="input-hce">
                 <option value="01">Contributivo</option>
                 <option value="02">Subsidiado</option>
                 <option value="03">Vinculado</option>
@@ -243,7 +241,7 @@ export default function NuevoPaciente() {
               onChange={(v) => set('codigo_eps', v)}
             />
             <Campo label="Pertenencia étnica" required>
-              <select value={form.codigo_etnia} onChange={(e) => set('codigo_etnia', e.target.value)} className={inputCls}>
+              <select value={form.codigo_etnia} onChange={(e) => set('codigo_etnia', e.target.value)} className="input-hce">
                 <option value="00">Sin pertenencia étnica</option>
                 <option value="01">Indígena</option>
                 <option value="02">ROM (gitano)</option>
@@ -254,7 +252,7 @@ export default function NuevoPaciente() {
               </select>
             </Campo>
             <Campo label="Discapacidad" required>
-              <select value={form.codigo_discapacidad} onChange={(e) => set('codigo_discapacidad', e.target.value)} className={inputCls}>
+              <select value={form.codigo_discapacidad} onChange={(e) => set('codigo_discapacidad', e.target.value)} className="input-hce">
                 <option value="00">Sin discapacidad</option>
                 <option value="01">Física</option>
                 <option value="02">Cognitiva</option>
@@ -284,18 +282,18 @@ export default function NuevoPaciente() {
         </div>
 
         {crear.isError && (
-          <p className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+          <p className="form-error">
             {(crear.error as Error)?.message ?? 'Error al registrar el paciente.'}
           </p>
         )}
 
         <div className="flex justify-end gap-3 pb-6">
           <button type="button" onClick={() => navigate(-1)} disabled={crear.isPending}
-            className="text-sm text-slate-500 hover:text-slate-700 px-4 py-2 rounded-md border border-slate-200 hover:bg-slate-50 transition-colors disabled:opacity-50">
+            className="btn-secondary">
             Cancelar
           </button>
           <button type="submit" disabled={crear.isPending}
-            className="text-sm bg-blue-700 hover:bg-blue-800 text-white px-4 py-2 rounded-md transition-colors disabled:opacity-50">
+            className="btn-primary">
             {crear.isPending ? 'Registrando...' : 'Registrar paciente'}
           </button>
         </div>

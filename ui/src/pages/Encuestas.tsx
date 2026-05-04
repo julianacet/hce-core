@@ -91,14 +91,14 @@ function TabRegistrar() {
   return (
     <form onSubmit={handleSubmit} className="max-w-xl space-y-6">
       {exito && (
-        <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-4 py-3">
+        <div className="form-success">
           <CheckCircle2 size={16} />
           Encuesta registrada exitosamente.
         </div>
       )}
 
-      <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-5">
-        <h3 className="text-sm font-semibold text-slate-700">Datos de la visita</h3>
+      <div className="card-hce p-6 space-y-5">
+        <h3 className="card-title">Datos de la visita</h3>
 
         <div className="grid grid-cols-2 gap-4">
           <div>
@@ -124,9 +124,9 @@ function TabRegistrar() {
         </div>
       </div>
 
-      <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-5">
+      <div className="card-hce p-6 space-y-5">
         <div>
-          <h3 className="text-sm font-semibold text-slate-700">Calificaciones</h3>
+          <h3 className="card-title">Calificaciones</h3>
           <p className="text-xs text-slate-400 mt-0.5">1 = Muy malo · 5 = Excelente</p>
         </div>
 
@@ -143,8 +143,8 @@ function TabRegistrar() {
         </div>
       </div>
 
-      <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-5">
-        <h3 className="text-sm font-semibold text-slate-700">Recomendación</h3>
+      <div className="card-hce p-6 space-y-5">
+        <h3 className="card-title">Recomendación</h3>
 
         <div>
           <p className="text-sm text-slate-700 mb-3">¿Recomendaría este consultorio a un familiar o amigo?</p>
@@ -190,7 +190,7 @@ function TabRegistrar() {
         <button
           type="submit"
           disabled={!completo || crear.isPending}
-          className="bg-blue-700 hover:bg-blue-800 text-white text-sm px-6 py-2 rounded-md transition-colors disabled:opacity-40"
+          className="btn-primary"
         >
           {crear.isPending ? 'Guardando...' : 'Registrar encuesta'}
         </button>
@@ -207,7 +207,7 @@ function Barra({ valor, max = 5 }: { valor: number; max?: number }) {
       <div className="flex-1 h-2 rounded-full bg-slate-100">
         <div className={`h-2 rounded-full ${color}`} style={{ width: `${pct}%` }} />
       </div>
-      <span className="text-sm font-semibold text-slate-700 w-8 text-right">
+      <span className="card-title w-8 text-right">
         {valor.toFixed(1)}
       </span>
     </div>
@@ -259,8 +259,8 @@ function TabResultados() {
       </div>
 
       {/* Promedios por dimensión */}
-      <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-4">
-        <h3 className="text-sm font-semibold text-slate-700">Promedio por dimensión</h3>
+      <div className="card-hce p-6 space-y-4">
+        <h3 className="card-title">Promedio por dimensión</h3>
         <div className="space-y-3">
           {dimensionLabels.map(({ key, label }) => (
             <div key={key}>
@@ -272,9 +272,9 @@ function TabResultados() {
       </div>
 
       {/* Tabla de respuestas */}
-      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+      <div className="card-hce overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-100">
-          <h3 className="text-sm font-semibold text-slate-700">Respuestas individuales</h3>
+          <h3 className="card-title">Respuestas individuales</h3>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
@@ -325,10 +325,12 @@ export default function Encuestas() {
   const [tab, setTab] = useState<Tab>('registrar')
 
   return (
-    <div className="p-8 space-y-6">
-      <div>
-        <h2 className="text-xl font-semibold text-slate-800">Encuestas de satisfacción</h2>
-        <p className="text-sm text-slate-400 mt-0.5">Registro de percepción del servicio por parte de los pacientes</p>
+    <div className="page-hce space-y-6">
+      <div className="page-header">
+        <div>
+          <h2 className="page-title">Encuestas de satisfacción</h2>
+          <p className="page-desc">Registro de percepción del servicio por parte de los pacientes</p>
+        </div>
       </div>
 
       {/* Tabs */}
@@ -340,11 +342,7 @@ export default function Encuestas() {
           <button
             key={id}
             onClick={() => setTab(id)}
-            className={`flex items-center gap-2 px-4 py-2.5 text-sm border-b-2 transition-colors ${
-              tab === id
-                ? 'border-blue-700 text-blue-700 font-medium'
-                : 'border-transparent text-slate-500 hover:text-slate-700'
-            }`}
+            className={`tab-hce ${tab === id ? 'tab-hce--active' : 'tab-hce--inactive'}`}
           >
             <Icon size={15} />
             {label}

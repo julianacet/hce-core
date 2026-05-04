@@ -77,7 +77,7 @@ export default function Login() {
             </div>
 
             {error && (
-              <p className="text-sm rounded-lg px-3 py-2 bg-red-50 text-red-600 border border-red-100">
+              <p className="form-error">
                 Usuario o contraseña incorrectos.
               </p>
             )}

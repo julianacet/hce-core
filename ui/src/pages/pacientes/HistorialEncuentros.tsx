@@ -35,7 +35,7 @@ export default function HistorialEncuentros() {
         </p>
         <button
           onClick={() => navigate(`/pacientes/${id}/encuentros/nuevo`)}
-          className="flex items-center gap-2 bg-blue-700 hover:bg-blue-800 text-white text-sm px-4 py-2 rounded-md transition-colors"
+          className="btn-primary"
         >
           <PlusCircle size={15} />
           Nuevo encuentro
@@ -59,16 +59,16 @@ export default function HistorialEncuentros() {
           <input type="text" value={form.diagnostico} placeholder="Código CIE-10 o descripción"
             onChange={(e) => setForm((p) => ({ ...p, diagnostico: e.target.value }))}
             onKeyDown={(e) => e.key === 'Enter' && aplicar()}
-            className="w-full border border-slate-200 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            className="input-hce" />
         </div>
         <div className="flex gap-2">
           <button onClick={aplicar}
-            className="flex items-center gap-1.5 bg-blue-700 hover:bg-blue-800 text-white text-sm px-3 py-1.5 rounded-md transition-colors">
+            className="btn-primary">
             <Search size={13} /> Filtrar
           </button>
           {hayFiltros && (
             <button onClick={limpiar}
-              className="flex items-center gap-1.5 text-slate-500 hover:text-slate-700 text-sm px-3 py-1.5 rounded-md border border-slate-200 hover:bg-slate-50 transition-colors">
+              className="btn-secondary">
               <X size={13} /> Limpiar
             </button>
           )}

@@ -53,7 +53,7 @@ export default function Inicio() {
   const [logAbierto, setLogAbierto] = useState(false)
 
   return (
-    <div className="p-8 space-y-6 max-w-4xl">
+    <div className="page-hce space-y-6">
 
       {/* Banner principal */}
       <div
@@ -88,10 +88,6 @@ export default function Inicio() {
             </span>
           </div>
         )}
-
-        {/* Círculos decorativos de fondo */}
-        <div className="absolute -right-12 -top-12 w-48 h-48 rounded-full bg-white/5" />
-        <div className="absolute -right-4 -bottom-16 w-64 h-64 rounded-full bg-white/5" />
       </div>
 
       {/* Tarjetas de resumen */}

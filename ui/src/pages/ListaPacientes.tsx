@@ -15,15 +15,15 @@ export default function ListaPacientes() {
   const { data: pacientes = [], isLoading, isError } = usePacientes(filtro || undefined)
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
+    <div className="page-hce">
+      <div className="page-header">
         <div>
-          <h2 className="text-xl font-semibold text-slate-800">Pacientes</h2>
-          <p className="text-sm text-slate-500 mt-1">Listado general de pacientes registrados</p>
+          <h2 className="page-title">Pacientes</h2>
+          <p className="page-desc">Listado general de pacientes registrados</p>
         </div>
         <button
           onClick={() => navigate('/pacientes/nuevo')}
-          className="flex items-center gap-2 bg-blue-700 hover:bg-blue-800 text-white text-sm px-4 py-2 rounded-md transition-colors"
+          className="btn-primary"
         >
           <UserPlus size={15} />
           Nuevo paciente
@@ -39,7 +39,7 @@ export default function ListaPacientes() {
               value={filtro}
               onChange={(e) => setFiltro(e.target.value)}
               placeholder="Buscar por nombre o documento..."
-              className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="input-hce pl-9"
             />
           </div>
         </div>

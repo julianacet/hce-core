@@ -111,7 +111,7 @@ function FormNuevoReporte({ onExito }: { onExito: () => void }) {
 
       {/* Tipo y fecha */}
       <div className="card-hce p-5 space-y-4">
-        <h3 className="text-sm font-semibold" style={{ color: 'var(--hce-text)' }}>Identificación</h3>
+        <h3 className="card-title">Identificación</h3>
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="label-hce">Tipo de evento</label>
@@ -145,7 +145,7 @@ function FormNuevoReporte({ onExito }: { onExito: () => void }) {
 
       {/* Clasificación */}
       <div className="card-hce p-5 space-y-4">
-        <h3 className="text-sm font-semibold" style={{ color: 'var(--hce-text)' }}>Clasificación *</h3>
+        <h3 className="card-title">Clasificación *</h3>
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="label-hce">Tipo de evento</label>
@@ -188,7 +188,7 @@ function FormNuevoReporte({ onExito }: { onExito: () => void }) {
 
       {/* Descripción */}
       <div className="card-hce p-5 space-y-4">
-        <h3 className="text-sm font-semibold" style={{ color: 'var(--hce-text)' }}>Descripción del evento *</h3>
+        <h3 className="card-title">Descripción del evento *</h3>
         <div>
           <label className="label-hce">¿Qué ocurrió? Describe el evento de forma objetiva</label>
           <textarea className="input-hce" rows={4} value={descripcion}
@@ -204,7 +204,7 @@ function FormNuevoReporte({ onExito }: { onExito: () => void }) {
 
       {/* Factores contribuyentes */}
       <div className="card-hce p-5 space-y-3">
-        <h3 className="text-sm font-semibold" style={{ color: 'var(--hce-text)' }}>Factores contribuyentes</h3>
+        <h3 className="card-title">Factores contribuyentes</h3>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           {([
             { k: 'humano',          l: 'Factor humano (cansancio, comunicación)' },
@@ -231,7 +231,7 @@ function FormNuevoReporte({ onExito }: { onExito: () => void }) {
 
       {/* Acciones */}
       <div className="card-hce p-5 space-y-4">
-        <h3 className="text-sm font-semibold" style={{ color: 'var(--hce-text)' }}>Acciones y seguimiento</h3>
+        <h3 className="card-title">Acciones y seguimiento</h3>
         <div>
           <label className="label-hce">Acciones inmediatas tomadas</label>
           <textarea className="input-hce" rows={3} value={accionesInmediatas}
@@ -249,7 +249,7 @@ function FormNuevoReporte({ onExito }: { onExito: () => void }) {
 
       <div className="flex justify-end">
         <button type="submit" disabled={crear.isPending}
-          className="btn-hce px-6">
+          className="btn-primary">
           {crear.isPending ? 'Registrando…' : 'Registrar evento'}
         </button>
       </div>
@@ -304,7 +304,7 @@ function ModalSeguimiento({ evento, onCerrar }: { evento: EventoAdverso; onCerra
                 </span>
               )}
             </div>
-            <p className="text-sm font-medium" style={{ color: 'var(--hce-text)' }}>
+            <p className="card-title">
               {new Date(evento.fecha_evento).toLocaleString('es-CO')}
             </p>
           </div>
@@ -351,7 +351,7 @@ function ModalSeguimiento({ evento, onCerrar }: { evento: EventoAdverso; onCerra
 
           {/* Formulario de seguimiento */}
           <form onSubmit={guardar} className="space-y-3 pt-2 border-t" style={{ borderColor: 'var(--hce-border)' }}>
-            <h4 className="text-sm font-semibold" style={{ color: 'var(--hce-text)' }}>Seguimiento y cierre</h4>
+            <h4 className="card-title">Seguimiento y cierre</h4>
 
             {evento.requiere_causa_raiz && (
               <div>
@@ -397,7 +397,7 @@ function ModalSeguimiento({ evento, onCerrar }: { evento: EventoAdverso; onCerra
                 style={{ borderColor: 'var(--hce-border)', color: 'var(--hce-text-muted)' }}>
                 Cancelar
               </button>
-              <button type="submit" disabled={actualizar.isPending} className="btn-hce px-5">
+              <button type="submit" disabled={actualizar.isPending} className="btn-primary">
                 {actualizar.isPending ? 'Guardando…' : 'Guardar seguimiento'}
               </button>
             </div>
@@ -427,22 +427,17 @@ export default function EventosAdversos() {
   }
 
   return (
-    <div className="p-6 max-w-5xl mx-auto space-y-6">
+    <div className="page-hce space-y-6">
 
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="page-header">
         <div className="flex items-center gap-3">
-          <AlertTriangle className="w-6 h-6 text-orange-500" />
           <div>
-            <h2 className="text-xl font-semibold" style={{ color: 'var(--hce-text)' }}>
-              Eventos adversos
-            </h2>
-            <p className="text-xs" style={{ color: 'var(--hce-text-muted)' }}>
-              Registro y seguimiento — PAMEC / Res. 2003/2014
-            </p>
+            <h2 className="page-title">Eventos adversos</h2>
+            <p className="page-desc">Registro y seguimiento — PAMEC / Res. 2003/2014</p>
           </div>
         </div>
-        <button onClick={() => setTab('nuevo')} className="btn-hce flex items-center gap-2 px-4">
+        <button onClick={() => setTab('nuevo')} className="btn-primary">
           <Plus className="w-4 h-4" /> Nuevo reporte
         </button>
       </div>
@@ -467,11 +462,7 @@ export default function EventosAdversos() {
           { id: 'nuevo',     label: 'Nuevo reporte' },
         ] as const).map(({ id, label }) => (
           <button key={id} onClick={() => setTab(id)}
-            className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
-              tab === id
-                ? 'border-blue-700 text-blue-700'
-                : 'border-transparent text-slate-500 hover:text-slate-700'
-            }`}>
+            className={`tab-hce ${tab === id ? 'tab-hce--active' : 'tab-hce--inactive'}`}>
             {label}
           </button>
         ))}

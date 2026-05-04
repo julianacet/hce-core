@@ -33,19 +33,19 @@ export default function Configuracion() {
   }
 
   return (
-    <div className="p-6 max-w-2xl mx-auto">
-      <div className="mb-6">
-        <h2 className="text-xl font-semibold" style={{ color: 'var(--hce-text)' }}>Configuración</h2>
-        <p className="text-sm mt-1" style={{ color: 'var(--hce-text-muted)' }}>
-          Datos del médico para fórmulas, facturas y documentos
-        </p>
+    <div className="page-hce">
+      <div className="page-header">
+        <div>
+          <h2 className="page-title">Configuración</h2>
+          <p className="page-desc">Datos del médico para fórmulas, facturas y documentos</p>
+        </div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
 
         {/* Datos del consultorio */}
         <div className="card-hce p-5 space-y-4">
-          <h3 className="text-sm font-semibold" style={{ color: 'var(--hce-text)' }}>Datos del consultorio</h3>
+          <h3 className="card-title">Datos del consultorio</h3>
 
           <div>
             <label className="label-hce">Nombre del consultorio</label>
@@ -123,7 +123,7 @@ export default function Configuracion() {
         {/* Perfil del usuario */}
         <div className="card-hce p-5 space-y-4">
           <div>
-            <h3 className="text-sm font-semibold" style={{ color: 'var(--hce-text)' }}>Perfil del usuario</h3>
+            <h3 className="card-title">Perfil del usuario</h3>
             <p className="text-xs mt-0.5" style={{ color: 'var(--hce-text-muted)' }}>
               El correo electrónico se usará para la integración futura con Google Drive (copias de seguridad automáticas).
             </p>
@@ -144,7 +144,7 @@ export default function Configuracion() {
         {/* Firma */}
         <div className="card-hce p-5 space-y-4">
           <div>
-            <h3 className="text-sm font-semibold" style={{ color: 'var(--hce-text)' }}>Firma del médico</h3>
+            <h3 className="card-title">Firma del médico</h3>
             <p className="text-xs mt-0.5" style={{ color: 'var(--hce-text-muted)' }}>
               Imagen escaneada o fotografiada de la firma. Se incluye en las fórmulas médicas si lo elegís.
             </p>

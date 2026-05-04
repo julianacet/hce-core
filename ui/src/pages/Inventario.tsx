@@ -103,14 +103,14 @@ function FormInsumo({
       </div>
 
       {error && (
-        <p className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-md px-3 py-2">{error}</p>
+        <p className="form-error">{error}</p>
       )}
 
       <div className="flex justify-end gap-2 pt-1">
         <button
           type="button"
           onClick={onCancelar}
-          className="text-sm px-3 py-1.5 rounded-md border border-slate-200 text-slate-600 hover:bg-slate-50"
+          className="btn-secondary"
         >
           Cancelar
         </button>
@@ -118,7 +118,7 @@ function FormInsumo({
           type="button"
           disabled={cargando || !form.nombre.trim() || !form.unidad.trim()}
           onClick={() => onGuardar(form)}
-          className="text-sm px-3 py-1.5 rounded-md bg-blue-700 text-white hover:bg-blue-800 disabled:opacity-40"
+          className="btn-primary"
         >
           {cargando ? 'Guardando...' : 'Guardar'}
         </button>
@@ -174,7 +174,7 @@ function DetalleInsumo({ insumo, onCerrar }: { insumo: Insumo; onCerrar: () => v
       <div className="px-5 py-4 flex items-start justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <h3 className="text-sm font-semibold text-slate-800">{insumo.nombre}</h3>
+            <h3 className="card-title">{insumo.nombre}</h3>
             <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${BADGE[estado]}`}>
               {BADGE_LABEL[estado]}
             </span>
@@ -290,7 +290,7 @@ function DetalleInsumo({ insumo, onCerrar }: { insumo: Insumo; onCerrar: () => v
         </div>
 
         {errorMov && (
-          <p className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-md px-3 py-2">{errorMov}</p>
+          <p className="form-error">{errorMov}</p>
         )}
 
         <button
@@ -345,15 +345,15 @@ export default function Inventario() {
   const crear = useCrearInsumo()
 
   return (
-    <div className="p-8 space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="page-hce space-y-6">
+      <div className="page-header">
         <div>
-          <h2 className="text-xl font-semibold text-slate-800">Inventario de insumos</h2>
-          <p className="text-sm text-slate-400 mt-0.5">Control de existencias del consultorio</p>
+          <h2 className="page-title">Inventario de insumos</h2>
+          <p className="page-desc">Control de existencias del consultorio</p>
         </div>
         <button
           onClick={() => { setCreando(true); setSeleccionado(null) }}
-          className="flex items-center gap-2 bg-blue-700 hover:bg-blue-800 text-white text-sm px-4 py-2 rounded-md transition-colors"
+          className="btn-primary"
         >
           <Plus size={15} />
           Nuevo insumo
@@ -377,7 +377,7 @@ export default function Inventario() {
           {/* Formulario de creación */}
           {creando && (
             <div className="bg-white rounded-xl border border-slate-200 p-4">
-              <p className="text-sm font-semibold text-slate-700 mb-3">Nuevo insumo</p>
+              <p className="card-title mb-3">Nuevo insumo</p>
               <FormInsumo
                 onGuardar={async (v) => {
                   await crear.mutateAsync(v)

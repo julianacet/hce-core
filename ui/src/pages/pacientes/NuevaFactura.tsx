@@ -67,19 +67,19 @@ export default function NuevaFactura() {
   return (
     <div className="space-y-4 max-w-3xl">
       {/* Header */}
-      <div className="bg-white rounded-xl border border-slate-200 px-5 py-4">
+      <div className="card-hce px-5 py-4">
         <button onClick={() => navigate(-1)}
           className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 mb-3 transition-colors">
           <ChevronLeft size={14} /> Volver al encuentro
         </button>
-        <h3 className="text-sm font-semibold text-slate-700">Nueva factura</h3>
+        <h3 className="card-title">Nueva factura</h3>
         <p className="text-xs text-slate-400 mt-0.5">
           {nombrePaciente}{diagnostico ? ` · ${diagnostico}` : ''}
         </p>
       </div>
 
       {/* Buscador CUPS */}
-      <div className="bg-white rounded-xl border border-slate-200 p-5 space-y-3">
+      <div className="card-hce p-5 space-y-3">
         <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Agregar procedimiento CUPS</p>
         <div className="relative">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -88,7 +88,7 @@ export default function NuevaFactura() {
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
             placeholder="Buscar por código o descripción (mín. 2 caracteres)"
-            className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="input-hce pl-9"
           />
         </div>
 
@@ -119,7 +119,7 @@ export default function NuevaFactura() {
       {/* Tabla de items */}
       {items.length > 0 && (
         <form onSubmit={handleSubmit}>
-          <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+          <div className="card-hce overflow-hidden">
             <table className="w-full text-sm">
               <thead className="bg-slate-50 border-b border-slate-200">
                 <tr>
@@ -140,7 +140,7 @@ export default function NuevaFactura() {
                         type="text"
                         value={item.descripcion}
                         onChange={(e) => actualizarItem(item._key, 'descripcion', e.target.value)}
-                        className="w-full border border-slate-200 rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        className="input-hce"
                       />
                     </td>
                     <td className="px-4 py-3">
@@ -184,18 +184,18 @@ export default function NuevaFactura() {
             </table>
 
             {crear.isError && (
-              <p className="px-4 py-3 text-sm text-red-600 bg-red-50 border-t border-red-100">
+              <p className="form-error">
                 {(crear.error as Error)?.message ?? 'Error al guardar la factura.'}
               </p>
             )}
 
             <div className="px-4 py-3 border-t border-slate-100 flex justify-end gap-3">
               <button type="button" onClick={() => navigate(-1)} disabled={crear.isPending}
-                className="text-sm text-slate-500 hover:text-slate-700 px-4 py-2 rounded-md border border-slate-200 hover:bg-slate-50 transition-colors disabled:opacity-50">
+                className="btn-secondary">
                 Cancelar
               </button>
               <button type="submit" disabled={crear.isPending || total === 0}
-                className="text-sm bg-blue-700 hover:bg-blue-800 text-white px-4 py-2 rounded-md transition-colors disabled:opacity-50">
+                className="btn-primary">
                 {crear.isPending ? 'Guardando...' : 'Guardar factura'}
               </button>
             </div>

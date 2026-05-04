@@ -60,12 +60,12 @@ export default function RipsMensual() {
   }
 
   return (
-    <div className="p-6 max-w-2xl mx-auto space-y-6">
-      <div>
-        <h2 className="text-xl font-semibold" style={{ color: 'var(--hce-text)' }}>RIPS Mensual</h2>
-        <p className="text-sm mt-1" style={{ color: 'var(--hce-text-muted)' }}>
-          Genera el lote mensual según Res. 2275/2023. Plazo: primeros 5 días calendario del mes siguiente.
-        </p>
+    <div className="page-hce space-y-6">
+      <div className="page-header">
+        <div>
+          <h2 className="page-title">RIPS Mensual</h2>
+          <p className="page-desc">Genera el lote mensual según Res. 2275/2023. Plazo: primeros 5 días calendario del mes siguiente.</p>
+        </div>
       </div>
 
       {sinConfig && (
@@ -80,7 +80,7 @@ export default function RipsMensual() {
 
       {/* Selección del período */}
       <div className="card-hce p-5 space-y-4">
-        <h3 className="text-sm font-semibold" style={{ color: 'var(--hce-text)' }}>Período a reportar</h3>
+        <h3 className="card-title">Período a reportar</h3>
 
         <div className="grid grid-cols-3 gap-4">
           <div>
@@ -169,7 +169,7 @@ export default function RipsMensual() {
       {/* Historial de lotes */}
       <div className="card-hce overflow-hidden">
         <div className="flex items-center gap-2 px-5 py-4 border-b border-slate-100">
-          <h3 className="text-sm font-medium" style={{ color: 'var(--hce-text)' }}>Lotes generados</h3>
+          <h3 className="card-title">Lotes generados</h3>
         </div>
 
         {historial.length === 0 ? (

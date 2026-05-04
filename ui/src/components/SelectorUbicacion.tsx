@@ -2,9 +2,6 @@ import { useState } from 'react'
 import { useDepartamentos, useMunicipios } from '../api/divipola'
 import { PAISES } from '../data/paises'
 
-const selectCls = 'w-full border border-slate-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed'
-const labelCls = 'block text-xs text-slate-500 mb-1'
-
 interface SelectorMunicipioColProps {
   value: string
   onChange: (codigo: string) => void
@@ -25,13 +22,13 @@ export function SelectorMunicipioCol({ value, onChange, required }: SelectorMuni
   return (
     <>
       <div>
-        <label className={labelCls}>
+        <label className="label-hce">
           Departamento{required && <span className="text-red-400 ml-0.5">*</span>}
         </label>
         <select
           value={dep}
           onChange={e => handleDep(e.target.value)}
-          className={selectCls}
+          className="input-hce"
           disabled={loadingDeps}
         >
           <option value="">{loadingDeps ? 'Cargando...' : '— Seleccionar —'}</option>
@@ -41,13 +38,13 @@ export function SelectorMunicipioCol({ value, onChange, required }: SelectorMuni
         </select>
       </div>
       <div>
-        <label className={labelCls}>
+        <label className="label-hce">
           Municipio{required && <span className="text-red-400 ml-0.5">*</span>}
         </label>
         <select
           value={value}
           onChange={e => onChange(e.target.value)}
-          className={selectCls}
+          className="input-hce"
           required={required}
           disabled={!dep || loadingMuns}
         >
@@ -65,15 +62,14 @@ interface SelectorPaisProps {
   value: string
   onChange: (codigo: string) => void
   required?: boolean
-  className?: string
 }
 
-export function SelectorPais({ value, onChange, required, className }: SelectorPaisProps) {
+export function SelectorPais({ value, onChange, required }: SelectorPaisProps) {
   return (
     <select
       value={value}
       onChange={e => onChange(e.target.value)}
-      className={className ?? selectCls}
+      className="input-hce"
       required={required}
     >
       {PAISES.map(p => (

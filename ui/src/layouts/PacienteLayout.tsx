@@ -23,7 +23,7 @@ export default function PacienteLayout() {
       <div className="bg-white border-b border-slate-200 px-6 py-4">
         <button
           onClick={() => navigate(-1)}
-          className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 mb-3 transition-colors"
+          className="btn-ghost mb-3"
         >
           <ArrowLeft size={14} />
           Volver
@@ -31,15 +31,15 @@ export default function PacienteLayout() {
 
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs text-slate-400 uppercase tracking-wide mb-0.5">Paciente</p>
-            <h2 className="text-lg font-semibold text-slate-800">{nombreCompleto}</h2>
-            <p className="text-sm text-slate-500">
+            <p className="section-title mb-0.5">Paciente</p>
+            <h2 className="page-title" style={{ fontSize: 'var(--hce-font-lg)' }}>{nombreCompleto}</h2>
+            <p className="page-desc" style={{ marginTop: '0.125rem' }}>
               {paciente ? `${paciente.tipo_documento} ${paciente.numero_documento}` : id}
             </p>
           </div>
           <button
             onClick={() => navigate(`/pacientes/${id}/encuentros/nuevo`)}
-            className="flex items-center gap-2 bg-blue-700 hover:bg-blue-800 text-white text-sm px-4 py-2 rounded-md transition-colors"
+            className="btn-primary"
           >
             <PlusCircle size={15} />
             Nuevo encuentro
@@ -54,10 +54,12 @@ export default function PacienteLayout() {
               end={end}
               className={({ isActive }) =>
                 `flex items-center gap-2 px-4 py-2 text-sm rounded-md transition-colors ${
-                  isActive
-                    ? 'bg-blue-50 text-blue-700 font-medium'
-                    : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700'
+                  isActive ? 'font-medium' : 'hover:bg-slate-100'
                 }`
+              }
+              style={({ isActive }) => isActive
+                ? { backgroundColor: 'color-mix(in srgb, var(--hce-primary) 10%, transparent)', color: 'var(--hce-primary)' }
+                : { color: 'var(--hce-text-muted)' }
               }
             >
               <Icon size={14} />

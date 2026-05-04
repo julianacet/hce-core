@@ -312,7 +312,7 @@ function ModalNuevaCita({
       <div className="card-hce w-full max-w-lg max-h-[85vh] overflow-y-auto">
         <div className="flex items-center justify-between p-5 border-b"
           style={{ borderColor: 'var(--hce-border)' }}>
-          <h2 className="text-sm font-semibold" style={{ color: 'var(--hce-text)' }}>Nueva cita</h2>
+          <h2 className="card-title">Nueva cita</h2>
           <button onClick={onCerrar} className="text-slate-400 hover:text-slate-600">
             <X className="w-5 h-5" />
           </button>
@@ -373,7 +373,7 @@ function ModalDetalleCita({ cita, onCerrar }: { cita: Cita; onCerrar: () => void
         <div className="flex items-center justify-between p-5 border-b"
           style={{ borderColor: 'var(--hce-border)' }}>
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-sm font-semibold" style={{ color: 'var(--hce-text)' }}>
+            <span className="card-title">
               {cita.hora_inicio.slice(0, 5)} — {cita.paciente_nombre}
             </span>
             <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${ESTADO_COLOR[cita.estado]}`}>
@@ -512,8 +512,7 @@ export default function Agenda() {
       <div className="px-6 py-4 border-b flex items-center justify-between shrink-0"
         style={{ borderColor: 'var(--hce-border)', background: 'var(--hce-surface)' }}>
         <div className="flex items-center gap-3">
-          <Calendar className="w-5 h-5" style={{ color: 'var(--hce-primary)' }} />
-          <h1 className="text-base font-semibold" style={{ color: 'var(--hce-text)' }}>Agenda</h1>
+          <h2 className="page-title">Agenda</h2>
           {citasActivas.length > 0 && (
             <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
               {completadas}/{citasActivas.length} atendidos hoy
@@ -522,8 +521,7 @@ export default function Agenda() {
         </div>
         <button
           onClick={() => setSlotNueva('08:00')}
-          className="flex items-center gap-2 px-4 py-2 rounded text-sm text-white transition-opacity hover:opacity-90"
-          style={{ backgroundColor: 'var(--hce-primary)' }}
+          className="btn-primary"
         >
           <Plus className="w-4 h-4" />
           Nueva cita

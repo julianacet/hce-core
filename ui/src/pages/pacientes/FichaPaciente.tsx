@@ -9,12 +9,10 @@ import { useOcupacion } from '../../api/ocupaciones'
 import { useEpsInfo } from '../../api/eps'
 import { nombrePais } from '../../data/paises'
 
-const inputCls = 'w-full border border-slate-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500'
-
 function Campo({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <p className="text-xs text-slate-400 mb-1">{label}</p>
+      <p className="label-hce">{label}</p>
       {children}
     </div>
   )
@@ -110,19 +108,18 @@ export default function FichaPaciente() {
     ]
 
     return (
-      <div className="bg-white rounded-xl border border-slate-200 p-6">
-        <h3 className="text-sm font-semibold text-slate-700 mb-4">Datos del paciente</h3>
+      <div className="card-hce p-6">
+        <h3 className="card-title mb-4">Datos del paciente</h3>
         <div className="grid grid-cols-2 gap-4">
           {campos.filter(([, v]) => v).map(([label, value]) => (
             <div key={label}>
-              <p className="text-xs text-slate-400 mb-0.5">{label}</p>
-              <p className="text-sm text-slate-800">{value}</p>
+              <p className="label-hce">{label}</p>
+              <p className="text-sm" style={{ color: 'var(--hce-text)' }}>{value}</p>
             </div>
           ))}
         </div>
         <div className="mt-6 pt-4 border-t border-slate-100 flex justify-end">
-          <button onClick={iniciarEdicion}
-            className="text-sm text-blue-600 hover:text-blue-800 transition-colors">
+          <button onClick={iniciarEdicion} className="btn-ghost">
             Editar información
           </button>
         </div>
@@ -132,13 +129,13 @@ export default function FichaPaciente() {
 
   // ── Modo edición ─────────────────────────────────────────────────────────────
   return (
-    <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-slate-200 p-6 space-y-5">
-      <h3 className="text-sm font-semibold text-slate-700">Editar datos del paciente</h3>
+    <form onSubmit={handleSubmit} className="card-hce p-6 space-y-5">
+      <h3 className="card-title">Editar datos del paciente</h3>
 
       {/* Documento — solo lectura */}
       <div className="grid grid-cols-2 gap-4">
         <Campo label="Tipo de documento">
-          <select value={form.tipo_documento} onChange={(e) => set('tipo_documento', e.target.value)} className={inputCls}>
+          <select value={form.tipo_documento} onChange={(e) => set('tipo_documento', e.target.value)} className="input-hce">
             <option value="CC">CC — Cédula de Ciudadanía</option>
             <option value="TI">TI — Tarjeta de Identidad</option>
             <option value="CE">CE — Cédula de Extranjería</option>
@@ -153,7 +150,7 @@ export default function FichaPaciente() {
         </Campo>
         <Campo label="Número de documento">
           <input type="text" value={p.numero_documento} disabled
-            className={`${inputCls} bg-slate-50 text-slate-400 cursor-not-allowed`} />
+            className="input-hce" />
         </Campo>
       </div>
 
@@ -161,19 +158,19 @@ export default function FichaPaciente() {
       <div className="grid grid-cols-2 gap-4">
         <Campo label="Primer nombre *">
           <input type="text" value={form.nombre_primero ?? ''} onChange={(e) => set('nombre_primero', e.target.value)}
-            required className={inputCls} />
+            required className="input-hce" />
         </Campo>
         <Campo label="Segundo nombre">
           <input type="text" value={form.nombre_segundo ?? ''} onChange={(e) => set('nombre_segundo', e.target.value)}
-            className={inputCls} />
+            className="input-hce" />
         </Campo>
         <Campo label="Primer apellido *">
           <input type="text" value={form.apellido_primero ?? ''} onChange={(e) => set('apellido_primero', e.target.value)}
-            required className={inputCls} />
+            required className="input-hce" />
         </Campo>
         <Campo label="Segundo apellido">
           <input type="text" value={form.apellido_segundo ?? ''} onChange={(e) => set('apellido_segundo', e.target.value)}
-            className={inputCls} />
+            className="input-hce" />
         </Campo>
       </div>
 
@@ -181,17 +178,17 @@ export default function FichaPaciente() {
       <div className="grid grid-cols-2 gap-4">
         <Campo label="Fecha de nacimiento *">
           <input type="date" value={form.fecha_nacimiento ?? ''} onChange={(e) => set('fecha_nacimiento', e.target.value)}
-            required className={inputCls} />
+            required className="input-hce" />
         </Campo>
         <Campo label="Género *">
-          <select value={form.genero} onChange={(e) => set('genero', e.target.value)} className={inputCls}>
+          <select value={form.genero} onChange={(e) => set('genero', e.target.value)} className="input-hce">
             <option value="M">Masculino</option>
             <option value="F">Femenino</option>
             <option value="I">Intersexual</option>
           </select>
         </Campo>
         <Campo label="Estado civil">
-          <select value={form.estado_civil ?? ''} onChange={(e) => set('estado_civil', e.target.value)} className={inputCls}>
+          <select value={form.estado_civil ?? ''} onChange={(e) => set('estado_civil', e.target.value)} className="input-hce">
             <option value="">— Seleccionar —</option>
             <option value="01">Soltero/a</option>
             <option value="02">Casado/a</option>
@@ -206,7 +203,6 @@ export default function FichaPaciente() {
             value={form.ocupacion ?? ''}
             nombre={editOcupacionNombre}
             onChange={(codigo, nombre) => { set('ocupacion', codigo); setEditOcupacionNombre(nombre) }}
-            className={inputCls}
           />
         </Campo>
       </div>
@@ -215,11 +211,11 @@ export default function FichaPaciente() {
       <div className="grid grid-cols-2 gap-4">
         <Campo label="Teléfono">
           <input type="tel" value={form.telefono ?? ''} onChange={(e) => set('telefono', e.target.value)}
-            className={inputCls} />
+            className="input-hce" />
         </Campo>
         <Campo label="Correo electrónico">
           <input type="email" value={form.correo_electronico ?? ''} onChange={(e) => set('correo_electronico', e.target.value)}
-            className={inputCls} />
+            className="input-hce" />
         </Campo>
         <SelectorMunicipioCol
           value={form.codigo_municipio_residencia ?? ''}
@@ -228,10 +224,10 @@ export default function FichaPaciente() {
         />
         <Campo label="Dirección">
           <input type="text" value={form.direccion ?? ''} onChange={(e) => set('direccion', e.target.value)}
-            className={inputCls} />
+            className="input-hce" />
         </Campo>
         <Campo label="Zona de residencia *">
-          <select value={form.zona_residencia} onChange={(e) => set('zona_residencia', e.target.value)} className={inputCls}>
+          <select value={form.zona_residencia} onChange={(e) => set('zona_residencia', e.target.value)} className="input-hce">
             <option value="U">Urbana</option>
             <option value="R">Rural</option>
           </select>
@@ -241,7 +237,6 @@ export default function FichaPaciente() {
             value={form.codigo_pais_origen ?? '170'}
             onChange={(v) => set('codigo_pais_origen', v)}
             required
-            className={inputCls}
           />
         </Campo>
       </div>
@@ -250,22 +245,22 @@ export default function FichaPaciente() {
       <div className="grid grid-cols-2 gap-4">
         <Campo label="Nombre del responsable">
           <input type="text" value={form.nombre_responsable ?? ''} onChange={(e) => set('nombre_responsable', e.target.value)}
-            className={inputCls} />
+            className="input-hce" />
         </Campo>
         <Campo label="Teléfono del responsable">
           <input type="tel" value={form.telefono_responsable ?? ''} onChange={(e) => set('telefono_responsable', e.target.value)}
-            className={inputCls} />
+            className="input-hce" />
         </Campo>
         <Campo label="Parentesco">
           <input type="text" value={form.parentesco_responsable ?? ''} onChange={(e) => set('parentesco_responsable', e.target.value)}
-            className={inputCls} />
+            className="input-hce" />
         </Campo>
       </div>
 
       {/* Aseguramiento */}
       <div className="grid grid-cols-2 gap-4">
         <Campo label="Tipo de usuario *">
-          <select value={form.tipo_usuario} onChange={(e) => set('tipo_usuario', e.target.value)} className={inputCls}>
+          <select value={form.tipo_usuario} onChange={(e) => set('tipo_usuario', e.target.value)} className="input-hce">
             <option value="01">Contributivo</option>
             <option value="02">Subsidiado</option>
             <option value="03">Vinculado</option>
@@ -279,7 +274,7 @@ export default function FichaPaciente() {
           onChange={(v) => set('codigo_eps', v)}
         />
         <Campo label="Pertenencia étnica *">
-          <select value={form.codigo_etnia} onChange={(e) => set('codigo_etnia', e.target.value)} className={inputCls}>
+          <select value={form.codigo_etnia} onChange={(e) => set('codigo_etnia', e.target.value)} className="input-hce">
             <option value="00">Sin pertenencia étnica</option>
             <option value="01">Indígena</option>
             <option value="02">ROM (gitano)</option>
@@ -290,7 +285,7 @@ export default function FichaPaciente() {
           </select>
         </Campo>
         <Campo label="Discapacidad *">
-          <select value={form.codigo_discapacidad} onChange={(e) => set('codigo_discapacidad', e.target.value)} className={inputCls}>
+          <select value={form.codigo_discapacidad} onChange={(e) => set('codigo_discapacidad', e.target.value)} className="input-hce">
             <option value="00">Sin discapacidad</option>
             <option value="01">Física</option>
             <option value="02">Cognitiva</option>
@@ -303,18 +298,18 @@ export default function FichaPaciente() {
       </div>
 
       {actualizar.isError && (
-        <p className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+        <p className="form-error">
           {(actualizar.error as Error)?.message ?? 'Error al guardar los cambios.'}
         </p>
       )}
 
       <div className="flex justify-end gap-3 pt-2 border-t border-slate-100">
         <button type="button" onClick={() => setEditando(false)} disabled={actualizar.isPending}
-          className="text-sm text-slate-500 hover:text-slate-700 px-4 py-2 rounded-md border border-slate-200 hover:bg-slate-50 transition-colors disabled:opacity-50">
+          className="btn-secondary">
           Cancelar
         </button>
         <button type="submit" disabled={actualizar.isPending}
-          className="text-sm bg-blue-700 hover:bg-blue-800 text-white px-4 py-2 rounded-md transition-colors disabled:opacity-50">
+          className="btn-primary">
           {actualizar.isPending ? 'Guardando...' : 'Guardar cambios'}
         </button>
       </div>

@@ -113,7 +113,7 @@ export default function NuevaFormula() {
             <ChevronLeft size={20} />
           </button>
           <div>
-            <h2 className="text-base font-semibold" style={{ color: 'var(--hce-text)' }}>
+            <h2 className="card-title">
               Nueva fórmula médica
             </h2>
             <p className="text-xs" style={{ color: 'var(--hce-text-muted)' }}>
@@ -208,7 +208,7 @@ export default function NuevaFormula() {
           {medicamentos.map((m, i) => (
             <div key={i} className="card-hce p-5 space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium" style={{ color: 'var(--hce-text)' }}>
+                <span className="card-title">
                   Medicamento {i + 1}
                 </span>
                 {medicamentos.length > 1 && (

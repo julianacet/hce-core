@@ -119,7 +119,7 @@ function TiposEventoAdversoAdmin() {
             Los tipos marcados con INVIMA indican que requieren reporte externo a Farmacovigilancia o Tecnovigilancia.
           </p>
         </div>
-        <button onClick={abrirNuevo} className="btn-hce flex items-center gap-2 px-3 py-1.5 text-sm">
+        <button onClick={abrirNuevo} className="btn-primary">
           <Plus className="w-4 h-4" /> Nuevo tipo
         </button>
       </div>
@@ -128,7 +128,7 @@ function TiposEventoAdversoAdmin() {
       {mostrarForm && (
         <div className="card-hce p-4 space-y-3 border-2" style={{ borderColor: 'var(--hce-primary)' }}>
           <div className="flex items-center justify-between">
-            <h4 className="text-sm font-semibold" style={{ color: 'var(--hce-text)' }}>
+            <h4 className="card-title">
               {editando ? 'Editar tipo' : 'Nuevo tipo de evento adverso'}
             </h4>
             <button onClick={cerrar}><X className="w-4 h-4 text-slate-400" /></button>
@@ -153,12 +153,11 @@ function TiposEventoAdversoAdmin() {
           </label>
           {error && <p className="text-xs text-red-600">{error}</p>}
           <div className="flex justify-end gap-2">
-            <button onClick={cerrar} className="px-3 py-1.5 text-sm rounded border"
-              style={{ borderColor: 'var(--hce-border)', color: 'var(--hce-text-muted)' }}>
+            <button onClick={cerrar} className="btn-secondary">
               Cancelar
             </button>
             <button onClick={guardar} disabled={crear.isPending || actualizar.isPending}
-              className="btn-hce px-4 py-1.5 text-sm">
+              className="btn-primary">
               Guardar
             </button>
           </div>
@@ -193,7 +192,7 @@ function TipoRow({ tipo, onEditar }: { tipo: TipoEventoAdverso; onEditar: () => 
       <AlertTriangle className={`w-4 h-4 mt-0.5 shrink-0 ${tipo.esta_activo ? 'text-orange-400' : 'text-slate-300'}`} />
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-medium" style={{ color: 'var(--hce-text)' }}>{tipo.nombre}</span>
+          <span className="card-title">{tipo.nombre}</span>
           {tipo.requiere_reporte_invima && (
             <span className="px-1.5 py-0.5 rounded text-xs bg-red-100 text-red-700 flex items-center gap-1">
               <ExternalLink className="w-3 h-3" /> INVIMA
@@ -312,7 +311,7 @@ function PlantillasAdmin() {
       {(nueva || editando) && (
         <div className="card-hce p-5 space-y-4">
           <div className="flex items-center justify-between">
-            <h4 className="text-sm font-semibold text-slate-700">
+            <h4 className="card-title">
               {editando ? 'Editar plantilla' : 'Nueva plantilla'}
             </h4>
             <button onClick={cerrar} className="text-slate-400 hover:text-slate-600">
@@ -433,7 +432,7 @@ function UsuariosAdmin() {
       {(nuevo || editando) && (
         <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 space-y-4">
           <div className="flex items-center justify-between">
-            <p className="text-sm font-semibold text-slate-700">{editando ? 'Editar usuario' : 'Nuevo usuario'}</p>
+            <p className="card-title">{editando ? 'Editar usuario' : 'Nuevo usuario'}</p>
             <button onClick={cerrar} className="text-slate-400 hover:text-slate-600"><X size={15} /></button>
           </div>
 
@@ -484,11 +483,11 @@ function UsuariosAdmin() {
           </div>
 
           {error && (
-            <p className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-md px-3 py-2">{error}</p>
+            <p className="form-error">{error}</p>
           )}
 
           <div className="flex justify-end gap-2">
-            <button onClick={cerrar} className="text-sm px-3 py-1.5 rounded-md border border-slate-200 text-slate-600 hover:bg-slate-50">
+            <button onClick={cerrar} className="btn-secondary">
               Cancelar
             </button>
             <button
@@ -596,9 +595,9 @@ export default function PanelAdmin() {
   }
 
   return (
-    <div className="p-6 max-w-2xl mx-auto">
-      <div className="mb-6">
-        <h2 className="text-xl font-semibold" style={{ color: 'var(--hce-text)' }}>Panel de administración</h2>
+    <div className="page-hce">
+      <div className="page-header">
+        <h2 className="page-title">Panel de administración</h2>
       </div>
 
       {/* Tabs */}
@@ -612,11 +611,7 @@ export default function PanelAdmin() {
           <button
             key={id}
             onClick={() => setTab(id)}
-            className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
-              tab === id
-                ? 'border-blue-700 text-blue-700'
-                : 'border-transparent text-slate-500 hover:text-slate-700'
-            }`}
+            className={`tab-hce ${tab === id ? 'tab-hce--active' : 'tab-hce--inactive'}`}
           >
             {label}
           </button>
@@ -631,7 +626,7 @@ export default function PanelAdmin() {
 
         {/* Identidad */}
         <div className="card-hce p-5 space-y-4">
-          <h3 className="text-sm font-semibold" style={{ color: 'var(--hce-text)' }}>Identidad</h3>
+          <h3 className="card-title">Identidad</h3>
 
           <div>
             <label className="label-hce">Nombre del sistema</label>
@@ -682,7 +677,7 @@ export default function PanelAdmin() {
 
         {/* Paletas */}
         <div className="card-hce p-5 space-y-4">
-          <h3 className="text-sm font-semibold" style={{ color: 'var(--hce-text)' }}>Paletas predefinidas</h3>
+          <h3 className="card-title">Paletas predefinidas</h3>
           <div className="flex flex-wrap gap-2">
             {PALETAS.map((p) => (
               <button key={p.nombre} type="button" onClick={() => aplicarPaleta(p)}
@@ -700,7 +695,7 @@ export default function PanelAdmin() {
 
         {/* Colores individuales */}
         <div className="card-hce p-5 space-y-4">
-          <h3 className="text-sm font-semibold" style={{ color: 'var(--hce-text)' }}>Colores individuales</h3>
+          <h3 className="card-title">Colores individuales</h3>
           <div className="space-y-3">
             {CAMPOS_COLOR.map(({ key, label }) => (
               <div key={key} className="flex items-center justify-between">
@@ -723,7 +718,7 @@ export default function PanelAdmin() {
 
         {/* Preview */}
         <div className="card-hce p-5 space-y-3">
-          <h3 className="text-sm font-semibold" style={{ color: 'var(--hce-text)' }}>Vista previa</h3>
+          <h3 className="card-title">Vista previa</h3>
           <div className="flex gap-4 items-start">
             {/* Mini sidebar */}
             <div className="rounded-lg p-3 w-36 space-y-1 shrink-0"

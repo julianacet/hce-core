@@ -1,17 +1,14 @@
 import { useState, useRef, useEffect } from 'react'
 import { useBuscarOcupaciones } from '../api/ocupaciones'
 
-const inputCls = 'w-full border border-slate-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500'
-
 interface Props {
   value: string       // código CNO almacenado
   nombre: string      // nombre visible (para mostrar en el input)
   onChange: (codigo: string, nombre: string) => void
   required?: boolean
-  className?: string
 }
 
-export function SelectorOcupacion({ value, nombre, onChange, required, className }: Props) {
+export function SelectorOcupacion({ value, nombre, onChange, required }: Props) {
   const [query, setQuery] = useState(nombre)
   const [abierto, setAbierto] = useState(false)
   const contenedorRef = useRef<HTMLDivElement>(null)
@@ -51,7 +48,7 @@ export function SelectorOcupacion({ value, nombre, onChange, required, className
         onFocus={() => query.length >= 2 && setAbierto(true)}
         placeholder="Buscar ocupación..."
         required={required && !value}
-        className={className ?? inputCls}
+        className="input-hce"
         autoComplete="off"
       />
       {/* Campo oculto para que el form capture el código */}

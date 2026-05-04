@@ -118,9 +118,9 @@ export default function DetalleEncuentro() {
   return (
     <div className="space-y-4 max-w-2xl">
       {/* Detalle del encuentro */}
-      <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-5">
+      <div className="card-hce p-6 space-y-5">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-slate-700">Detalle del encuentro clínico</h3>
+          <h3 className="card-title">Detalle del encuentro clínico</h3>
           <span className="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">v{e.numero_version}</span>
         </div>
 
@@ -232,7 +232,7 @@ export default function DetalleEncuentro() {
             </button>
             <button
               onClick={() => navigate(`/pacientes/${id}/encuentros/${encId}/facturas/nueva`)}
-              className="flex items-center gap-2 bg-blue-700 hover:bg-blue-800 text-white text-sm px-4 py-2 rounded-md transition-colors"
+              className="btn-primary"
             >
               <Receipt size={15} />
               Generar factura
@@ -245,7 +245,7 @@ export default function DetalleEncuentro() {
       <div className="bg-white rounded-xl border border-slate-200 p-5 space-y-4">
         <div className="flex items-center gap-2">
           <ScrollText size={16} className="text-slate-400" />
-          <h3 className="text-sm font-medium text-slate-700">Consentimiento informado</h3>
+          <h3 className="card-title">Consentimiento informado</h3>
           {consentimientoPrevio && (
             <span className="ml-auto text-xs text-slate-400">
               Generado el {new Date(consentimientoPrevio.fecha_generacion).toLocaleDateString('es-CO')}
@@ -297,10 +297,10 @@ export default function DetalleEncuentro() {
       </div>
 
       {/* Log de auditoría del encuentro */}
-      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+      <div className="card-hce overflow-hidden">
         <div className="flex items-center gap-2 px-5 py-4 border-b border-slate-100">
           <Activity size={16} className="text-slate-400" />
-          <h3 className="text-sm font-medium text-slate-700">Historial de cambios</h3>
+          <h3 className="card-title">Historial de cambios</h3>
         </div>
 
         <div className="divide-y divide-slate-100">

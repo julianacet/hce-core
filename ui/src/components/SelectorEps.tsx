@@ -1,9 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useRegimenes, useEps, useEpsInfo } from '../api/eps'
 
-const selectCls = 'w-full border border-slate-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed'
-const labelCls = 'block text-xs text-slate-500 mb-1'
-
 interface Props {
   value: string
   onChange: (codigo: string) => void
@@ -30,11 +27,11 @@ export function SelectorEps({ value, onChange, required }: Props) {
   return (
     <>
       <div>
-        <label className={labelCls}>Régimen</label>
+        <label className="label-hce">Régimen</label>
         <select
           value={regimen}
           onChange={e => handleRegimen(e.target.value)}
-          className={selectCls}
+          className="input-hce"
           disabled={loadingReg}
         >
           <option value="">{loadingReg ? 'Cargando...' : '— Seleccionar —'}</option>
@@ -44,13 +41,13 @@ export function SelectorEps({ value, onChange, required }: Props) {
         </select>
       </div>
       <div>
-        <label className={labelCls}>
+        <label className="label-hce">
           EPS / Aseguradora{required && <span className="text-red-400 ml-0.5">*</span>}
         </label>
         <select
           value={value}
           onChange={e => onChange(e.target.value)}
-          className={selectCls}
+          className="input-hce"
           disabled={!regimen || loadingEps}
         >
           <option value="">{loadingEps ? 'Cargando...' : '— Seleccionar —'}</option>

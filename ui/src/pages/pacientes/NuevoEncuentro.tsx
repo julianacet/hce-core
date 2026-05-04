@@ -97,8 +97,8 @@ export default function NuevoEncuentro() {
     <form onSubmit={handleSubmit} className="space-y-4 max-w-2xl">
 
       {/* Clasificación */}
-      <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-4">
-        <h3 className="text-sm font-semibold text-slate-700">Nuevo encuentro clínico</h3>
+      <div className="card-hce p-6 space-y-4">
+        <h3 className="card-title">Nuevo encuentro clínico</h3>
         <div className="grid grid-cols-3 gap-4">
           <div>
             <label className="label-hce">Finalidad de consulta</label>
@@ -128,7 +128,7 @@ export default function NuevoEncuentro() {
       </div>
 
       {/* Motivo */}
-      <div className="bg-white rounded-xl border border-slate-200 p-6">
+      <div className="card-hce p-6">
         <label className="label-hce">Motivo de consulta *</label>
         <textarea
           name="motivo_consulta"
@@ -141,8 +141,8 @@ export default function NuevoEncuentro() {
       </div>
 
       {/* Signos vitales */}
-      <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-4">
-        <h3 className="text-sm font-semibold text-slate-700">Signos vitales <span className="font-normal text-slate-400">(opcional)</span></h3>
+      <div className="card-hce p-6 space-y-4">
+        <h3 className="card-title">Signos vitales <span className="font-normal text-slate-400">(opcional)</span></h3>
 
         <div className="grid grid-cols-4 gap-4">
           <div className="col-span-2">
@@ -260,7 +260,7 @@ export default function NuevoEncuentro() {
       </div>
 
       {/* Examen físico */}
-      <div className="bg-white rounded-xl border border-slate-200 p-6">
+      <div className="card-hce p-6">
         <label className="label-hce">Examen físico</label>
         <textarea
           name="examen_fisico"
@@ -273,7 +273,7 @@ export default function NuevoEncuentro() {
       </div>
 
       {/* Diagnóstico */}
-      <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-4">
+      <div className="card-hce p-6 space-y-4">
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="label-hce">Código diagnóstico (CIE-10) *</label>
@@ -313,7 +313,7 @@ export default function NuevoEncuentro() {
       </div>
 
       {crear.isError && (
-        <p className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+        <p className="form-error">
           {(crear.error as Error)?.message ?? 'Error al guardar el encuentro.'}
         </p>
       )}
@@ -323,14 +323,14 @@ export default function NuevoEncuentro() {
           type="button"
           onClick={() => navigate(-1)}
           disabled={crear.isPending}
-          className="text-sm text-slate-500 hover:text-slate-700 px-4 py-2 rounded-md border border-slate-200 hover:bg-slate-50 transition-colors disabled:opacity-50"
+          className="btn-secondary"
         >
           Cancelar
         </button>
         <button
           type="submit"
           disabled={crear.isPending}
-          className="text-sm bg-blue-700 hover:bg-blue-800 text-white px-4 py-2 rounded-md transition-colors disabled:opacity-50"
+          className="btn-primary"
         >
           {crear.isPending ? 'Guardando...' : 'Guardar encuentro'}
         </button>

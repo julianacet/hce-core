@@ -106,7 +106,7 @@ export default function DetalleFactura() {
           </button>
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="text-sm font-semibold text-slate-700">Factura</h3>
+              <h3 className="card-title">Factura</h3>
               <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${colorEstado[factura.estado] ?? 'bg-slate-100 text-slate-600'}`}>
                 {factura.estado.toUpperCase()}
               </span>
@@ -138,7 +138,7 @@ export default function DetalleFactura() {
       </div>
 
       {/* Tabla de items */}
-      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+      <div className="card-hce overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-slate-50 border-b border-slate-200">
             <tr>
@@ -170,10 +170,10 @@ export default function DetalleFactura() {
       </div>
 
       {/* RIPS */}
-      <div className="bg-white rounded-xl border border-slate-200 px-5 py-4">
+      <div className="card-hce px-5 py-4">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-sm font-semibold text-slate-700">RIPS (Res. 2275/2023)</h3>
+            <h3 className="card-title">RIPS (Res. 2275/2023)</h3>
             {ripsExistente ? (
               <p className="text-xs text-slate-400 mt-0.5">
                 Último generado: {new Date(ripsExistente.fecha_generacion).toLocaleString('es-CO')}
