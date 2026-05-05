@@ -26,11 +26,30 @@ func CamposClinicosRouter(db *pgxpool.Pool) http.Handler {
 	return r
 }
 
+func asJSONCampo(r json.RawMessage) interface{} {
+	if len(r) == 0 || string(r) == "null" {
+		return nil
+	}
+	return []byte(r)
+}
+
+func scanCampo(c *models.CampoClinico, row interface{ Scan(...any) error }) error {
+	var opRaw []byte
+	if err := row.Scan(
+		&c.ID, &c.Seccion, &c.Nombre, &c.Tipo, &c.Unidad,
+		&c.Clave, &c.Orden, &c.EstaActivo, &c.Descripcion, &opRaw,
+	); err != nil {
+		return err
+	}
+	c.Opciones = json.RawMessage(opRaw)
+	return nil
+}
+
+const selectCampos = `SELECT id, seccion, nombre, tipo, unidad, clave, orden, esta_activo, descripcion, opciones FROM campo_clinico`
+
 func (h *CampoClinicoHandler) listar(w http.ResponseWriter, r *http.Request) {
 	rows, err := h.db.Query(r.Context(),
-		`SELECT id, seccion, nombre, tipo, unidad, clave, orden, esta_activo
-		 FROM campo_clinico
-		 ORDER BY seccion, orden, nombre`,
+		selectCampos+` ORDER BY seccion, orden, nombre`,
 	)
 	if err != nil {
 		responderError(w, http.StatusInternalServerError, "error al consultar campos")
@@ -41,9 +60,11 @@ func (h *CampoClinicoHandler) listar(w http.ResponseWriter, r *http.Request) {
 	campos := make([]models.CampoClinico, 0)
 	for rows.Next() {
 		var c models.CampoClinico
-		if err := rows.Scan(&c.ID, &c.Seccion, &c.Nombre, &c.Tipo, &c.Unidad, &c.Clave, &c.Orden, &c.EstaActivo); err != nil {
+		var opRaw []byte
+		if err := rows.Scan(&c.ID, &c.Seccion, &c.Nombre, &c.Tipo, &c.Unidad, &c.Clave, &c.Orden, &c.EstaActivo, &c.Descripcion, &opRaw); err != nil {
 			continue
 		}
+		c.Opciones = json.RawMessage(opRaw)
 		campos = append(campos, c)
 	}
 	responderJSON(w, http.StatusOK, campos)
@@ -68,16 +89,19 @@ func (h *CampoClinicoHandler) crear(w http.ResponseWriter, r *http.Request) {
 
 	clave := strings.ToLower(strings.ReplaceAll(strings.TrimSpace(input.Clave), " ", "_"))
 	var c models.CampoClinico
+	var opRaw []byte
 	err := h.db.QueryRow(r.Context(),
-		`INSERT INTO campo_clinico (seccion, nombre, tipo, unidad, clave, orden)
-		 VALUES ($1, $2, $3, $4, $5, $6)
-		 RETURNING id, seccion, nombre, tipo, unidad, clave, orden, esta_activo`,
+		`INSERT INTO campo_clinico (seccion, nombre, tipo, unidad, clave, orden, descripcion, opciones)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		 RETURNING id, seccion, nombre, tipo, unidad, clave, orden, esta_activo, descripcion, opciones`,
 		input.Seccion, input.Nombre, input.Tipo, input.Unidad, clave, input.Orden,
-	).Scan(&c.ID, &c.Seccion, &c.Nombre, &c.Tipo, &c.Unidad, &c.Clave, &c.Orden, &c.EstaActivo)
+		input.Descripcion, asJSONCampo(input.Opciones),
+	).Scan(&c.ID, &c.Seccion, &c.Nombre, &c.Tipo, &c.Unidad, &c.Clave, &c.Orden, &c.EstaActivo, &c.Descripcion, &opRaw)
 	if err != nil {
 		responderError(w, http.StatusInternalServerError, "error al crear campo — la clave debe ser única")
 		return
 	}
+	c.Opciones = json.RawMessage(opRaw)
 	responderJSON(w, http.StatusCreated, c)
 }
 
@@ -96,17 +120,20 @@ func (h *CampoClinicoHandler) actualizar(w http.ResponseWriter, r *http.Request)
 	}
 
 	var c models.CampoClinico
+	var opRaw []byte
 	err := h.db.QueryRow(r.Context(),
 		`UPDATE campo_clinico
-		 SET seccion=$1, nombre=$2, tipo=$3, unidad=$4, orden=$5
-		 WHERE id=$6
-		 RETURNING id, seccion, nombre, tipo, unidad, clave, orden, esta_activo`,
-		input.Seccion, input.Nombre, input.Tipo, input.Unidad, input.Orden, id,
-	).Scan(&c.ID, &c.Seccion, &c.Nombre, &c.Tipo, &c.Unidad, &c.Clave, &c.Orden, &c.EstaActivo)
+		 SET seccion=$1, nombre=$2, tipo=$3, unidad=$4, orden=$5, descripcion=$6, opciones=$7
+		 WHERE id=$8
+		 RETURNING id, seccion, nombre, tipo, unidad, clave, orden, esta_activo, descripcion, opciones`,
+		input.Seccion, input.Nombre, input.Tipo, input.Unidad, input.Orden,
+		input.Descripcion, asJSONCampo(input.Opciones), id,
+	).Scan(&c.ID, &c.Seccion, &c.Nombre, &c.Tipo, &c.Unidad, &c.Clave, &c.Orden, &c.EstaActivo, &c.Descripcion, &opRaw)
 	if err != nil {
 		responderError(w, http.StatusInternalServerError, "error al actualizar campo")
 		return
 	}
+	c.Opciones = json.RawMessage(opRaw)
 	responderJSON(w, http.StatusOK, c)
 }
 
@@ -119,15 +146,17 @@ func (h *CampoClinicoHandler) toggle(w http.ResponseWriter, r *http.Request) {
 
 	id := chi.URLParam(r, "id")
 	var c models.CampoClinico
+	var opRaw []byte
 	err := h.db.QueryRow(r.Context(),
 		`UPDATE campo_clinico SET esta_activo = NOT esta_activo
 		 WHERE id=$1
-		 RETURNING id, seccion, nombre, tipo, unidad, clave, orden, esta_activo`,
+		 RETURNING id, seccion, nombre, tipo, unidad, clave, orden, esta_activo, descripcion, opciones`,
 		id,
-	).Scan(&c.ID, &c.Seccion, &c.Nombre, &c.Tipo, &c.Unidad, &c.Clave, &c.Orden, &c.EstaActivo)
+	).Scan(&c.ID, &c.Seccion, &c.Nombre, &c.Tipo, &c.Unidad, &c.Clave, &c.Orden, &c.EstaActivo, &c.Descripcion, &opRaw)
 	if err != nil {
 		responderError(w, http.StatusInternalServerError, "error al actualizar campo")
 		return
 	}
+	c.Opciones = json.RawMessage(opRaw)
 	responderJSON(w, http.StatusOK, c)
 }

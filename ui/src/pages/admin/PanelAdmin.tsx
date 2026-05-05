@@ -842,6 +842,7 @@ const TIPO_CAMPO_LABELS: Record<string, string> = {
   numero:       'Número',
   normal_notas: 'Normal / Hallazgos',
   texto:        'Texto libre',
+  opciones:     'Lista de opciones',
 }
 const FORM_CAMPO_INICIAL: CampoClinicoInput = {
   seccion: 'signos_vitales',
@@ -850,6 +851,7 @@ const FORM_CAMPO_INICIAL: CampoClinicoInput = {
   unidad: undefined,
   clave: '',
   orden: 0,
+  descripcion: undefined,
 }
 
 function CamposClinicosAdmin() {
@@ -858,6 +860,7 @@ function CamposClinicosAdmin() {
   const [editando, setEditando] = useState<CampoClinico | null>(null)
   const actualizar = useActualizarCampoClinico(editando?.id ?? '')
   const [form, setForm] = useState<CampoClinicoInput>(FORM_CAMPO_INICIAL)
+  const [opcionesRaw, setOpcionesRaw] = useState('')
   const [mostrarForm, setMostrarForm] = useState(false)
   const [error, setError] = useState('')
 
@@ -869,13 +872,15 @@ function CamposClinicosAdmin() {
   function abrirNuevo() {
     setEditando(null)
     setForm(FORM_CAMPO_INICIAL)
+    setOpcionesRaw('')
     setError('')
     setMostrarForm(true)
   }
 
   function abrirEditar(c: CampoClinico) {
     setEditando(c)
-    setForm({ seccion: c.seccion, nombre: c.nombre, tipo: c.tipo, unidad: c.unidad, clave: c.clave, orden: c.orden })
+    setForm({ seccion: c.seccion, nombre: c.nombre, tipo: c.tipo, unidad: c.unidad, clave: c.clave, orden: c.orden, descripcion: c.descripcion, opciones: c.opciones })
+    setOpcionesRaw(c.opciones ? c.opciones.join('\n') : '')
     setError('')
     setMostrarForm(true)
   }
@@ -883,16 +888,21 @@ function CamposClinicosAdmin() {
   function cerrar() {
     setMostrarForm(false)
     setEditando(null)
+    setOpcionesRaw('')
     setError('')
   }
 
   async function guardar() {
     if (!form.nombre.trim()) { setError('El nombre es obligatorio.'); return }
     if (!editando && !form.clave.trim()) { setError('La clave es obligatoria.'); return }
+    if (form.tipo === 'opciones' && !opcionesRaw.trim()) { setError('Debes definir al menos una opción.'); return }
     setError('')
+    const opciones = form.tipo === 'opciones'
+      ? opcionesRaw.split('\n').map(o => o.trim()).filter(Boolean)
+      : undefined
     try {
-      if (editando) await actualizar.mutateAsync(form)
-      else await crear.mutateAsync(form)
+      if (editando) await actualizar.mutateAsync({ ...form, opciones })
+      else await crear.mutateAsync({ ...form, opciones })
       cerrar()
     } catch {
       setError('Error al guardar. La clave debe ser única.')
@@ -934,6 +944,7 @@ function CamposClinicosAdmin() {
                 <option value="numero">Número</option>
                 <option value="normal_notas">Normal / Hallazgos</option>
                 <option value="texto">Texto libre</option>
+              <option value="opciones">Lista de opciones</option>
               </select>
             </div>
           </div>
@@ -944,6 +955,29 @@ function CamposClinicosAdmin() {
               onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))}
               placeholder="Ej: Glucometría" />
           </div>
+
+          <div>
+            <label className="label-hce">Descripción / instrucción para el médico <span className="font-normal text-slate-400">(opcional)</span></label>
+            <textarea className="input-hce resize-none" rows={2}
+              value={form.descripcion ?? ''}
+              onChange={e => setForm(f => ({ ...f, descripcion: e.target.value || undefined }))}
+              placeholder="Ej: Tomar en reposo, brazo derecho…" />
+          </div>
+
+          {form.tipo === 'opciones' && (
+            <div>
+              <label className="label-hce">
+                Opciones <span className="font-normal text-slate-400">— una por línea *</span>
+              </label>
+              <textarea
+                className="input-hce resize-none font-mono text-sm"
+                rows={4}
+                value={opcionesRaw}
+                onChange={e => setOpcionesRaw(e.target.value)}
+                placeholder={'Normal\nAnormal\nNo evaluado'}
+              />
+            </div>
+          )}
 
           <div className="grid grid-cols-3 gap-4">
             <div>
@@ -1000,8 +1034,8 @@ function CamposClinicosAdmin() {
 function CampoRow({ campo, onEditar }: { campo: CampoClinico; onEditar: () => void }) {
   const toggle = useToggleCampoClinico(campo.id)
   return (
-    <div className={`flex items-center gap-3 px-4 py-3 ${!campo.esta_activo ? 'opacity-50' : ''}`}>
-      <Activity className={`w-4 h-4 shrink-0 ${campo.esta_activo ? 'text-blue-400' : 'text-slate-300'}`} />
+    <div className={`flex items-start gap-3 px-4 py-3 ${!campo.esta_activo ? 'opacity-50' : ''}`}>
+      <Activity className={`w-4 h-4 mt-0.5 shrink-0 ${campo.esta_activo ? 'text-blue-400' : 'text-slate-300'}`} />
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-sm text-slate-700">{campo.nombre}</span>
@@ -1018,6 +1052,9 @@ function CampoRow({ campo, onEditar }: { campo: CampoClinico; onEditar: () => vo
             <span className="px-1.5 py-0.5 rounded text-xs bg-slate-100 text-slate-400">Inactivo</span>
           )}
         </div>
+        {campo.descripcion && (
+          <p className="text-xs mt-0.5 truncate" style={{ color: 'var(--hce-text-muted)' }}>{campo.descripcion}</p>
+        )}
       </div>
       <div className="flex items-center gap-2 shrink-0">
         <button onClick={onEditar} className="text-slate-400 hover:text-slate-600">

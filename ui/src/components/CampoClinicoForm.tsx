@@ -142,6 +142,24 @@ export function ExamenFisicoForm({ campos, values, onChange }: ExamenProps) {
           )
         }
 
+        if (c.tipo === 'opciones') {
+          return (
+            <div key={c.clave} className="flex items-center gap-3">
+              <span className="text-sm min-w-44" style={{ color: 'var(--hce-text)' }}>{c.nombre}</span>
+              <select
+                className="input-hce text-sm flex-1 max-w-xs"
+                value={typeof values[c.clave] === 'string' ? (values[c.clave] as string) : ''}
+                onChange={(e) => setTexto(c.clave, e.target.value)}
+              >
+                <option value="">— seleccionar —</option>
+                {(c.opciones ?? []).map((op) => (
+                  <option key={op} value={op}>{op}</option>
+                ))}
+              </select>
+            </div>
+          )
+        }
+
         // normal_notas
         const normal = getNormal(c.clave)
         const notas = getNotas(c.clave)

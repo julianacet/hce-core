@@ -5,11 +5,13 @@ export type CampoClinico = {
   id: string
   seccion: 'signos_vitales' | 'examen_fisico'
   nombre: string
-  tipo: 'numero' | 'normal_notas' | 'texto'
+  tipo: 'numero' | 'normal_notas' | 'texto' | 'opciones'
   unidad?: string
   clave: string
   orden: number
   esta_activo: boolean
+  descripcion?: string
+  opciones?: string[]
 }
 
 export type CampoClinicoInput = Omit<CampoClinico, 'id' | 'esta_activo'>

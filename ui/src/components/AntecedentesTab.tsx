@@ -10,6 +10,19 @@ import {
 
 type AnswerState = { valor: string; detalle: string }
 
+const ESTADOS_BOOLEANO = [
+  { value: 'si',        label: 'Sí' },
+  { value: 'no',        label: 'No' },
+  { value: 'no_sabe',   label: 'No sabe' },
+  { value: 'no_aplica', label: 'No aplica' },
+]
+
+function normalizarBooleano(v: string): string {
+  if (v === 'true') return 'si'
+  if (v === 'false') return 'no'
+  return v
+}
+
 const CATEGORIAS = [
   { key: 'personal',       label: 'Personales patológicos' },
   { key: 'familiar',       label: 'Familiares' },
@@ -98,41 +111,23 @@ function PreguntaField({ pregunta, answer, onValor, onDetalle }: {
   onDetalle: (v: string) => void
 }) {
   const { tipo_respuesta, tiene_detalle, placeholder_detalle, opciones } = pregunta
-  const mostrarDetalle = tiene_detalle && answer.valor === 'true'
+  const mostrarDetalle = tiene_detalle && answer.valor === 'si'
 
   return (
     <div className="space-y-2 border-b border-slate-100 pb-4 last:border-0 last:pb-0">
       <p className="text-sm text-slate-700">{pregunta.texto}</p>
 
       {tipo_respuesta === 'booleano' && (
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => onValor(answer.valor === 'true' ? '' : 'true')}
-            className={`px-3 py-1 rounded-full text-xs border transition-colors ${
-              answer.valor === 'true'
-                ? 'border-emerald-400 bg-emerald-50 text-emerald-700 font-medium'
-                : 'border-slate-200 text-slate-500 hover:border-slate-400'
-            }`}>
-            Sí
-          </button>
-          <button
-            type="button"
-            onClick={() => onValor(answer.valor === 'false' ? '' : 'false')}
-            className={`px-3 py-1 rounded-full text-xs border transition-colors ${
-              answer.valor === 'false'
-                ? 'border-red-300 bg-red-50 text-red-600 font-medium'
-                : 'border-slate-200 text-slate-500 hover:border-slate-400'
-            }`}>
-            No
-          </button>
-          {answer.valor !== '' && (
-            <button type="button" onClick={() => { onValor(''); onDetalle('') }}
-              className="text-xs text-slate-400 hover:text-slate-600 transition-colors">
-              Limpiar
-            </button>
-          )}
-        </div>
+        <select
+          className="input-hce text-sm w-44"
+          value={answer.valor}
+          onChange={e => { onValor(e.target.value); if (!e.target.value) onDetalle('') }}
+        >
+          <option value="">— sin responder —</option>
+          {ESTADOS_BOOLEANO.map(({ value, label }) => (
+            <option key={value} value={value}>{label}</option>
+          ))}
+        </select>
       )}
 
       {tipo_respuesta === 'opciones' && (
@@ -194,7 +189,7 @@ export default function AntecedentesTab({ documento, genero }: { documento: stri
     dataRef.current = data
     const init: Record<string, AnswerState> = {}
     Object.values(data).flat().forEach(p => {
-      init[p.id] = { valor: p.valor ?? '', detalle: p.detalle ?? '' }
+      init[p.id] = { valor: normalizarBooleano(p.valor ?? ''), detalle: p.detalle ?? '' }
     })
     setAnswers(init)
   }, [data])

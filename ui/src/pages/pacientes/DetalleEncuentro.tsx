@@ -297,7 +297,7 @@ export default function DetalleEncuentro() {
           </div>
           <div className="space-y-3">
             {Object.entries(antecedentes).map(([cat, preguntas]) => {
-              const respondidas = preguntas.filter(p => p.valor && p.valor !== 'false' && p.valor !== '[]')
+              const respondidas = preguntas.filter(p => p.valor && p.valor !== 'false' && p.valor !== 'no' && p.valor !== '[]')
               if (respondidas.length === 0) return null
               const catLabel: Record<string, string> = {
                 personal: 'Personales', familiar: 'Familiares', farmacologico: 'Farmacológicos',
@@ -315,8 +315,9 @@ export default function DetalleEncuentro() {
                           chips = items.map(it => Object.values(it).filter(Boolean).join(' · '))
                         } catch { chips = [] }
                       } else {
+                        const sufijo: Record<string, string> = { no_sabe: ' (no sabe)', no_aplica: ' (no aplica)' }
                         const label = p.tipo_respuesta === 'booleano'
-                          ? p.texto.replace(/^¿/, '').replace(/\?$/, '')
+                          ? p.texto.replace(/^¿/, '').replace(/\?$/, '') + (sufijo[p.valor ?? ''] ?? '')
                           : `${p.texto.replace(/^¿/, '').replace(/\?$/, '')}: ${p.valor}`
                         chips = [label + (p.detalle ? ` (${p.detalle})` : '')]
                       }

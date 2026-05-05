@@ -118,20 +118,14 @@ CREATE TABLE encuentro_clinico (
     via_ingreso            VARCHAR(2)  NOT NULL DEFAULT '02',
 
     -- Contenido clínico (Res. 866/2021)
-    motivo_consulta              TEXT       NOT NULL,
+    motivo_consulta TEXT NOT NULL,
 
-    -- Signos vitales (todos opcionales)
-    ta_sistolica          SMALLINT,        -- mmHg
-    ta_diastolica         SMALLINT,        -- mmHg
-    frecuencia_cardiaca   SMALLINT,        -- lpm
-    frecuencia_respiratoria SMALLINT,      -- rpm
-    temperatura           NUMERIC(4,1),   -- °C
-    saturacion_o2         SMALLINT,        -- %
-    peso                  NUMERIC(5,1),   -- kg
-    talla                 NUMERIC(5,1),   -- cm
+    -- Signos vitales y examen físico parametrizables (ver tabla campo_clinico)
+    signos_vitales JSONB,
+    examen_fisico  JSONB,
 
-    examen_fisico                TEXT,
-    codigo_diagnostico_principal VARCHAR(5) NOT NULL,  -- CIE-10
+    -- Diagnóstico principal (mantenido para compat. RIPS; derivado de encuentro_diagnostico)
+    codigo_diagnostico_principal VARCHAR(8),  -- CIE-10
     descripcion_diagnostico      TEXT,
     plan_manejo                  TEXT,
 
@@ -749,4 +743,202 @@ INSERT INTO antecedente_pregunta (categoria, texto, tipo_respuesta, opciones, ti
 ('gineco','¿Cuándo fue su última citología (Papanicolaou)?','fecha',NULL,FALSE,NULL,'FX',10),
 ('gineco','¿Se realiza autoexamen de seno regularmente?','booleano',NULL,FALSE,NULL,'FX',11),
 ('gineco','¿Ha tenido algún problema ginecológico?','booleano',NULL,TRUE,'Cuál','FX',12)
+ON CONFLICT DO NOTHING;
+
+-- ============================================================
+-- 20. Catálogo CIE-10 y diagnósticos por encuentro
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS diagnostico_cie10 (
+    codigo  VARCHAR(8)  PRIMARY KEY,
+    nombre  TEXT        NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS encuentro_diagnostico (
+    id                    UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    encuentro_clinico_id  UUID        NOT NULL REFERENCES encuentro_clinico(id) ON DELETE CASCADE,
+    tipo                  VARCHAR(15) NOT NULL CHECK (tipo IN ('principal', 'secundario', 'nota')),
+    codigo                VARCHAR(8)  REFERENCES diagnostico_cie10(codigo),
+    descripcion           TEXT        NOT NULL,
+    orden                 SMALLINT    NOT NULL DEFAULT 0
+);
+
+CREATE INDEX IF NOT EXISTS idx_enc_diag_clinico ON encuentro_diagnostico(encuentro_clinico_id);
+
+INSERT INTO diagnostico_cie10 (codigo, nombre) VALUES
+-- Vías respiratorias superiores
+('J00',   'Rinofaringitis aguda (resfriado común)'),
+('J01.9', 'Sinusitis aguda, no especificada'),
+('J02.9', 'Faringitis aguda, no especificada'),
+('J03.9', 'Amigdalitis aguda, no especificada'),
+('J04.0', 'Laringitis aguda'),
+('J06.9', 'Infección aguda de vías respiratorias superiores, no especificada'),
+('J30.0', 'Rinitis alérgica vasomotora'),
+('J30.4', 'Rinitis alérgica, no especificada'),
+('J35.0', 'Amigdalitis crónica'),
+('J35.1', 'Hipertrofia de amígdalas'),
+-- Vías respiratorias inferiores
+('J10',   'Influenza debida a virus de la influenza identificado'),
+('J11',   'Influenza, virus no identificado'),
+('J18.9', 'Neumonía, no especificada'),
+('J20.9', 'Bronquitis aguda, no especificada'),
+('J22',   'Infección aguda de las vías respiratorias inferiores, no especificada'),
+('J40',   'Bronquitis, no especificada como aguda o crónica'),
+('J41.0', 'Bronquitis crónica simple'),
+('J45.0', 'Asma predominantemente alérgica'),
+('J45.1', 'Asma no alérgica'),
+('J45.9', 'Asma, no especificada'),
+('J96.9', 'Insuficiencia respiratoria, no especificada'),
+-- Cardiovascular
+('I10',   'Hipertensión esencial (primaria)'),
+('I11.9', 'Cardiopatía hipertensiva sin insuficiencia cardíaca'),
+('I20.9', 'Angina de pecho, no especificada'),
+('I21.9', 'Infarto agudo del miocardio, no especificado'),
+('I25.10','Enfermedad aterosclerótica del corazón'),
+('I48.9', 'Fibrilación y aleteo auricular, no especificados'),
+('I50.9', 'Insuficiencia cardíaca, no especificada'),
+('I63.9', 'Infarto cerebral, no especificado'),
+('I73.9', 'Enfermedad vascular periférica, no especificada'),
+('I83.9', 'Venas varicosas de los miembros inferiores sin úlcera ni inflamación'),
+-- Endocrinología y metabolismo
+('E03.9', 'Hipotiroidismo, no especificado'),
+('E05.9', 'Tirotoxicosis, no especificada'),
+('E10',   'Diabetes mellitus tipo 1'),
+('E11',   'Diabetes mellitus tipo 2'),
+('E11.9', 'Diabetes mellitus tipo 2, sin complicaciones'),
+('E11.65','Diabetes mellitus tipo 2 con hiperglucemia'),
+('E66.9', 'Obesidad, no especificada'),
+('E78.0', 'Hipercolesterolemia pura'),
+('E78.5', 'Hiperlipidemia, no especificada'),
+('E83.5', 'Trastornos del metabolismo del calcio'),
+-- Gastrointestinal
+('A09',   'Otras gastroenteritis y colitis de origen infeccioso y no especificadas'),
+('K21.0', 'Enfermedad por reflujo gastroesofágico con esofagitis'),
+('K21.9', 'Enfermedad por reflujo gastroesofágico sin esofagitis'),
+('K25.9', 'Úlcera gástrica, no especificada'),
+('K27.9', 'Úlcera péptica, sitio no especificado'),
+('K29.5', 'Gastritis crónica, no especificada'),
+('K29.7', 'Gastritis, no especificada'),
+('K31.9', 'Enfermedad del estómago y del duodeno, no especificada'),
+('K57.30','Diverticulosis del intestino grueso sin hemorragia'),
+('K58.0', 'Síndrome del colon irritable con diarrea'),
+('K58.9', 'Síndrome del colon irritable sin diarrea'),
+('K59.0', 'Estreñimiento'),
+('K74.6', 'Cirrosis hepática, no especificada'),
+('K92.9', 'Enfermedades del aparato digestivo, no especificadas'),
+-- Musculoesquelético
+('M06.9', 'Artritis reumatoide, no especificada'),
+('M10.9', 'Gota, no especificada'),
+('M17.9', 'Gonartrosis, no especificada'),
+('M47.9', 'Espondiloartrosis, no especificada'),
+('M54.2', 'Cervicalgia'),
+('M54.4', 'Lumbago con ciática'),
+('M54.5', 'Lumbalgia'),
+('M54.9', 'Dorsalgia, no especificada'),
+('M75.1', 'Síndrome del manguito rotatorio'),
+('M79.1', 'Mialgia'),
+('M79.3', 'Paniculitis, no especificada'),
+('M79.9', 'Trastorno de los tejidos blandos, no especificado'),
+-- Urológico
+('N10',   'Nefritis tubulointersticial aguda'),
+('N18.9', 'Enfermedad renal crónica, no especificada'),
+('N20.0', 'Cálculo del riñón'),
+('N39.0', 'Infección de vías urinarias, sitio no especificado'),
+('N40',   'Hiperplasia de la próstata'),
+-- Salud mental
+('F32.0', 'Episodio depresivo leve'),
+('F32.1', 'Episodio depresivo moderado'),
+('F32.9', 'Episodio depresivo, no especificado'),
+('F33.0', 'Trastorno depresivo recurrente, episodio leve actual'),
+('F41.0', 'Trastorno de pánico'),
+('F41.1', 'Trastorno de ansiedad generalizada'),
+('F41.9', 'Trastorno de ansiedad, no especificado'),
+('F43.1', 'Trastorno de estrés postraumático'),
+('F10.1', 'Trastornos mentales debidos al uso del alcohol, uso nocivo'),
+-- Piel
+('B35.0', 'Tiña de la barba y del cuero cabelludo'),
+('B35.4', 'Tiña del pie'),
+('L01.0', 'Impétigo por Staphylococcus'),
+('L20.9', 'Dermatitis atópica, no especificada'),
+('L23.9', 'Dermatitis alérgica de contacto, causa no especificada'),
+('L25.9', 'Dermatitis de contacto, no especificada'),
+('L30.9', 'Dermatitis, no especificada'),
+('L50.9', 'Urticaria, no especificada'),
+-- Ginecología y obstetricia
+('N91.2', 'Amenorrea, no especificada'),
+('N92.0', 'Menstruación excesiva y frecuente con ciclo regular'),
+('N92.6', 'Menstruación irregular, no especificada'),
+('N94.6', 'Dismenorrea, no especificada'),
+('N95.1', 'Menopausia y climaterio femenino'),
+('O09.9', 'Duración del embarazo, no especificada'),
+('Z34.9', 'Supervisión de embarazo normal, no especificado'),
+-- Neurológico
+('G43.9', 'Migraña, no especificada'),
+('G44.2', 'Cefalea tensional'),
+('G47.0', 'Insomnio'),
+('G62.9', 'Polineuropatía, no especificada'),
+('R51',   'Cefalea'),
+-- Oftalmológico
+('H10.9', 'Conjuntivitis, no especificada'),
+('H52.1', 'Miopía'),
+('H52.4', 'Presbicia'),
+('H66.9', 'Otitis media, no especificada'),
+-- Otorrinolaringología
+('H60.9', 'Otitis externa, no especificada'),
+('H65.9', 'Otitis media no supurada, no especificada'),
+('H92.0', 'Otalgia'),
+-- Infecciosas
+('A15.0', 'Tuberculosis del pulmón, confirmada por microscopía'),
+('B01.9', 'Varicela sin complicaciones'),
+('B02.9', 'Herpes zóster sin complicaciones'),
+('B19.9', 'Hepatitis viral no especificada, sin coma hepático'),
+('B50.9', 'Paludismo por Plasmodium falciparum, sin otra especificación'),
+-- Preventivo / control
+('Z00.0', 'Examen médico general'),
+('Z00.1', 'Examen de rutina del estado de salud infantil'),
+('Z30.0', 'Consejería general sobre anticoncepción'),
+('Z76.0', 'Emisión de prescripción repetida')
+ON CONFLICT DO NOTHING;
+
+-- ============================================================
+-- 21. Campos clínicos parametrizables (signos vitales y examen físico)
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS campo_clinico (
+    id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    seccion     VARCHAR(20) NOT NULL CHECK (seccion IN ('signos_vitales', 'examen_fisico')),
+    nombre      TEXT        NOT NULL,
+    tipo        VARCHAR(20) NOT NULL CHECK (tipo IN ('numero', 'normal_notas', 'texto', 'opciones')),
+    unidad      TEXT,
+    clave       TEXT        NOT NULL UNIQUE,
+    orden       SMALLINT    NOT NULL DEFAULT 0,
+    esta_activo BOOLEAN     NOT NULL DEFAULT TRUE,
+    descripcion TEXT,
+    opciones    JSONB
+);
+
+INSERT INTO campo_clinico (seccion, nombre, tipo, unidad, clave, orden) VALUES
+  ('signos_vitales', 'Tensión arterial sistólica',  'numero', 'mmHg',  'ta_sistolica',            1),
+  ('signos_vitales', 'Tensión arterial diastólica', 'numero', 'mmHg',  'ta_diastolica',           2),
+  ('signos_vitales', 'Frecuencia cardíaca',         'numero', 'lpm',   'frecuencia_cardiaca',     3),
+  ('signos_vitales', 'Frecuencia respiratoria',     'numero', 'rpm',   'frecuencia_respiratoria', 4),
+  ('signos_vitales', 'Temperatura',                 'numero', '°C',    'temperatura',             5),
+  ('signos_vitales', 'Saturación O₂',               'numero', '%',     'saturacion_o2',           6),
+  ('signos_vitales', 'Peso',                        'numero', 'kg',    'peso',                    7),
+  ('signos_vitales', 'Talla',                       'numero', 'cm',    'talla',                   8),
+  ('signos_vitales', 'Glucometría',                 'numero', 'mg/dL', 'glucometria',             9),
+  ('signos_vitales', 'Perímetro abdominal',         'numero', 'cm',    'perimetro_abdominal',    10),
+  ('examen_fisico',  'Aspecto general',             'texto',        NULL, 'aspecto_general',     1),
+  ('examen_fisico',  'Piel y mucosas',              'normal_notas', NULL, 'piel',                2),
+  ('examen_fisico',  'Cabeza y cuello',             'normal_notas', NULL, 'cabeza_cuello',       3),
+  ('examen_fisico',  'Ojos',                        'normal_notas', NULL, 'ojos',                4),
+  ('examen_fisico',  'Oídos, nariz, garganta',      'normal_notas', NULL, 'oing',                5),
+  ('examen_fisico',  'Tórax',                       'normal_notas', NULL, 'torax',               6),
+  ('examen_fisico',  'Pulmones',                    'normal_notas', NULL, 'pulmones',            7),
+  ('examen_fisico',  'Cardiovascular',              'normal_notas', NULL, 'cardiovascular',      8),
+  ('examen_fisico',  'Abdomen',                     'normal_notas', NULL, 'abdomen',             9),
+  ('examen_fisico',  'Extremidades',                'normal_notas', NULL, 'extremidades',       10),
+  ('examen_fisico',  'Neurológico',                 'normal_notas', NULL, 'neurologico',        11),
+  ('examen_fisico',  'Musculoesquelético',          'normal_notas', NULL, 'musculoesqueletico', 12),
+  ('examen_fisico',  'Genitourinario',              'normal_notas', NULL, 'genitourinario',     13)
 ON CONFLICT DO NOTHING;
