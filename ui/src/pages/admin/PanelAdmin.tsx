@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react'
 import { useTema, DEFAULTS, type Tema } from '../../context/TemaContext'
-import { Upload, Trash2, CheckCircle, RotateCcw, Plus, Pencil, X, ShieldCheck, Stethoscope, Users, AlertTriangle, ExternalLink, ClipboardList, Activity } from 'lucide-react'
+import { Upload, Trash2, CheckCircle, RotateCcw, Plus, Pencil, X, ShieldCheck, Stethoscope, Users, AlertTriangle, ExternalLink, ClipboardList, Activity, Info } from 'lucide-react'
 import {
   usePlantillas,
   useCrearPlantilla,
@@ -637,7 +637,12 @@ function AntecedentesAdmin() {
       solo_genero: p.solo_genero ?? '',
       orden: p.orden,
     })
-    setOpcionesRaw(p.opciones ? JSON.stringify(p.opciones, null, 2) : '')
+    setOpcionesRaw(p.opciones
+      ? p.tipo_respuesta === 'opciones'
+        ? (p.opciones as string[]).join('\n')
+        : JSON.stringify(p.opciones, null, 2)
+      : ''
+    )
     setError('')
     setMostrarForm(true)
   }
@@ -654,8 +659,13 @@ function AntecedentesAdmin() {
 
     let opcionesJSON = null
     if (opcionesRaw.trim()) {
-      try { opcionesJSON = JSON.parse(opcionesRaw) }
-      catch { setError('El JSON de opciones no es válido.'); return }
+      if (form.tipo_respuesta === 'opciones') {
+        opcionesJSON = opcionesRaw.split('\n').map(o => o.trim()).filter(Boolean)
+        if (opcionesJSON.length === 0) { setError('Debes definir al menos una opción.'); return }
+      } else {
+        try { opcionesJSON = JSON.parse(opcionesRaw) }
+        catch { setError('El JSON de opciones no es válido.'); return }
+      }
     }
 
     const payload = {
@@ -717,21 +727,30 @@ function AntecedentesAdmin() {
               placeholder="Ej: ¿Tiene hipertensión arterial?" />
           </div>
 
-          {(form.tipo_respuesta === 'opciones' || form.tipo_respuesta === 'lista') && (
+          {form.tipo_respuesta === 'opciones' && (
             <div>
               <label className="label-hce">
-                Opciones (JSON){' '}
+                Opciones <span className="font-normal text-slate-400">— una por línea *</span>
+              </label>
+              <textarea className="input-hce font-mono text-sm resize-none" rows={4}
+                value={opcionesRaw}
+                onChange={e => setOpcionesRaw(e.target.value)}
+                placeholder={'Nunca ha fumado\nFumador activo\nEx-fumador'} />
+            </div>
+          )}
+
+          {form.tipo_respuesta === 'lista' && (
+            <div>
+              <label className="label-hce">
+                Campos de la lista{' '}
                 <span className="text-slate-400 font-normal">
-                  — para "opciones": array de strings; para "lista": array de{' '}
-                  <code className="bg-slate-100 px-1 rounded">{'{"campo","label","requerido"}'}</code>
+                  — JSON: array de <code className="bg-slate-100 px-1 rounded">{'{"campo","label","requerido"}'}</code>
                 </span>
               </label>
               <textarea className="input-hce font-mono text-xs resize-y" rows={4}
                 value={opcionesRaw}
                 onChange={e => setOpcionesRaw(e.target.value)}
-                placeholder={form.tipo_respuesta === 'opciones'
-                  ? '["Opción 1","Opción 2","Opción 3"]'
-                  : '[{"campo":"nombre","label":"Nombre","requerido":true}]'} />
+                placeholder={'[{"campo":"nombre","label":"Nombre","requerido":true}]'} />
             </div>
           )}
 
@@ -832,6 +851,15 @@ function PreguntaRow({ pregunta, onEditar }: { pregunta: AntecedentePregunta; on
       </div>
     </div>
   )
+}
+
+function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9\s]/g, '')
+    .trim()
+    .replace(/\s+/g, '_')
 }
 
 const SECCION_LABELS: Record<string, string> = {
@@ -952,7 +980,11 @@ function CamposClinicosAdmin() {
           <div>
             <label className="label-hce">Nombre *</label>
             <input className="input-hce" value={form.nombre}
-              onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))}
+              onChange={e => setForm(f => ({
+                ...f,
+                nombre: e.target.value,
+                clave: editando ? f.clave : slugify(e.target.value),
+              }))}
               placeholder="Ej: Glucometría" />
           </div>
 
@@ -981,8 +1013,14 @@ function CamposClinicosAdmin() {
 
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <label className="label-hce">
+              <label className="label-hce flex items-center gap-1">
                 Clave (identificador){editando ? <span className="text-slate-400 font-normal"> — no editable</span> : ' *'}
+                <span
+                  title="Nombre interno que el sistema usa para guardar el valor en la base de datos. Se genera automáticamente a partir del nombre. Solo letras minúsculas, números y guiones bajos. No se puede cambiar después de crear el campo."
+                  className="cursor-help text-slate-300 hover:text-slate-500 transition-colors"
+                >
+                  <Info className="w-3.5 h-3.5" />
+                </span>
               </label>
               <input className="input-hce font-mono" value={form.clave}
                 disabled={!!editando}
