@@ -19,6 +19,14 @@ import (
 	"hce/api/models"
 )
 
+// asJSON convierte json.RawMessage a []byte para pgx; nil si vacío.
+func asJSON(r json.RawMessage) interface{} {
+	if len(r) == 0 || string(r) == "null" {
+		return nil
+	}
+	return []byte(r)
+}
+
 type EncuentroHandler struct {
 	db *pgxpool.Pool
 }
@@ -51,9 +59,7 @@ const columnasEncuentro = `
 	paciente_documento, encuentro_padre_id,
 	fecha_atencion, causa_externa, finalidad_consulta, via_ingreso,
 	motivo_consulta,
-	ta_sistolica, ta_diastolica, frecuencia_cardiaca, frecuencia_respiratoria,
-	temperatura, saturacion_o2, peso, talla,
-	examen_fisico,
+	signos_vitales, examen_fisico,
 	COALESCE(codigo_diagnostico_principal, ''), descripcion_diagnostico, plan_manejo,
 	hash_integridad, fecha_creacion, creado_por, id_sistema_anterior,
 	CASE finalidad_consulta WHEN '10' THEN 'Consulta de primera vez' WHEN '11' THEN 'Consulta de control o seguimiento' WHEN '12' THEN 'Urgencias' ELSE finalidad_consulta END AS finalidad_consulta_nombre,
@@ -254,19 +260,23 @@ func (h *EncuentroHandler) actualizar(w http.ResponseWriter, r *http.Request) {
 
 func escanearEncuentro(row scanner) (models.Encuentro, error) {
 	var e models.Encuentro
+	var svRaw, efRaw []byte
 	err := row.Scan(
 		&e.ID, &e.EncuentroID, &e.NumeroVersion, &e.EsUltimaVersion, &e.EstaActivo,
 		&e.PacienteDocumento, &e.EncuentroPadreID,
 		&e.FechaAtencion, &e.CausaExterna, &e.FinalidadConsulta, &e.ViaIngreso,
 		&e.MotivoConsulta,
-		&e.TASistolica, &e.TADiastolica, &e.FrecuenciaCardiaca, &e.FrecuenciaRespiratoria,
-		&e.Temperatura, &e.SaturacionO2, &e.Peso, &e.Talla,
-		&e.ExamenFisico,
+		&svRaw, &efRaw,
 		&e.CodigoDiagnosticoPrincipal, &e.DescripcionDiagnostico, &e.PlanManejo,
 		&e.HashIntegridad, &e.FechaCreacion, &e.CreadoPor, &e.IDSistemaAnterior,
 		&e.FinalidadConsultaNombre, &e.CausaExternaNombre, &e.ViaIngresoNombre,
 	)
-	return e, err
+	if err != nil {
+		return e, err
+	}
+	e.SignosVitales = json.RawMessage(svRaw)
+	e.ExamenFisico = json.RawMessage(efRaw)
+	return e, nil
 }
 
 func insertarEncuentro(ctx context.Context, db encuentroQuerier, encuentroID string, documento string, input models.EncuentroInput, version int, creadoPor string) (models.Encuentro, error) {
@@ -295,9 +305,7 @@ func insertarEncuentro(ctx context.Context, db encuentroQuerier, encuentroID str
 			paciente_documento, encuentro_padre_id,
 			fecha_atencion, causa_externa, finalidad_consulta, via_ingreso,
 			motivo_consulta,
-			ta_sistolica, ta_diastolica, frecuencia_cardiaca, frecuencia_respiratoria,
-			temperatura, saturacion_o2, peso, talla,
-			examen_fisico,
+			signos_vitales, examen_fisico,
 			codigo_diagnostico_principal, descripcion_diagnostico, plan_manejo,
 			creado_por
 		) VALUES (
@@ -305,19 +313,15 @@ func insertarEncuentro(ctx context.Context, db encuentroQuerier, encuentroID str
 			$3, $4,
 			$5, $6, $7, $8,
 			$9,
-			$10, $11, $12, $13,
-			$14, $15, $16, $17,
-			$18,
-			$19, $20, $21,
-			$22
+			$10, $11,
+			$12, $13, $14,
+			$15
 		) RETURNING `+columnasEncuentro,
 		encuentroID, version,
 		documento, input.EncuentroPadreID,
 		fechaAtencion, input.CausaExterna, input.FinalidadConsulta, input.ViaIngreso,
 		input.MotivoConsulta,
-		input.TASistolica, input.TADiastolica, input.FrecuenciaCardiaca, input.FrecuenciaRespiratoria,
-		input.Temperatura, input.SaturacionO2, input.Peso, input.Talla,
-		input.ExamenFisico,
+		asJSON(input.SignosVitales), asJSON(input.ExamenFisico),
 		codigoPrincipal, descPrincipal, input.PlanManejo,
 		creadoPor,
 	)

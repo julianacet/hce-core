@@ -1,21 +1,14 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
-import { useCrearEncuentro, type DiagnosticoItem } from '../../api/encuentros'
+import { useCrearEncuentro, type DiagnosticoItem, type ValorNormalNotas } from '../../api/encuentros'
 import { usePaciente } from '../../api/pacientes'
+import { useCamposClinicosActivos } from '../../api/campos_clinicos'
 import AntecedentesTab from '../../components/AntecedentesTab'
 import DiagnosticoSearch from '../../components/DiagnosticoSearch'
+import { SignosVitalesForm, ExamenFisicoForm } from '../../components/CampoClinicoForm'
 
 type FormState = {
   motivo_consulta: string
-  ta_sistolica: string
-  ta_diastolica: string
-  frecuencia_cardiaca: string
-  frecuencia_respiratoria: string
-  temperatura: string
-  saturacion_o2: string
-  peso: string
-  talla: string
-  examen_fisico: string
   plan_manejo: string
   finalidad_consulta: string
   causa_externa: string
@@ -24,36 +17,10 @@ type FormState = {
 
 const FORM_INICIAL: FormState = {
   motivo_consulta: '',
-  ta_sistolica: '',
-  ta_diastolica: '',
-  frecuencia_cardiaca: '',
-  frecuencia_respiratoria: '',
-  temperatura: '',
-  saturacion_o2: '',
-  peso: '',
-  talla: '',
-  examen_fisico: '',
   plan_manejo: '',
   finalidad_consulta: '10',
   causa_externa: '13',
   via_ingreso: '02',
-}
-
-function numONull(v: string): number | null {
-  const n = parseFloat(v)
-  return v.trim() === '' || isNaN(n) ? null : n
-}
-
-function intONull(v: string): number | null {
-  const n = parseInt(v, 10)
-  return v.trim() === '' || isNaN(n) ? null : n
-}
-
-function calcularIMC(peso: string, talla: string): string {
-  const p = parseFloat(peso)
-  const t = parseFloat(talla)
-  if (!p || !t || t === 0) return '—'
-  return (p / Math.pow(t / 100, 2)).toFixed(1)
 }
 
 type Tab = 'consulta' | 'antecedentes'
@@ -63,7 +30,11 @@ export default function NuevoEncuentro() {
   const navigate = useNavigate()
   const crear = useCrearEncuentro(id ?? '')
   const { data: paciente } = usePaciente(id ?? '')
+  const { data: campos = [] } = useCamposClinicosActivos()
+
   const [form, setForm] = useState<FormState>(FORM_INICIAL)
+  const [signos, setSignos] = useState<Record<string, string>>({})
+  const [examen, setExamen] = useState<Record<string, string | ValorNormalNotas>>({})
   const [diagnosticos, setDiagnosticos] = useState<DiagnosticoItem[]>([])
   const [tab, setTab] = useState<Tab>('consulta')
 
@@ -75,17 +46,15 @@ export default function NuevoEncuentro() {
     e.preventDefault()
     if (!diagnosticos.some(d => d.tipo === 'principal')) return
 
+    // Limpiar campos vacíos de signos vitales
+    const signosLimpios = Object.fromEntries(
+      Object.entries(signos).filter(([, v]) => v.trim() !== '')
+    )
+
     const encuentro = await crear.mutateAsync({
       motivo_consulta: form.motivo_consulta,
-      ta_sistolica: intONull(form.ta_sistolica),
-      ta_diastolica: intONull(form.ta_diastolica),
-      frecuencia_cardiaca: intONull(form.frecuencia_cardiaca),
-      frecuencia_respiratoria: intONull(form.frecuencia_respiratoria),
-      temperatura: numONull(form.temperatura),
-      saturacion_o2: intONull(form.saturacion_o2),
-      peso: numONull(form.peso),
-      talla: numONull(form.talla),
-      examen_fisico: form.examen_fisico || undefined,
+      signos_vitales: Object.keys(signosLimpios).length > 0 ? signosLimpios : undefined,
+      examen_fisico: Object.keys(examen).length > 0 ? examen : undefined,
       diagnosticos,
       plan_manejo: form.plan_manejo || undefined,
       finalidad_consulta: form.finalidad_consulta,
@@ -95,8 +64,9 @@ export default function NuevoEncuentro() {
     navigate(`/pacientes/${id}/encuentros/${encuentro.encuentro_id}`)
   }
 
-  const imc = calcularIMC(form.peso, form.talla)
   const faltaDiagnostico = !diagnosticos.some(d => d.tipo === 'principal')
+  const camposSignos = campos.filter(c => c.seccion === 'signos_vitales')
+  const camposExamen = campos.filter(c => c.seccion === 'examen_fisico')
 
   const TABS: { key: Tab; label: string }[] = [
     { key: 'consulta', label: 'Consulta' },
@@ -105,7 +75,6 @@ export default function NuevoEncuentro() {
 
   return (
     <div className="space-y-4">
-
       {/* Tabs */}
       <div className="flex gap-1 bg-slate-100 p-1 rounded-lg w-fit">
         {TABS.map(({ key, label }) => (
@@ -123,7 +92,6 @@ export default function NuevoEncuentro() {
         ))}
       </div>
 
-      {/* ── Tab: Antecedentes ─────────────────────────────────── */}
       {tab === 'antecedentes' && (
         <div className="card-hce p-6">
           <h3 className="card-title mb-4">Antecedentes del paciente</h3>
@@ -131,7 +99,6 @@ export default function NuevoEncuentro() {
         </div>
       )}
 
-      {/* ── Tab: Consulta ─────────────────────────────────────── */}
       {tab === 'consulta' && (
         <form onSubmit={handleSubmit} className="space-y-4">
 
@@ -174,69 +141,24 @@ export default function NuevoEncuentro() {
           </div>
 
           {/* Signos vitales */}
-          <div className="card-hce p-6 space-y-4">
-            <h3 className="card-title">Signos vitales <span className="font-normal text-slate-400">(opcional)</span></h3>
-
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="col-span-2">
-                <label className="label-hce">Tensión arterial (mmHg)</label>
-                <div className="flex items-center gap-2">
-                  <input type="number" name="ta_sistolica" value={form.ta_sistolica} onChange={handleChange}
-                    placeholder="Sistólica" min={40} max={300} className="input-hce" />
-                  <span className="text-slate-400 shrink-0">/</span>
-                  <input type="number" name="ta_diastolica" value={form.ta_diastolica} onChange={handleChange}
-                    placeholder="Diastólica" min={20} max={200} className="input-hce" />
-                </div>
-              </div>
-              <div>
-                <label className="label-hce">FC (lpm)</label>
-                <input type="number" name="frecuencia_cardiaca" value={form.frecuencia_cardiaca} onChange={handleChange}
-                  placeholder="72" min={20} max={300} className="input-hce" />
-              </div>
-              <div>
-                <label className="label-hce">FR (rpm)</label>
-                <input type="number" name="frecuencia_respiratoria" value={form.frecuencia_respiratoria} onChange={handleChange}
-                  placeholder="16" min={4} max={60} className="input-hce" />
-              </div>
+          {camposSignos.length > 0 && (
+            <div className="card-hce p-6 space-y-4">
+              <h3 className="card-title">
+                Signos vitales <span className="font-normal text-slate-400">(opcional)</span>
+              </h3>
+              <SignosVitalesForm campos={camposSignos} values={signos} onChange={setSignos} />
             </div>
-
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div>
-                <label className="label-hce">Temperatura (°C)</label>
-                <input type="number" name="temperatura" value={form.temperatura} onChange={handleChange}
-                  placeholder="36.5" step="0.1" min={30} max={45} className="input-hce" />
-              </div>
-              <div>
-                <label className="label-hce">SpO₂ (%)</label>
-                <input type="number" name="saturacion_o2" value={form.saturacion_o2} onChange={handleChange}
-                  placeholder="98" min={50} max={100} className="input-hce" />
-              </div>
-              <div>
-                <label className="label-hce">Peso (kg)</label>
-                <input type="number" name="peso" value={form.peso} onChange={handleChange}
-                  placeholder="70.0" step="0.1" min={1} max={300} className="input-hce" />
-              </div>
-              <div>
-                <label className="label-hce">Talla (cm)</label>
-                <input type="number" name="talla" value={form.talla} onChange={handleChange}
-                  placeholder="165" step="0.1" min={30} max={250} className="input-hce" />
-              </div>
-            </div>
-
-            {(form.peso || form.talla) && (
-              <p className="text-xs text-slate-500">
-                IMC: <span className="font-semibold text-slate-700">{imc}</span>
-                {imc !== '—' && ' kg/m²'}
-              </p>
-            )}
-          </div>
+          )}
 
           {/* Examen físico */}
-          <div className="card-hce p-6">
-            <label className="label-hce">Examen físico</label>
-            <textarea name="examen_fisico" value={form.examen_fisico} onChange={handleChange}
-              rows={3} placeholder="Hallazgos por sistemas..." className="input-hce resize-none" />
-          </div>
+          {camposExamen.length > 0 && (
+            <div className="card-hce p-6 space-y-4">
+              <h3 className="card-title">
+                Examen físico <span className="font-normal text-slate-400">(marcar Normal o describir hallazgos)</span>
+              </h3>
+              <ExamenFisicoForm campos={camposExamen} values={examen} onChange={setExamen} />
+            </div>
+          )}
 
           {/* Diagnósticos */}
           <div className="card-hce p-6 space-y-4">

@@ -12,6 +12,8 @@ export type EncuentroDiagnostico = DiagnosticoItem & {
   orden: number
 }
 
+export type ValorNormalNotas = { normal: boolean; notas?: string }
+
 export type Encuentro = {
   id: string
   encuentro_id: string
@@ -24,15 +26,8 @@ export type Encuentro = {
   finalidad_consulta: string
   via_ingreso: string
   motivo_consulta: string
-  ta_sistolica?: number
-  ta_diastolica?: number
-  frecuencia_cardiaca?: number
-  frecuencia_respiratoria?: number
-  temperatura?: number
-  saturacion_o2?: number
-  peso?: number
-  talla?: number
-  examen_fisico?: string
+  signos_vitales?: Record<string, string>
+  examen_fisico?: Record<string, string | ValorNormalNotas>
   // Kept for RIPS / list display
   codigo_diagnostico_principal: string
   descripcion_diagnostico?: string
@@ -54,15 +49,8 @@ export type EncuentroInput = {
   finalidad_consulta: string
   via_ingreso: string
   motivo_consulta: string
-  ta_sistolica?: number | null
-  ta_diastolica?: number | null
-  frecuencia_cardiaca?: number | null
-  frecuencia_respiratoria?: number | null
-  temperatura?: number | null
-  saturacion_o2?: number | null
-  peso?: number | null
-  talla?: number | null
-  examen_fisico?: string
+  signos_vitales?: Record<string, string>
+  examen_fisico?: Record<string, string | ValorNormalNotas>
   diagnosticos: DiagnosticoItem[]
   plan_manejo?: string
 }

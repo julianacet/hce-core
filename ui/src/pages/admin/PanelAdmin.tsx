@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react'
 import { useTema, DEFAULTS, type Tema } from '../../context/TemaContext'
-import { Upload, Trash2, CheckCircle, RotateCcw, Plus, Pencil, X, ShieldCheck, Stethoscope, Users, AlertTriangle, ExternalLink, ClipboardList } from 'lucide-react'
+import { Upload, Trash2, CheckCircle, RotateCcw, Plus, Pencil, X, ShieldCheck, Stethoscope, Users, AlertTriangle, ExternalLink, ClipboardList, Activity } from 'lucide-react'
 import {
   usePlantillas,
   useCrearPlantilla,
@@ -31,6 +31,14 @@ import {
   useTogglePregunta,
   type AntecedentePregunta,
 } from '../../api/antecedentes'
+import {
+  useTodosCamposClinicos,
+  useCrearCampoClinico,
+  useActualizarCampoClinico,
+  useToggleCampoClinico,
+  type CampoClinico,
+  type CampoClinicoInput,
+} from '../../api/campos_clinicos'
 
 const PALETAS = [
   {
@@ -826,11 +834,214 @@ function PreguntaRow({ pregunta, onEditar }: { pregunta: AntecedentePregunta; on
   )
 }
 
+const SECCION_LABELS: Record<string, string> = {
+  signos_vitales: 'Signos vitales',
+  examen_fisico:  'Examen físico',
+}
+const TIPO_CAMPO_LABELS: Record<string, string> = {
+  numero:       'Número',
+  normal_notas: 'Normal / Hallazgos',
+  texto:        'Texto libre',
+}
+const FORM_CAMPO_INICIAL: CampoClinicoInput = {
+  seccion: 'signos_vitales',
+  nombre: '',
+  tipo: 'numero',
+  unidad: undefined,
+  clave: '',
+  orden: 0,
+}
+
+function CamposClinicosAdmin() {
+  const { data: campos = [] } = useTodosCamposClinicos()
+  const crear = useCrearCampoClinico()
+  const [editando, setEditando] = useState<CampoClinico | null>(null)
+  const actualizar = useActualizarCampoClinico(editando?.id ?? '')
+  const [form, setForm] = useState<CampoClinicoInput>(FORM_CAMPO_INICIAL)
+  const [mostrarForm, setMostrarForm] = useState(false)
+  const [error, setError] = useState('')
+
+  const porSeccion = ['signos_vitales', 'examen_fisico'].map(sec => ({
+    sec,
+    items: campos.filter(c => c.seccion === sec),
+  }))
+
+  function abrirNuevo() {
+    setEditando(null)
+    setForm(FORM_CAMPO_INICIAL)
+    setError('')
+    setMostrarForm(true)
+  }
+
+  function abrirEditar(c: CampoClinico) {
+    setEditando(c)
+    setForm({ seccion: c.seccion, nombre: c.nombre, tipo: c.tipo, unidad: c.unidad, clave: c.clave, orden: c.orden })
+    setError('')
+    setMostrarForm(true)
+  }
+
+  function cerrar() {
+    setMostrarForm(false)
+    setEditando(null)
+    setError('')
+  }
+
+  async function guardar() {
+    if (!form.nombre.trim()) { setError('El nombre es obligatorio.'); return }
+    if (!editando && !form.clave.trim()) { setError('La clave es obligatoria.'); return }
+    setError('')
+    try {
+      if (editando) await actualizar.mutateAsync(form)
+      else await crear.mutateAsync(form)
+      cerrar()
+    } catch {
+      setError('Error al guardar. La clave debe ser única.')
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <p className="text-sm" style={{ color: 'var(--hce-text-muted)' }}>
+          Define qué campos aparecen en los formularios de signos vitales y examen físico.
+          Los campos inactivos no se muestran al médico pero conservan los datos existentes.
+        </p>
+        <button onClick={abrirNuevo} className="btn-primary">
+          <Plus className="w-4 h-4" /> Nuevo campo
+        </button>
+      </div>
+
+      {mostrarForm && (
+        <div className="card-hce p-5 space-y-4 border-2" style={{ borderColor: 'var(--hce-primary)' }}>
+          <div className="flex items-center justify-between">
+            <h4 className="card-title">{editando ? 'Editar campo' : 'Nuevo campo clínico'}</h4>
+            <button onClick={cerrar}><X className="w-4 h-4 text-slate-400" /></button>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="label-hce">Sección *</label>
+              <select className="input-hce" value={form.seccion}
+                onChange={e => setForm(f => ({ ...f, seccion: e.target.value as CampoClinicoInput['seccion'] }))}>
+                <option value="signos_vitales">Signos vitales</option>
+                <option value="examen_fisico">Examen físico</option>
+              </select>
+            </div>
+            <div>
+              <label className="label-hce">Tipo *</label>
+              <select className="input-hce" value={form.tipo}
+                onChange={e => setForm(f => ({ ...f, tipo: e.target.value as CampoClinicoInput['tipo'] }))}>
+                <option value="numero">Número</option>
+                <option value="normal_notas">Normal / Hallazgos</option>
+                <option value="texto">Texto libre</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="label-hce">Nombre *</label>
+            <input className="input-hce" value={form.nombre}
+              onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))}
+              placeholder="Ej: Glucometría" />
+          </div>
+
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <label className="label-hce">
+                Clave (identificador){editando ? <span className="text-slate-400 font-normal"> — no editable</span> : ' *'}
+              </label>
+              <input className="input-hce font-mono" value={form.clave}
+                disabled={!!editando}
+                onChange={e => setForm(f => ({ ...f, clave: e.target.value }))}
+                placeholder="glucometria" />
+            </div>
+            {form.tipo === 'numero' && (
+              <div>
+                <label className="label-hce">Unidad</label>
+                <input className="input-hce" value={form.unidad ?? ''}
+                  onChange={e => setForm(f => ({ ...f, unidad: e.target.value || undefined }))}
+                  placeholder="mg/dL, cm, mmHg…" />
+              </div>
+            )}
+            <div>
+              <label className="label-hce">Orden</label>
+              <input type="number" className="input-hce" value={form.orden}
+                onChange={e => setForm(f => ({ ...f, orden: parseInt(e.target.value) || 0 }))} />
+            </div>
+          </div>
+
+          {error && <p className="text-xs text-red-600">{error}</p>}
+          <div className="flex justify-end gap-2">
+            <button onClick={cerrar} className="btn-secondary">Cancelar</button>
+            <button onClick={guardar} disabled={crear.isPending || actualizar.isPending} className="btn-primary">
+              Guardar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {porSeccion.map(({ sec, items }) => (
+        <div key={sec}>
+          <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2">
+            {SECCION_LABELS[sec]}
+          </h4>
+          <div className="card-hce divide-y" style={{ borderColor: 'var(--hce-border)' }}>
+            {items.length === 0 && (
+              <p className="px-4 py-4 text-sm text-slate-400">Sin campos configurados.</p>
+            )}
+            {items.map(c => <CampoRow key={c.id} campo={c} onEditar={() => abrirEditar(c)} />)}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function CampoRow({ campo, onEditar }: { campo: CampoClinico; onEditar: () => void }) {
+  const toggle = useToggleCampoClinico(campo.id)
+  return (
+    <div className={`flex items-center gap-3 px-4 py-3 ${!campo.esta_activo ? 'opacity-50' : ''}`}>
+      <Activity className={`w-4 h-4 shrink-0 ${campo.esta_activo ? 'text-blue-400' : 'text-slate-300'}`} />
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-sm text-slate-700">{campo.nombre}</span>
+          {campo.unidad && (
+            <span className="text-xs text-slate-400">({campo.unidad})</span>
+          )}
+          <span className="px-1.5 py-0.5 rounded text-xs bg-slate-100 text-slate-500">
+            {TIPO_CAMPO_LABELS[campo.tipo]}
+          </span>
+          <span className="px-1.5 py-0.5 rounded text-xs bg-slate-50 text-slate-400 font-mono">
+            {campo.clave}
+          </span>
+          {!campo.esta_activo && (
+            <span className="px-1.5 py-0.5 rounded text-xs bg-slate-100 text-slate-400">Inactivo</span>
+          )}
+        </div>
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
+        <button onClick={onEditar} className="text-slate-400 hover:text-slate-600">
+          <Pencil className="w-3.5 h-3.5" />
+        </button>
+        <button
+          onClick={() => toggle.mutate()}
+          className={`text-xs px-2 py-0.5 rounded border transition-colors ${
+            campo.esta_activo
+              ? 'border-slate-200 text-slate-500 hover:border-red-300 hover:text-red-600'
+              : 'border-green-200 text-green-600 hover:bg-green-50'
+          }`}>
+          {campo.esta_activo ? 'Desactivar' : 'Activar'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export default function PanelAdmin() {
   const { tema, guardarTema } = useTema()
   const [form, setForm] = useState<Tema>(tema)
   const [guardado, setGuardado] = useState(false)
-  const [tab, setTab] = useState<'apariencia' | 'consentimientos' | 'usuarios' | 'eventos' | 'antecedentes'>('apariencia')
+  const [tab, setTab] = useState<'apariencia' | 'consentimientos' | 'usuarios' | 'eventos' | 'antecedentes' | 'campos'>('apariencia')
   const inputLogo = useRef<HTMLInputElement>(null)
 
   function set<K extends keyof Tema>(key: K, value: Tema[K]) {
@@ -877,6 +1088,7 @@ export default function PanelAdmin() {
           { id: 'apariencia',      label: 'Apariencia' },
           { id: 'consentimientos', label: 'Consentimientos' },
           { id: 'antecedentes',    label: 'Antecedentes' },
+          { id: 'campos',          label: 'Campos clínicos' },
           { id: 'usuarios',        label: 'Usuarios' },
           { id: 'eventos',         label: 'Eventos adversos' },
         ] as const).map(({ id, label }) => (
@@ -894,6 +1106,7 @@ export default function PanelAdmin() {
       {tab === 'usuarios' && <UsuariosAdmin />}
       {tab === 'eventos' && <TiposEventoAdversoAdmin />}
       {tab === 'antecedentes' && <AntecedentesAdmin />}
+      {tab === 'campos' && <CamposClinicosAdmin />}
 
       {tab === 'apariencia' && <form onSubmit={guardar} className="space-y-6">
 

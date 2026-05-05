@@ -1,61 +1,50 @@
 package models
 
-import "time"
+import (
+	"encoding/json"
+	"time"
+)
 
 type Encuentro struct {
-	ID                         string     `json:"id"`
-	EncuentroID                string     `json:"encuentro_id"`
-	NumeroVersion              int        `json:"numero_version"`
-	EsUltimaVersion            bool       `json:"es_ultima_version"`
-	EstaActivo                 bool       `json:"esta_activo"`
-	PacienteDocumento          string     `json:"paciente_documento"`
-	EncuentroPadreID           *string    `json:"encuentro_padre_id"`
-	FechaAtencion              time.Time  `json:"fecha_atencion"`
-	CausaExterna               string     `json:"causa_externa"`
-	FinalidadConsulta          string     `json:"finalidad_consulta"`
-	ViaIngreso                 string     `json:"via_ingreso"`
-	MotivoConsulta             string     `json:"motivo_consulta"`
-	TASistolica                *int16     `json:"ta_sistolica"`
-	TADiastolica               *int16     `json:"ta_diastolica"`
-	FrecuenciaCardiaca         *int16     `json:"frecuencia_cardiaca"`
-	FrecuenciaRespiratoria     *int16     `json:"frecuencia_respiratoria"`
-	Temperatura                *float64   `json:"temperatura"`
-	SaturacionO2               *int16     `json:"saturacion_o2"`
-	Peso                       *float64   `json:"peso"`
-	Talla                      *float64   `json:"talla"`
-	ExamenFisico               *string    `json:"examen_fisico"`
-	// Kept for RIPS compatibility and list-view display; populated from first principal diagnosis.
-	CodigoDiagnosticoPrincipal string     `json:"codigo_diagnostico_principal"`
-	DescripcionDiagnostico     *string    `json:"descripcion_diagnostico"`
-	PlanManejo                 *string    `json:"plan_manejo"`
-	HashIntegridad             *string    `json:"hash_integridad"`
-	FechaCreacion              time.Time  `json:"fecha_creacion"`
-	CreadoPor                  string     `json:"creado_por"`
-	IDSistemaAnterior          *string    `json:"id_sistema_anterior"`
+	ID                         string          `json:"id"`
+	EncuentroID                string          `json:"encuentro_id"`
+	NumeroVersion              int             `json:"numero_version"`
+	EsUltimaVersion            bool            `json:"es_ultima_version"`
+	EstaActivo                 bool            `json:"esta_activo"`
+	PacienteDocumento          string          `json:"paciente_documento"`
+	EncuentroPadreID           *string         `json:"encuentro_padre_id"`
+	FechaAtencion              time.Time       `json:"fecha_atencion"`
+	CausaExterna               string          `json:"causa_externa"`
+	FinalidadConsulta          string          `json:"finalidad_consulta"`
+	ViaIngreso                 string          `json:"via_ingreso"`
+	MotivoConsulta             string          `json:"motivo_consulta"`
+	SignosVitales              json.RawMessage `json:"signos_vitales"`
+	ExamenFisico               json.RawMessage `json:"examen_fisico"`
+	// Kept for RIPS compatibility and list-view display.
+	CodigoDiagnosticoPrincipal string          `json:"codigo_diagnostico_principal"`
+	DescripcionDiagnostico     *string         `json:"descripcion_diagnostico"`
+	PlanManejo                 *string         `json:"plan_manejo"`
+	HashIntegridad             *string         `json:"hash_integridad"`
+	FechaCreacion              time.Time       `json:"fecha_creacion"`
+	CreadoPor                  string          `json:"creado_por"`
+	IDSistemaAnterior          *string         `json:"id_sistema_anterior"`
 	// Computed labels
 	FinalidadConsultaNombre string `json:"finalidad_consulta_nombre"`
 	CausaExternaNombre      string `json:"causa_externa_nombre"`
 	ViaIngresoNombre        string `json:"via_ingreso_nombre"`
-	// Full diagnosis list — populated on detail view, omitted on list view.
+	// Full diagnosis list — populated on detail view.
 	Diagnosticos []EncuentroDiagnostico `json:"diagnosticos,omitempty"`
 }
 
 type EncuentroInput struct {
-	EncuentroPadreID       *string            `json:"encuentro_padre_id"`
-	FechaAtencion          *string            `json:"fecha_atencion"` // nil → hora actual
-	CausaExterna           string             `json:"causa_externa"`
-	FinalidadConsulta      string             `json:"finalidad_consulta"`
-	ViaIngreso             string             `json:"via_ingreso"`
-	MotivoConsulta         string             `json:"motivo_consulta"`
-	TASistolica            *int16             `json:"ta_sistolica"`
-	TADiastolica           *int16             `json:"ta_diastolica"`
-	FrecuenciaCardiaca     *int16             `json:"frecuencia_cardiaca"`
-	FrecuenciaRespiratoria *int16             `json:"frecuencia_respiratoria"`
-	Temperatura            *float64           `json:"temperatura"`
-	SaturacionO2           *int16             `json:"saturacion_o2"`
-	Peso                   *float64           `json:"peso"`
-	Talla                  *float64           `json:"talla"`
-	ExamenFisico           *string            `json:"examen_fisico"`
-	Diagnosticos           []DiagnosticoInput `json:"diagnosticos"`
-	PlanManejo             *string            `json:"plan_manejo"`
+	EncuentroPadreID  *string            `json:"encuentro_padre_id"`
+	FechaAtencion     *string            `json:"fecha_atencion"` // nil → hora actual
+	CausaExterna      string             `json:"causa_externa"`
+	FinalidadConsulta string             `json:"finalidad_consulta"`
+	ViaIngreso        string             `json:"via_ingreso"`
+	MotivoConsulta    string             `json:"motivo_consulta"`
+	SignosVitales     json.RawMessage    `json:"signos_vitales"`
+	ExamenFisico      json.RawMessage    `json:"examen_fisico"`
+	Diagnosticos      []DiagnosticoInput `json:"diagnosticos"`
+	PlanManejo        *string            `json:"plan_manejo"`
 }

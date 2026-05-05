@@ -2,13 +2,14 @@ import { useNavigate, useParams } from 'react-router'
 import { FileText, Activity, Receipt, ScrollText, Download, Printer, ClipboardList } from 'lucide-react'
 import { useState } from 'react'
 import { pdf, PDFDownloadLink } from '@react-pdf/renderer'
-import { useEncuentro } from '../../api/encuentros'
+import { useEncuentro, type ValorNormalNotas } from '../../api/encuentros'
 import { useAuditoriaEncuentro } from '../../api/auditoria'
 import { usePaciente } from '../../api/pacientes'
 import { usePlantillas, useConsentimientoEncuentro, useRegistrarConsentimiento } from '../../api/consentimientos'
 import { useMedico } from '../../context/MedicoContext'
 import ConsentimientoPDF from '../../components/pdf/ConsentimientoPDF'
 import { useAntecedentes } from '../../api/antecedentes'
+import { useCamposClinicosActivos } from '../../api/campos_clinicos'
 
 
 const colorAccion: Record<string, string> = {
@@ -38,6 +39,7 @@ export default function DetalleEncuentro() {
   const { data: consentimientoPrevio } = useConsentimientoEncuentro(id ?? '', encId ?? '')
   const registrar = useRegistrarConsentimiento(id ?? '', encId ?? '')
   const { data: antecedentes } = useAntecedentes(id ?? '')
+  const { data: campos = [] } = useCamposClinicosActivos()
 
   if (isLoading) {
     return <div className="p-6 text-sm text-slate-400">Cargando encuentro...</div>
@@ -133,70 +135,98 @@ export default function DetalleEncuentro() {
           )}
 
           {/* Signos vitales */}
-          {(e.ta_sistolica || e.frecuencia_cardiaca || e.temperatura || e.saturacion_o2 || e.peso) && (
-            <div>
-              <p className="text-xs text-slate-400 mb-2">Signos vitales</p>
-              <div className="grid grid-cols-4 gap-3">
-                {e.ta_sistolica && e.ta_diastolica && (
-                  <div className="bg-slate-50 rounded-lg p-2 text-center">
-                    <p className="text-sm font-semibold text-slate-800">{e.ta_sistolica}/{e.ta_diastolica}</p>
+          {e.signos_vitales && Object.keys(e.signos_vitales).length > 0 && (() => {
+            const sv = e.signos_vitales!
+            const camposSignos = campos.filter(c => c.seccion === 'signos_vitales')
+            const rendered = new Set<string>()
+            const chips: React.ReactNode[] = []
+
+            for (const c of camposSignos) {
+              if (rendered.has(c.clave) || !sv[c.clave]) continue
+              rendered.add(c.clave)
+
+              if (c.clave === 'ta_sistolica' && sv['ta_diastolica']) {
+                rendered.add('ta_diastolica')
+                chips.push(
+                  <div key="ta" className="bg-slate-50 rounded-lg p-2 text-center">
+                    <p className="text-sm font-semibold text-slate-800">{sv['ta_sistolica']}/{sv['ta_diastolica']}</p>
                     <p className="text-xs text-slate-400">TA mmHg</p>
                   </div>
-                )}
-                {e.frecuencia_cardiaca && (
-                  <div className="bg-slate-50 rounded-lg p-2 text-center">
-                    <p className="text-sm font-semibold text-slate-800">{e.frecuencia_cardiaca}</p>
-                    <p className="text-xs text-slate-400">FC lpm</p>
-                  </div>
-                )}
-                {e.frecuencia_respiratoria && (
-                  <div className="bg-slate-50 rounded-lg p-2 text-center">
-                    <p className="text-sm font-semibold text-slate-800">{e.frecuencia_respiratoria}</p>
-                    <p className="text-xs text-slate-400">FR rpm</p>
-                  </div>
-                )}
-                {e.temperatura && (
-                  <div className="bg-slate-50 rounded-lg p-2 text-center">
-                    <p className="text-sm font-semibold text-slate-800">{e.temperatura}°C</p>
-                    <p className="text-xs text-slate-400">Temperatura</p>
-                  </div>
-                )}
-                {e.saturacion_o2 && (
-                  <div className="bg-slate-50 rounded-lg p-2 text-center">
-                    <p className="text-sm font-semibold text-slate-800">{e.saturacion_o2}%</p>
-                    <p className="text-xs text-slate-400">SpO₂</p>
-                  </div>
-                )}
-                {e.peso && (
-                  <div className="bg-slate-50 rounded-lg p-2 text-center">
-                    <p className="text-sm font-semibold text-slate-800">{e.peso} kg</p>
-                    <p className="text-xs text-slate-400">Peso</p>
-                  </div>
-                )}
-                {e.talla && (
-                  <div className="bg-slate-50 rounded-lg p-2 text-center">
-                    <p className="text-sm font-semibold text-slate-800">{e.talla} cm</p>
-                    <p className="text-xs text-slate-400">Talla</p>
-                  </div>
-                )}
-                {e.peso && e.talla && (
-                  <div className="bg-slate-50 rounded-lg p-2 text-center">
-                    <p className="text-sm font-semibold text-slate-800">
-                      {(e.peso / Math.pow(e.talla / 100, 2)).toFixed(1)}
-                    </p>
-                    <p className="text-xs text-slate-400">IMC kg/m²</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
+                )
+                continue
+              }
 
-          {e.examen_fisico && (
-            <div>
-              <p className="text-xs text-slate-400 mb-1">Examen físico</p>
-              <p className="text-sm text-slate-800 leading-relaxed">{e.examen_fisico}</p>
-            </div>
-          )}
+              chips.push(
+                <div key={c.clave} className="bg-slate-50 rounded-lg p-2 text-center">
+                  <p className="text-sm font-semibold text-slate-800">
+                    {sv[c.clave]}{c.unidad ? ` ${c.unidad}` : ''}
+                  </p>
+                  <p className="text-xs text-slate-400">{c.nombre}</p>
+                </div>
+              )
+            }
+
+            // IMC calculado
+            if (sv['peso'] && sv['talla']) {
+              const p = parseFloat(sv['peso']), t = parseFloat(sv['talla'])
+              if (p && t) chips.push(
+                <div key="imc" className="bg-slate-50 rounded-lg p-2 text-center">
+                  <p className="text-sm font-semibold text-slate-800">{(p / Math.pow(t / 100, 2)).toFixed(1)}</p>
+                  <p className="text-xs text-slate-400">IMC kg/m²</p>
+                </div>
+              )
+            }
+
+            if (chips.length === 0) return null
+            return (
+              <div>
+                <p className="text-xs text-slate-400 mb-2">Signos vitales</p>
+                <div className="grid grid-cols-4 gap-3">{chips}</div>
+              </div>
+            )
+          })()}
+
+          {/* Examen físico */}
+          {e.examen_fisico && Object.keys(e.examen_fisico).length > 0 && (() => {
+            const ef = e.examen_fisico!
+            const camposExamen = campos.filter(c => c.seccion === 'examen_fisico')
+            const filas: React.ReactNode[] = []
+
+            for (const c of camposExamen) {
+              const val = ef[c.clave]
+              if (val === undefined || val === null) continue
+              if (c.tipo === 'texto') {
+                if (typeof val === 'string' && val.trim()) {
+                  filas.push(
+                    <div key={c.clave} className="flex gap-2 text-sm">
+                      <span className="text-slate-400 shrink-0 w-40">{c.nombre}</span>
+                      <span className="text-slate-800">{val}</span>
+                    </div>
+                  )
+                }
+              } else {
+                const v = val as ValorNormalNotas
+                const notas = v.notas?.trim()
+                filas.push(
+                  <div key={c.clave} className="flex gap-2 text-sm">
+                    <span className="text-slate-400 shrink-0 w-40">{c.nombre}</span>
+                    {v.normal && !notas
+                      ? <span className="text-green-700 text-xs">Normal</span>
+                      : <span className="text-slate-800">{notas || '—'}</span>
+                    }
+                  </div>
+                )
+              }
+            }
+
+            if (filas.length === 0) return null
+            return (
+              <div>
+                <p className="text-xs text-slate-400 mb-2">Examen físico</p>
+                <div className="space-y-1">{filas}</div>
+              </div>
+            )
+          })()}
 
           {/* Diagnósticos */}
           {(e.diagnosticos && e.diagnosticos.length > 0) ? (
