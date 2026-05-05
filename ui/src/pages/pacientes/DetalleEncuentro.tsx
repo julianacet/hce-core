@@ -103,7 +103,7 @@ export default function DetalleEncuentro() {
   }
 
   return (
-    <div className="space-y-4 max-w-2xl">
+    <div className="space-y-4">
       {/* Detalle del encuentro */}
       <div className="card-hce p-6 space-y-5">
         <div className="flex items-center justify-between">
@@ -336,9 +336,8 @@ export default function DetalleEncuentro() {
       )}
 
       {/* Consentimiento informado */}
-      <div className="bg-white rounded-xl border border-slate-200 p-5 space-y-4">
+      <div className="card-hce p-5 space-y-4">
         <div className="flex items-center gap-2">
-          <ScrollText size={16} className="text-slate-400" />
           <h3 className="card-title">Consentimiento informado</h3>
           {consentimientoPrevio && (
             <span className="ml-auto text-xs text-slate-400">
