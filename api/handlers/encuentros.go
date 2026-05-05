@@ -47,7 +47,10 @@ const columnasEncuentro = `
 	temperatura, saturacion_o2, peso, talla,
 	examen_fisico,
 	codigo_diagnostico_principal, descripcion_diagnostico, plan_manejo,
-	hash_integridad, fecha_creacion, creado_por, id_sistema_anterior`
+	hash_integridad, fecha_creacion, creado_por, id_sistema_anterior,
+	CASE finalidad_consulta WHEN '10' THEN 'Consulta de primera vez' WHEN '11' THEN 'Consulta de control o seguimiento' WHEN '12' THEN 'Urgencias' ELSE finalidad_consulta END AS finalidad_consulta_nombre,
+	CASE causa_externa WHEN '13' THEN 'Enfermedad general' WHEN '01' THEN 'Accidente de trabajo' WHEN '02' THEN 'Accidente de tránsito' WHEN '03' THEN 'Otro accidente' WHEN '04' THEN 'Lesión por agresión' WHEN '05' THEN 'Lesión autoinfligida' WHEN '06' THEN 'Evento catastrófico' ELSE causa_externa END AS causa_externa_nombre,
+	CASE via_ingreso WHEN '01' THEN 'Urgencias' WHEN '02' THEN 'Consulta externa' WHEN '03' THEN 'Hospitalización' ELSE via_ingreso END AS via_ingreso_nombre`
 
 // GET /pacientes/{documento}/encuentros?desde=&hasta=&diagnostico=
 func (h *EncuentroHandler) listar(w http.ResponseWriter, r *http.Request) {
@@ -232,6 +235,7 @@ func escanearEncuentro(row scanner) (models.Encuentro, error) {
 		&e.ExamenFisico,
 		&e.CodigoDiagnosticoPrincipal, &e.DescripcionDiagnostico, &e.PlanManejo,
 		&e.HashIntegridad, &e.FechaCreacion, &e.CreadoPor, &e.IDSistemaAnterior,
+		&e.FinalidadConsultaNombre, &e.CausaExternaNombre, &e.ViaIngresoNombre,
 	)
 	return e, err
 }

@@ -52,7 +52,7 @@ CREATE TABLE paciente (
     apellido_primero  TEXT        NOT NULL,
     apellido_segundo  TEXT,
     fecha_nacimiento  DATE        NOT NULL,
-    genero            CHAR(1)     NOT NULL CHECK (genero IN ('M', 'F', 'I')),
+    genero            CHAR(1)     NOT NULL CHECK (genero IN ('M', 'F', 'X')),
 
     -- Datos personales obligatorios (Res. 1995/1999)
     estado_civil  VARCHAR(2),   -- 01 soltero, 02 casado, 03 unión libre…
@@ -650,3 +650,103 @@ CREATE TABLE IF NOT EXISTS eps (
 
 CREATE INDEX IF NOT EXISTS idx_eps_regimen ON eps(regimen);
 CREATE INDEX IF NOT EXISTS idx_eps_codigo  ON eps(codigo);
+
+-- ============================================================
+-- 19. Antecedentes del paciente — preguntas parametrizables
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS antecedente_pregunta (
+    id                  UUID        PRIMARY KEY DEFAULT uuid_generate_v4(),
+    categoria           VARCHAR(20) NOT NULL
+                        CHECK (categoria IN ('personal','familiar','farmacologico','alergico','quirurgico','habito','gineco')),
+    texto               TEXT        NOT NULL,
+    tipo_respuesta      VARCHAR(20) NOT NULL
+                        CHECK (tipo_respuesta IN ('booleano','texto','numero','fecha','opciones','lista')),
+    opciones            JSONB,
+    tiene_detalle       BOOLEAN     NOT NULL DEFAULT FALSE,
+    placeholder_detalle TEXT,
+    solo_genero         VARCHAR(5),
+    orden               INTEGER     NOT NULL DEFAULT 0,
+    esta_activo         BOOLEAN     NOT NULL DEFAULT TRUE
+);
+
+CREATE TABLE IF NOT EXISTS antecedente_respuesta (
+    id               UUID        PRIMARY KEY DEFAULT uuid_generate_v4(),
+    numero_documento TEXT        NOT NULL,
+    pregunta_id      UUID        NOT NULL REFERENCES antecedente_pregunta(id) ON DELETE CASCADE,
+    valor            TEXT        NOT NULL,
+    detalle          TEXT,
+    actualizado_en   TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (numero_documento, pregunta_id)
+);
+
+-- ── Semilla: preguntas iniciales ───────────────────────────────────────────────
+
+INSERT INTO antecedente_pregunta (categoria, texto, tipo_respuesta, opciones, tiene_detalle, placeholder_detalle, solo_genero, orden) VALUES
+-- Personales patológicos
+('personal','¿Tiene hipertensión arterial?','booleano',NULL,TRUE,'Desde cuándo, si está medicado',NULL,1),
+('personal','¿Tiene diabetes mellitus?','booleano',NULL,TRUE,'Tipo (1 o 2), desde cuándo',NULL,2),
+('personal','¿Tiene hipotiroidismo o hipertiroidismo?','booleano',NULL,TRUE,'Cuál',NULL,3),
+('personal','¿Tiene asma?','booleano',NULL,FALSE,NULL,NULL,4),
+('personal','¿Tiene EPOC u otra enfermedad pulmonar crónica?','booleano',NULL,FALSE,NULL,NULL,5),
+('personal','¿Ha tenido infarto de miocardio?','booleano',NULL,TRUE,'Cuándo',NULL,6),
+('personal','¿Ha tenido derrame cerebral (ACV)?','booleano',NULL,TRUE,'Cuándo',NULL,7),
+('personal','¿Tiene insuficiencia cardíaca?','booleano',NULL,FALSE,NULL,NULL,8),
+('personal','¿Tiene enfermedad renal crónica?','booleano',NULL,TRUE,'¿Está en diálisis?',NULL,9),
+('personal','¿Tiene artritis, lupus u otra enfermedad autoinmune?','booleano',NULL,TRUE,'Cuál',NULL,10),
+('personal','¿Ha tenido cáncer?','booleano',NULL,TRUE,'Cuál, cuándo',NULL,11),
+('personal','¿Tiene epilepsia o convulsiones?','booleano',NULL,FALSE,NULL,NULL,12),
+('personal','¿Tiene VIH/SIDA?','booleano',NULL,FALSE,NULL,NULL,13),
+('personal','¿Ha sido hospitalizado anteriormente?','booleano',NULL,TRUE,'Cuándo, por qué',NULL,14),
+('personal','Otra enfermedad crónica o relevante','texto',NULL,FALSE,NULL,NULL,15),
+
+-- Familiares
+('familiar','¿Algún familiar directo tiene o tuvo diabetes?','booleano',NULL,TRUE,'Quién',NULL,1),
+('familiar','¿Algún familiar directo tiene o tuvo hipertensión?','booleano',NULL,TRUE,'Quién',NULL,2),
+('familiar','¿Hay antecedentes de infarto o enfermedad cardíaca?','booleano',NULL,TRUE,'Quién, a qué edad',NULL,3),
+('familiar','¿Hay antecedentes de cáncer en la familia?','booleano',NULL,TRUE,'Quién, cuál',NULL,4),
+('familiar','¿Hay antecedentes de muerte súbita en la familia?','booleano',NULL,TRUE,'Quién, a qué edad',NULL,5),
+('familiar','¿Hay enfermedades hereditarias o genéticas en la familia?','booleano',NULL,TRUE,'Cuál',NULL,6),
+('familiar','¿Algún familiar tiene enfermedad mental o neurológica?','booleano',NULL,TRUE,'Cuál',NULL,7),
+
+-- Farmacológicos
+('farmacologico','Medicamentos actuales con prescripción','lista','[{"campo":"medicamento","label":"Medicamento","requerido":true},{"campo":"dosis","label":"Dosis","requerido":false},{"campo":"frecuencia","label":"Frecuencia","requerido":false}]',FALSE,NULL,NULL,1),
+('farmacologico','¿Usa medicamentos de venta libre con frecuencia?','booleano',NULL,TRUE,'Cuáles',NULL,2),
+('farmacologico','¿Usa plantas medicinales o remedios naturales?','booleano',NULL,TRUE,'Cuáles',NULL,3),
+('farmacologico','¿Usa suplementos, vitaminas u otros?','booleano',NULL,TRUE,'Cuáles',NULL,4),
+
+-- Alérgicos
+('alergico','¿Tiene alergia a algún medicamento?','booleano',NULL,TRUE,'Cuál, qué reacción',NULL,1),
+('alergico','¿Tiene alergia a algún alimento?','booleano',NULL,TRUE,'Cuál, qué reacción',NULL,2),
+('alergico','¿Tiene alergia ambiental (polvo, animales, pólenes)?','booleano',NULL,TRUE,'Cuál',NULL,3),
+('alergico','¿Tiene alergia a picaduras de insectos?','booleano',NULL,TRUE,'Qué reacción',NULL,4),
+('alergico','¿Tiene alergia al látex o a materiales médicos?','booleano',NULL,TRUE,'Cuál',NULL,5),
+('alergico','¿Ha tenido anafilaxia o reacción alérgica grave?','booleano',NULL,TRUE,'A qué',NULL,6),
+
+-- Quirúrgicos
+('quirurgico','Cirugías previas','lista','[{"campo":"procedimiento","label":"Procedimiento","requerido":true},{"campo":"anio","label":"Año","requerido":false}]',FALSE,NULL,NULL,1),
+('quirurgico','¿Ha tenido complicaciones con anestesia general?','booleano',NULL,TRUE,'Cuáles',NULL,2),
+('quirurgico','¿Ha recibido transfusiones de sangre?','booleano',NULL,TRUE,'Cuándo',NULL,3),
+
+-- Hábitos y tóxicos
+('habito','Tabaquismo','opciones','["Nunca ha fumado","Fumador activo","Ex-fumador"]',TRUE,'Cigarrillos/día y años; si ex-fumador, hasta cuándo',NULL,1),
+('habito','Consumo de alcohol','opciones','["No consume","Ocasional","Regular (fines de semana)","Diario"]',TRUE,'Cantidad aproximada',NULL,2),
+('habito','¿Consume sustancias psicoactivas?','booleano',NULL,TRUE,'Cuál, con qué frecuencia',NULL,3),
+('habito','Actividad física habitual','opciones','["Sedentario","Actividad leve (caminatas)","Actividad moderada","Deportista regular"]',FALSE,NULL,NULL,4),
+('habito','¿Tiene restricción alimentaria o dieta especial?','booleano',NULL,TRUE,'Cuál',NULL,5),
+('habito','¿Trabaja expuesto a riesgos (ruido, químicos, polvo)?','booleano',NULL,TRUE,'Cuáles',NULL,6),
+
+-- Gineco-obstétrico (solo para pacientes F o X)
+('gineco','Edad de primera menstruación (menarquia)','numero',NULL,FALSE,NULL,'FX',1),
+('gineco','Ciclo menstrual','opciones','["Regular","Irregular","Sin ciclo (menopausia o anticonceptivo)"]',FALSE,NULL,'FX',2),
+('gineco','¿Está en menopausia?','booleano',NULL,TRUE,'Desde cuándo','FX',3),
+('gineco','Gestas (número de embarazos)','numero',NULL,FALSE,NULL,'FX',4),
+('gineco','Partos vaginales','numero',NULL,FALSE,NULL,'FX',5),
+('gineco','Cesáreas','numero',NULL,FALSE,NULL,'FX',6),
+('gineco','Abortos (espontáneos o inducidos)','numero',NULL,FALSE,NULL,'FX',7),
+('gineco','Fecha de última menstruación (FUM)','fecha',NULL,FALSE,NULL,'FX',8),
+('gineco','¿Usa método de planificación familiar?','booleano',NULL,TRUE,'Cuál','FX',9),
+('gineco','¿Cuándo fue su última citología (Papanicolaou)?','fecha',NULL,FALSE,NULL,'FX',10),
+('gineco','¿Se realiza autoexamen de seno regularmente?','booleano',NULL,FALSE,NULL,'FX',11),
+('gineco','¿Ha tenido algún problema ginecológico?','booleano',NULL,TRUE,'Cuál','FX',12)
+ON CONFLICT DO NOTHING;

@@ -1,5 +1,5 @@
 import { useNavigate, useParams } from 'react-router'
-import { FileText, Activity, Receipt, ScrollText, Download, Printer } from 'lucide-react'
+import { FileText, Activity, Receipt, ScrollText, Download, Printer, ClipboardList } from 'lucide-react'
 import { useState } from 'react'
 import { pdf, PDFDownloadLink } from '@react-pdf/renderer'
 import { useEncuentro } from '../../api/encuentros'
@@ -8,24 +8,8 @@ import { usePaciente } from '../../api/pacientes'
 import { usePlantillas, useConsentimientoEncuentro, useRegistrarConsentimiento } from '../../api/consentimientos'
 import { useMedico } from '../../context/MedicoContext'
 import ConsentimientoPDF from '../../components/pdf/ConsentimientoPDF'
+import { useAntecedentes } from '../../api/antecedentes'
 
-const finalidades: Record<string, string> = {
-  '10': 'Consulta de primera vez',
-  '11': 'Consulta de control',
-  '12': 'Urgencias',
-}
-
-const causasExternas: Record<string, string> = {
-  '13': 'Enfermedad general',
-  '01': 'Accidente de trabajo',
-  '02': 'Accidente de tránsito',
-}
-
-const viasIngreso: Record<string, string> = {
-  '02': 'Consulta externa',
-  '01': 'Urgencias',
-  '03': 'Hospitalización',
-}
 
 const colorAccion: Record<string, string> = {
   INSERT: 'bg-green-100 text-green-700',
@@ -53,6 +37,7 @@ export default function DetalleEncuentro() {
   const { data: plantillas = [] } = usePlantillas()
   const { data: consentimientoPrevio } = useConsentimientoEncuentro(id ?? '', encId ?? '')
   const registrar = useRegistrarConsentimiento(id ?? '', encId ?? '')
+  const { data: antecedentes } = useAntecedentes(id ?? '')
 
   if (isLoading) {
     return <div className="p-6 text-sm text-slate-400">Cargando encuentro...</div>
@@ -127,9 +112,9 @@ export default function DetalleEncuentro() {
         <div className="grid grid-cols-3 gap-4 text-sm">
           {[
             ['Fecha', new Date(e.fecha_atencion).toLocaleString('es-CO')],
-            ['Finalidad', finalidades[e.finalidad_consulta] ?? e.finalidad_consulta],
-            ['Causa externa', causasExternas[e.causa_externa] ?? e.causa_externa],
-            ['Vía de ingreso', viasIngreso[e.via_ingreso] ?? e.via_ingreso],
+            ['Finalidad', e.finalidad_consulta_nombre],
+            ['Causa externa', e.causa_externa_nombre],
+            ['Vía de ingreso', e.via_ingreso_nombre],
             ['Registrado por', e.creado_por],
           ].map(([label, value]) => (
             <div key={label}>
@@ -240,6 +225,52 @@ export default function DetalleEncuentro() {
           </div>
         </div>
       </div>
+
+      {/* Antecedentes */}
+      {antecedentes && Object.values(antecedentes).some(qs => qs.some(q => q.valor)) && (
+        <div className="card-hce p-5 space-y-4">
+          <div className="flex items-center gap-2">
+            <ClipboardList size={16} className="text-slate-400" />
+            <h3 className="card-title">Antecedentes</h3>
+          </div>
+          <div className="space-y-3">
+            {Object.entries(antecedentes).map(([cat, preguntas]) => {
+              const respondidas = preguntas.filter(p => p.valor && p.valor !== 'false' && p.valor !== '[]')
+              if (respondidas.length === 0) return null
+              const catLabel: Record<string, string> = {
+                personal: 'Personales', familiar: 'Familiares', farmacologico: 'Farmacológicos',
+                alergico: 'Alérgicos', quirurgico: 'Quirúrgicos', habito: 'Hábitos', gineco: 'Gineco-obstétrico',
+              }
+              return (
+                <div key={cat}>
+                  <p className="text-xs text-slate-400 mb-1">{catLabel[cat] ?? cat}</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {respondidas.map(p => {
+                      let chips: string[] = []
+                      if (p.tipo_respuesta === 'lista') {
+                        try {
+                          const items: Record<string, string>[] = JSON.parse(p.valor ?? '[]')
+                          chips = items.map(it => Object.values(it).filter(Boolean).join(' · '))
+                        } catch { chips = [] }
+                      } else {
+                        const label = p.tipo_respuesta === 'booleano'
+                          ? p.texto.replace(/^¿/, '').replace(/\?$/, '')
+                          : `${p.texto.replace(/^¿/, '').replace(/\?$/, '')}: ${p.valor}`
+                        chips = [label + (p.detalle ? ` (${p.detalle})` : '')]
+                      }
+                      return chips.map((chip, i) => (
+                        <span key={`${p.id}-${i}`} className="bg-slate-100 text-slate-700 text-xs rounded-full px-2.5 py-1">
+                          {chip}
+                        </span>
+                      ))
+                    })}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Consentimiento informado */}
       <div className="bg-white rounded-xl border border-slate-200 p-5 space-y-4">

@@ -34,6 +34,13 @@ type Paciente struct {
 	FechaCreacion             time.Time  `json:"fecha_creacion"`
 	CreadoPor                 string     `json:"creado_por"`
 	Edad                      int        `json:"edad"`
+	// Computed labels — codes are kept for forms, names are for display
+	GeneroNombre         string  `json:"genero_nombre"`
+	EstadoCivilNombre    *string `json:"estado_civil_nombre"`
+	TipoUsuarioNombre    string  `json:"tipo_usuario_nombre"`
+	ZonaResidenciaNombre string  `json:"zona_residencia_nombre"`
+	EtniaNombre          string  `json:"etnia_nombre"`
+	DiscapacidadNombre   string  `json:"discapacidad_nombre"`
 }
 
 // PacienteInput es lo que llega en el body al crear o actualizar un paciente.

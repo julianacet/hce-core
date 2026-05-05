@@ -16,6 +16,16 @@ import (
 	"hce/api/models"
 )
 
+// extraColumnasPaciente appends CASE WHEN labels after the main column list.
+// Must be preceded by a comma (last column before it should end without one).
+const extraColumnasPaciente = `,
+	CASE genero WHEN 'M' THEN 'Masculino' WHEN 'F' THEN 'Femenino' WHEN 'X' THEN 'Otro / Intersexual' ELSE genero END AS genero_nombre,
+	CASE estado_civil WHEN '01' THEN 'Soltero/a' WHEN '02' THEN 'Casado/a' WHEN '03' THEN 'Unión libre' WHEN '04' THEN 'Separado/a' WHEN '05' THEN 'Divorciado/a' WHEN '06' THEN 'Viudo/a' ELSE estado_civil END AS estado_civil_nombre,
+	CASE tipo_usuario WHEN '01' THEN 'Contributivo' WHEN '02' THEN 'Subsidiado' WHEN '03' THEN 'Vinculado' WHEN '04' THEN 'Particular' WHEN '05' THEN 'Indígena' WHEN '06' THEN 'No asegurado' ELSE tipo_usuario END AS tipo_usuario_nombre,
+	CASE zona_residencia WHEN 'U' THEN 'Urbana' WHEN 'R' THEN 'Rural' ELSE zona_residencia END AS zona_residencia_nombre,
+	CASE codigo_etnia WHEN '00' THEN 'Sin pertenencia étnica' WHEN '01' THEN 'Indígena' WHEN '02' THEN 'ROM (gitano)' WHEN '03' THEN 'Raizal del Archipiélago' WHEN '04' THEN 'Palenquero de San Basilio' WHEN '05' THEN 'Afrocolombiano / afrodescendiente' WHEN '06' THEN 'Otro' ELSE codigo_etnia END AS etnia_nombre,
+	CASE codigo_discapacidad WHEN '00' THEN 'Sin discapacidad' WHEN '01' THEN 'Física' WHEN '02' THEN 'Cognitiva' WHEN '03' THEN 'Mental' WHEN '04' THEN 'Visual' WHEN '05' THEN 'Auditiva' WHEN '06' THEN 'Múltiple' ELSE codigo_discapacidad END AS discapacidad_nombre`
+
 type PacienteHandler struct {
 	db *pgxpool.Pool
 }
@@ -30,6 +40,7 @@ func PacientesRouter(db *pgxpool.Pool) http.Handler {
 		r.Get("/", h.obtener)
 		r.Put("/", h.actualizar)
 		r.Mount("/encuentros", EncuentrosRouter(db))
+		r.Mount("/antecedentes", AntecedentesRouter(db))
 	})
 
 	return r
@@ -55,7 +66,8 @@ func (h *PacienteHandler) listar(w http.ResponseWriter, r *http.Request) {
 		       tipo_usuario, codigo_etnia, codigo_discapacidad, codigo_eps,
 		       telefono, correo_electronico, politica_datos_aceptada,
 		       fecha_creacion, creado_por,
-		       EXTRACT(YEAR FROM AGE(NOW(), fecha_nacimiento))::int AS edad
+		       EXTRACT(YEAR FROM AGE(NOW(), fecha_nacimiento))::int AS edad` +
+		extraColumnasPaciente + `
 		FROM paciente
 		WHERE es_ultima_version = TRUE AND esta_activo = TRUE`
 
@@ -116,7 +128,8 @@ func (h *PacienteHandler) obtener(w http.ResponseWriter, r *http.Request) {
 		       tipo_usuario, codigo_etnia, codigo_discapacidad, codigo_eps,
 		       telefono, correo_electronico, politica_datos_aceptada,
 		       fecha_creacion, creado_por,
-		       EXTRACT(YEAR FROM AGE(NOW(), fecha_nacimiento))::int AS edad
+		       EXTRACT(YEAR FROM AGE(NOW(), fecha_nacimiento))::int AS edad`+
+		extraColumnasPaciente+`
 		FROM paciente
 		WHERE numero_documento = $1 AND es_ultima_version = TRUE AND esta_activo = TRUE`,
 		documento,
@@ -232,6 +245,8 @@ func escanearPaciente(row scanner) (models.Paciente, error) {
 		&p.TipoUsuario, &p.CodigoEtnia, &p.CodigoDiscapacidad, &p.CodigoEps,
 		&p.Telefono, &p.CorreoElectronico, &p.PoliticaDatosAceptada,
 		&p.FechaCreacion, &p.CreadoPor, &p.Edad,
+		&p.GeneroNombre, &p.EstadoCivilNombre, &p.TipoUsuarioNombre,
+		&p.ZonaResidenciaNombre, &p.EtniaNombre, &p.DiscapacidadNombre,
 	)
 	if err != nil {
 		return models.Paciente{}, err
@@ -267,7 +282,8 @@ func insertarPaciente(ctx context.Context, db queryRower, input models.PacienteI
 		          tipo_usuario, codigo_etnia, codigo_discapacidad, codigo_eps,
 		          telefono, correo_electronico, politica_datos_aceptada,
 		          fecha_creacion, creado_por,
-		          EXTRACT(YEAR FROM AGE(NOW(), fecha_nacimiento))::int AS edad`,
+		          EXTRACT(YEAR FROM AGE(NOW(), fecha_nacimiento))::int AS edad`+
+		extraColumnasPaciente,
 		version,
 		input.TipoDocumento, input.NumeroDocumento, input.NombrePrimero, input.NombreSegundo,
 		input.ApellidoPrimero, input.ApellidoSegundo, input.FechaNacimiento, input.Genero,

@@ -27,6 +27,10 @@ export type Encuentro = {
   plan_manejo?: string
   fecha_creacion: string
   creado_por: string
+  // Computed labels
+  finalidad_consulta_nombre: string
+  causa_externa_nombre: string
+  via_ingreso_nombre: string
 }
 
 export type EncuentroInput = {

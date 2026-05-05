@@ -76,6 +76,7 @@ func main() {
 		r.Mount("/cups", handlers.CupsRouter(db))
 		r.Mount("/rips", handlers.RipsMensualRouter(db))
 		r.Mount("/consentimientos/plantillas", handlers.PlantillasRouter(db))
+		r.Mount("/antecedentes/preguntas", handlers.PreguntasAntecedentesRouter(db))
 		r.Mount("/encuestas", handlers.EncuestasRouter(db))
 		r.Mount("/dashboard", handlers.DashboardRouter(db))
 		r.Mount("/insumos", handlers.InsumosRouter(db))

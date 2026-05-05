@@ -31,10 +31,18 @@ export type Paciente = {
   fecha_creacion: string
   creado_por: string
   edad: number
+  // Computed labels returned by the API (codes are kept for form values)
+  genero_nombre: string
+  estado_civil_nombre?: string
+  tipo_usuario_nombre: string
+  zona_residencia_nombre: string
+  etnia_nombre: string
+  discapacidad_nombre: string
 }
 
 export type PacienteInput = Omit<Paciente,
-  'id' | 'numero_version' | 'es_ultima_version' | 'esta_activo' | 'fecha_creacion' | 'creado_por' | 'edad'
+  'id' | 'numero_version' | 'es_ultima_version' | 'esta_activo' | 'fecha_creacion' | 'creado_por' | 'edad' |
+  'genero_nombre' | 'estado_civil_nombre' | 'tipo_usuario_nombre' | 'zona_residencia_nombre' | 'etnia_nombre' | 'discapacidad_nombre'
 >
 
 export function usePacientes(q?: string) {

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router'
 import {
-  Calendar, Clock, User, Phone, ChevronLeft, ChevronRight,
+  Clock, User, Phone, ChevronLeft, ChevronRight,
   Plus, X, Check, XCircle, AlertCircle, CheckCheck,
 } from 'lucide-react'
 import {

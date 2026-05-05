@@ -31,6 +31,10 @@ type Encuentro struct {
 	FechaCreacion              time.Time  `json:"fecha_creacion"`
 	CreadoPor                  string     `json:"creado_por"`
 	IDSistemaAnterior          *string    `json:"id_sistema_anterior"`
+	// Computed labels
+	FinalidadConsultaNombre string `json:"finalidad_consulta_nombre"`
+	CausaExternaNombre      string `json:"causa_externa_nombre"`
+	ViaIngresoNombre        string `json:"via_ingreso_nombre"`
 }
 
 type EncuentroInput struct {

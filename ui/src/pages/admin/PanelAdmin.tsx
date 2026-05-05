@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react'
 import { useTema, DEFAULTS, type Tema } from '../../context/TemaContext'
-import { Upload, Trash2, CheckCircle, RotateCcw, Plus, Pencil, X, ShieldCheck, Stethoscope, Users, AlertTriangle, ExternalLink } from 'lucide-react'
+import { Upload, Trash2, CheckCircle, RotateCcw, Plus, Pencil, X, ShieldCheck, Stethoscope, Users, AlertTriangle, ExternalLink, ClipboardList } from 'lucide-react'
 import {
   usePlantillas,
   useCrearPlantilla,
@@ -24,6 +24,13 @@ import {
   type TipoEventoAdverso,
   type TipoInput,
 } from '../../api/eventos_adversos'
+import {
+  usePreguntas,
+  useCrearPregunta,
+  useActualizarPregunta,
+  useTogglePregunta,
+  type AntecedentePregunta,
+} from '../../api/antecedentes'
 
 const PALETAS = [
   {
@@ -555,11 +562,275 @@ function UsuariosAdmin() {
   )
 }
 
+const CATEGORIA_LABELS: Record<string, string> = {
+  personal:      'Personales patológicos',
+  familiar:      'Familiares',
+  farmacologico: 'Farmacológicos',
+  alergico:      'Alérgicos',
+  quirurgico:    'Quirúrgicos',
+  habito:        'Hábitos y tóxicos',
+  gineco:        'Gineco-obstétrico',
+}
+const CATEGORIAS_OPTS = Object.keys(CATEGORIA_LABELS)
+const TIPOS_RESPUESTA = ['booleano', 'texto', 'numero', 'fecha', 'opciones', 'lista']
+const TIPO_LABELS: Record<string, string> = {
+  booleano: 'Sí / No',
+  texto:    'Texto libre',
+  numero:   'Número',
+  fecha:    'Fecha',
+  opciones: 'Selección (opciones)',
+  lista:    'Lista de ítems',
+}
+
+type FormPregunta = Omit<AntecedentePregunta, 'id' | 'esta_activo'>
+const FORM_PREGUNTA_INICIAL: FormPregunta = {
+  categoria: 'personal',
+  texto: '',
+  tipo_respuesta: 'booleano',
+  opciones: null,
+  tiene_detalle: false,
+  placeholder_detalle: '',
+  solo_genero: '',
+  orden: 0,
+}
+
+function AntecedentesAdmin() {
+  const { data: preguntas = [] } = usePreguntas()
+  const crear = useCrearPregunta()
+  const [editando, setEditando] = useState<AntecedentePregunta | null>(null)
+  const actualizar = useActualizarPregunta(editando?.id ?? '')
+  const [form, setForm] = useState<FormPregunta>(FORM_PREGUNTA_INICIAL)
+  const [opcionesRaw, setOpcionesRaw] = useState('')
+  const [mostrarForm, setMostrarForm] = useState(false)
+  const [error, setError] = useState('')
+
+  const porCategoria = CATEGORIAS_OPTS.map(cat => ({
+    cat,
+    items: preguntas.filter(p => p.categoria === cat),
+  })).filter(g => g.items.length > 0)
+
+  function abrirNueva() {
+    setEditando(null)
+    setForm(FORM_PREGUNTA_INICIAL)
+    setOpcionesRaw('')
+    setError('')
+    setMostrarForm(true)
+  }
+
+  function abrirEditar(p: AntecedentePregunta) {
+    setEditando(p)
+    setForm({
+      categoria: p.categoria,
+      texto: p.texto,
+      tipo_respuesta: p.tipo_respuesta,
+      opciones: p.opciones,
+      tiene_detalle: p.tiene_detalle,
+      placeholder_detalle: p.placeholder_detalle ?? '',
+      solo_genero: p.solo_genero ?? '',
+      orden: p.orden,
+    })
+    setOpcionesRaw(p.opciones ? JSON.stringify(p.opciones, null, 2) : '')
+    setError('')
+    setMostrarForm(true)
+  }
+
+  function cerrar() {
+    setMostrarForm(false)
+    setEditando(null)
+    setError('')
+  }
+
+  async function guardar() {
+    if (!form.texto.trim()) { setError('El texto es obligatorio.'); return }
+    setError('')
+
+    let opcionesJSON = null
+    if (opcionesRaw.trim()) {
+      try { opcionesJSON = JSON.parse(opcionesRaw) }
+      catch { setError('El JSON de opciones no es válido.'); return }
+    }
+
+    const payload = {
+      ...form,
+      opciones: opcionesJSON,
+      placeholder_detalle: form.placeholder_detalle || undefined,
+      solo_genero: form.solo_genero || undefined,
+    }
+
+    try {
+      if (editando) await actualizar.mutateAsync(payload)
+      else await crear.mutateAsync(payload)
+      cerrar()
+    } catch {
+      setError('Error al guardar.')
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <p className="text-sm" style={{ color: 'var(--hce-text-muted)' }}>
+          Define las preguntas guiadas que aparecerán en cada consulta.
+          Las preguntas inactivas no se muestran al médico pero conservan las respuestas existentes.
+        </p>
+        <button onClick={abrirNueva} className="btn-primary">
+          <Plus className="w-4 h-4" /> Nueva pregunta
+        </button>
+      </div>
+
+      {mostrarForm && (
+        <div className="card-hce p-5 space-y-4 border-2" style={{ borderColor: 'var(--hce-primary)' }}>
+          <div className="flex items-center justify-between">
+            <h4 className="card-title">{editando ? 'Editar pregunta' : 'Nueva pregunta'}</h4>
+            <button onClick={cerrar}><X className="w-4 h-4 text-slate-400" /></button>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="label-hce">Categoría *</label>
+              <select className="input-hce" value={form.categoria}
+                onChange={e => setForm(f => ({ ...f, categoria: e.target.value }))}>
+                {CATEGORIAS_OPTS.map(c => <option key={c} value={c}>{CATEGORIA_LABELS[c]}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="label-hce">Tipo de respuesta *</label>
+              <select className="input-hce" value={form.tipo_respuesta}
+                onChange={e => setForm(f => ({ ...f, tipo_respuesta: e.target.value as FormPregunta['tipo_respuesta'] }))}>
+                {TIPOS_RESPUESTA.map(t => <option key={t} value={t}>{TIPO_LABELS[t]}</option>)}
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="label-hce">Texto de la pregunta *</label>
+            <input className="input-hce" value={form.texto}
+              onChange={e => setForm(f => ({ ...f, texto: e.target.value }))}
+              placeholder="Ej: ¿Tiene hipertensión arterial?" />
+          </div>
+
+          {(form.tipo_respuesta === 'opciones' || form.tipo_respuesta === 'lista') && (
+            <div>
+              <label className="label-hce">
+                Opciones (JSON){' '}
+                <span className="text-slate-400 font-normal">
+                  — para "opciones": array de strings; para "lista": array de{' '}
+                  <code className="bg-slate-100 px-1 rounded">{'{"campo","label","requerido"}'}</code>
+                </span>
+              </label>
+              <textarea className="input-hce font-mono text-xs resize-y" rows={4}
+                value={opcionesRaw}
+                onChange={e => setOpcionesRaw(e.target.value)}
+                placeholder={form.tipo_respuesta === 'opciones'
+                  ? '["Opción 1","Opción 2","Opción 3"]'
+                  : '[{"campo":"nombre","label":"Nombre","requerido":true}]'} />
+            </div>
+          )}
+
+          <div className="grid grid-cols-3 gap-4">
+            <div className="col-span-2">
+              <label className="flex items-center gap-2 text-sm cursor-pointer mb-1" style={{ color: 'var(--hce-text)' }}>
+                <input type="checkbox" checked={form.tiene_detalle}
+                  onChange={e => setForm(f => ({ ...f, tiene_detalle: e.target.checked }))} />
+                Mostrar campo de detalle cuando la respuesta es "Sí"
+              </label>
+              {form.tiene_detalle && (
+                <input className="input-hce text-sm" value={form.placeholder_detalle ?? ''}
+                  onChange={e => setForm(f => ({ ...f, placeholder_detalle: e.target.value }))}
+                  placeholder="Texto guía del detalle (opcional)" />
+              )}
+            </div>
+            <div>
+              <label className="label-hce">Solo mostrar para género</label>
+              <select className="input-hce" value={form.solo_genero ?? ''}
+                onChange={e => setForm(f => ({ ...f, solo_genero: e.target.value }))}>
+                <option value="">Todos</option>
+                <option value="FX">F / X (femenino e intersex)</option>
+                <option value="M">M (masculino)</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="w-24">
+            <label className="label-hce">Orden</label>
+            <input type="number" className="input-hce" value={form.orden}
+              onChange={e => setForm(f => ({ ...f, orden: parseInt(e.target.value) || 0 }))} />
+          </div>
+
+          {error && <p className="text-xs text-red-600">{error}</p>}
+
+          <div className="flex justify-end gap-2">
+            <button onClick={cerrar} className="btn-secondary">Cancelar</button>
+            <button onClick={guardar} disabled={crear.isPending || actualizar.isPending} className="btn-primary">
+              Guardar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {porCategoria.map(({ cat, items }) => (
+        <div key={cat}>
+          <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2">
+            {CATEGORIA_LABELS[cat]}
+          </h4>
+          <div className="card-hce divide-y" style={{ borderColor: 'var(--hce-border)' }}>
+            {items.map(p => (
+              <PreguntaRow key={p.id} pregunta={p} onEditar={() => abrirEditar(p)} />
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function PreguntaRow({ pregunta, onEditar }: { pregunta: AntecedentePregunta; onEditar: () => void }) {
+  const toggle = useTogglePregunta(pregunta.id)
+  return (
+    <div className={`flex items-start gap-3 px-4 py-3 ${!pregunta.esta_activo ? 'opacity-50' : ''}`}>
+      <ClipboardList className={`w-4 h-4 mt-0.5 shrink-0 ${pregunta.esta_activo ? 'text-blue-400' : 'text-slate-300'}`} />
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-sm text-slate-700">{pregunta.texto}</span>
+          <span className="px-1.5 py-0.5 rounded text-xs bg-slate-100 text-slate-500">
+            {TIPO_LABELS[pregunta.tipo_respuesta]}
+          </span>
+          {pregunta.solo_genero && (
+            <span className="px-1.5 py-0.5 rounded text-xs bg-purple-50 text-purple-600">
+              Solo {pregunta.solo_genero}
+            </span>
+          )}
+          {!pregunta.esta_activo && (
+            <span className="px-1.5 py-0.5 rounded text-xs bg-slate-100 text-slate-400">Inactiva</span>
+          )}
+        </div>
+        {pregunta.tiene_detalle && pregunta.placeholder_detalle && (
+          <p className="text-xs mt-0.5 text-slate-400 truncate">Detalle: {pregunta.placeholder_detalle}</p>
+        )}
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
+        <button onClick={onEditar} className="text-slate-400 hover:text-slate-600">
+          <Pencil className="w-3.5 h-3.5" />
+        </button>
+        <button
+          onClick={() => toggle.mutate()}
+          className={`text-xs px-2 py-0.5 rounded border transition-colors ${
+            pregunta.esta_activo
+              ? 'border-slate-200 text-slate-500 hover:border-red-300 hover:text-red-600'
+              : 'border-green-200 text-green-600 hover:bg-green-50'
+          }`}>
+          {pregunta.esta_activo ? 'Desactivar' : 'Activar'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export default function PanelAdmin() {
   const { tema, guardarTema } = useTema()
   const [form, setForm] = useState<Tema>(tema)
   const [guardado, setGuardado] = useState(false)
-  const [tab, setTab] = useState<'apariencia' | 'consentimientos' | 'usuarios' | 'eventos'>('apariencia')
+  const [tab, setTab] = useState<'apariencia' | 'consentimientos' | 'usuarios' | 'eventos' | 'antecedentes'>('apariencia')
   const inputLogo = useRef<HTMLInputElement>(null)
 
   function set<K extends keyof Tema>(key: K, value: Tema[K]) {
@@ -603,10 +874,11 @@ export default function PanelAdmin() {
       {/* Tabs */}
       <div className="flex gap-1 mb-6 border-b border-slate-200">
         {([
-          { id: 'apariencia', label: 'Apariencia' },
+          { id: 'apariencia',      label: 'Apariencia' },
           { id: 'consentimientos', label: 'Consentimientos' },
-          { id: 'usuarios', label: 'Usuarios' },
-          { id: 'eventos', label: 'Eventos adversos' },
+          { id: 'antecedentes',    label: 'Antecedentes' },
+          { id: 'usuarios',        label: 'Usuarios' },
+          { id: 'eventos',         label: 'Eventos adversos' },
         ] as const).map(({ id, label }) => (
           <button
             key={id}
@@ -621,6 +893,7 @@ export default function PanelAdmin() {
       {tab === 'consentimientos' && <PlantillasAdmin />}
       {tab === 'usuarios' && <UsuariosAdmin />}
       {tab === 'eventos' && <TiposEventoAdversoAdmin />}
+      {tab === 'antecedentes' && <AntecedentesAdmin />}
 
       {tab === 'apariencia' && <form onSubmit={guardar} className="space-y-6">
 
