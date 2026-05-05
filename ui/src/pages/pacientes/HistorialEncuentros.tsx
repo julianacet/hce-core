@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
-import { ChevronRight, PlusCircle, Search, X } from 'lucide-react'
+import { ChevronRight, Search, X } from 'lucide-react'
 import { useEncuentros, type FiltrosEncuentro } from '../../api/encuentros'
 
 export default function HistorialEncuentros() {
@@ -29,18 +29,9 @@ export default function HistorialEncuentros() {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <p className="text-sm text-slate-500">
-          {isLoading ? 'Cargando...' : `${encuentros.length} encuentro(s)${hayFiltros ? ' (filtrado)' : ''}`}
-        </p>
-        <button
-          onClick={() => navigate(`/pacientes/${id}/encuentros/nuevo`)}
-          className="btn-primary"
-        >
-          <PlusCircle size={15} />
-          Nuevo encuentro
-        </button>
-      </div>
+      <p className="text-sm text-slate-500">
+        {isLoading ? 'Cargando...' : `${encuentros.length} encuentro(s)${hayFiltros ? ' (filtrado)' : ''}`}
+      </p>
 
       {/* Filtros */}
       <div className="bg-white rounded-xl border border-slate-200 px-5 py-4 flex flex-wrap gap-3 items-end">
