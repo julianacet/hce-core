@@ -1,6 +1,17 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiFetch } from './client'
 
+export type DiagnosticoItem = {
+  tipo: 'principal' | 'secundario' | 'nota'
+  codigo?: string
+  descripcion: string
+}
+
+export type EncuentroDiagnostico = DiagnosticoItem & {
+  id: string
+  orden: number
+}
+
 export type Encuentro = {
   id: string
   encuentro_id: string
@@ -22,6 +33,7 @@ export type Encuentro = {
   peso?: number
   talla?: number
   examen_fisico?: string
+  // Kept for RIPS / list display
   codigo_diagnostico_principal: string
   descripcion_diagnostico?: string
   plan_manejo?: string
@@ -31,6 +43,8 @@ export type Encuentro = {
   finalidad_consulta_nombre: string
   causa_externa_nombre: string
   via_ingreso_nombre: string
+  // Full diagnosis list (populated on detail view)
+  diagnosticos?: EncuentroDiagnostico[]
 }
 
 export type EncuentroInput = {
@@ -49,8 +63,7 @@ export type EncuentroInput = {
   peso?: number | null
   talla?: number | null
   examen_fisico?: string
-  codigo_diagnostico_principal: string
-  descripcion_diagnostico?: string
+  diagnosticos: DiagnosticoItem[]
   plan_manejo?: string
 }
 

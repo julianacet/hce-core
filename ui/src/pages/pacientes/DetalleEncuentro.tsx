@@ -125,14 +125,12 @@ export default function DetalleEncuentro() {
         </div>
 
         <div className="border-t border-slate-100 pt-4 space-y-4">
-          {[
-            ['Motivo de consulta', e.motivo_consulta],
-          ].filter(([, v]) => v).map(([label, value]) => (
-            <div key={label}>
-              <p className="text-xs text-slate-400 mb-1">{label}</p>
-              <p className="text-sm text-slate-800 leading-relaxed">{value}</p>
+          {e.motivo_consulta && (
+            <div>
+              <p className="text-xs text-slate-400 mb-1">Motivo de consulta</p>
+              <p className="text-sm text-slate-800 leading-relaxed">{e.motivo_consulta}</p>
             </div>
-          ))}
+          )}
 
           {/* Signos vitales */}
           {(e.ta_sistolica || e.frecuencia_cardiaca || e.temperatura || e.saturacion_o2 || e.peso) && (
@@ -193,16 +191,50 @@ export default function DetalleEncuentro() {
             </div>
           )}
 
-          {[
-            ['Examen físico', e.examen_fisico],
-            ['Diagnóstico principal', diagnostico],
-            ['Plan de manejo', e.plan_manejo],
-          ].filter(([, v]) => v).map(([label, value]) => (
-            <div key={label}>
-              <p className="text-xs text-slate-400 mb-1">{label}</p>
-              <p className="text-sm text-slate-800 leading-relaxed">{value}</p>
+          {e.examen_fisico && (
+            <div>
+              <p className="text-xs text-slate-400 mb-1">Examen físico</p>
+              <p className="text-sm text-slate-800 leading-relaxed">{e.examen_fisico}</p>
             </div>
-          ))}
+          )}
+
+          {/* Diagnósticos */}
+          {(e.diagnosticos && e.diagnosticos.length > 0) ? (
+            <div>
+              <p className="text-xs text-slate-400 mb-2">Diagnósticos</p>
+              <div className="space-y-1.5">
+                {e.diagnosticos.map((d) => (
+                  <div key={d.id} className="flex items-baseline gap-2 text-sm">
+                    <span className={`text-xs px-2 py-0.5 rounded-full shrink-0 ${
+                      d.tipo === 'principal' ? 'bg-blue-100 text-blue-700'
+                      : d.tipo === 'secundario' ? 'bg-slate-100 text-slate-600'
+                      : 'bg-amber-100 text-amber-700'
+                    }`}>
+                      {d.tipo === 'principal' ? 'Principal'
+                        : d.tipo === 'secundario' ? 'Secundario'
+                        : 'Nota'}
+                    </span>
+                    {d.codigo && (
+                      <span className="font-mono text-xs text-slate-500">{d.codigo}</span>
+                    )}
+                    <span className="text-slate-800">{d.descripcion}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : diagnostico ? (
+            <div>
+              <p className="text-xs text-slate-400 mb-1">Diagnóstico principal</p>
+              <p className="text-sm text-slate-800 leading-relaxed">{diagnostico}</p>
+            </div>
+          ) : null}
+
+          {e.plan_manejo && (
+            <div>
+              <p className="text-xs text-slate-400 mb-1">Plan de manejo</p>
+              <p className="text-sm text-slate-800 leading-relaxed">{e.plan_manejo}</p>
+            </div>
+          )}
         </div>
 
         <div className="border-t border-slate-100 pt-4 flex items-center justify-between">

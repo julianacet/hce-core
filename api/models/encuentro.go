@@ -24,6 +24,7 @@ type Encuentro struct {
 	Peso                       *float64   `json:"peso"`
 	Talla                      *float64   `json:"talla"`
 	ExamenFisico               *string    `json:"examen_fisico"`
+	// Kept for RIPS compatibility and list-view display; populated from first principal diagnosis.
 	CodigoDiagnosticoPrincipal string     `json:"codigo_diagnostico_principal"`
 	DescripcionDiagnostico     *string    `json:"descripcion_diagnostico"`
 	PlanManejo                 *string    `json:"plan_manejo"`
@@ -35,25 +36,26 @@ type Encuentro struct {
 	FinalidadConsultaNombre string `json:"finalidad_consulta_nombre"`
 	CausaExternaNombre      string `json:"causa_externa_nombre"`
 	ViaIngresoNombre        string `json:"via_ingreso_nombre"`
+	// Full diagnosis list — populated on detail view, omitted on list view.
+	Diagnosticos []EncuentroDiagnostico `json:"diagnosticos,omitempty"`
 }
 
 type EncuentroInput struct {
-	EncuentroPadreID           *string `json:"encuentro_padre_id"`
-	FechaAtencion              *string `json:"fecha_atencion"` // si es nil usa la hora actual
-	CausaExterna               string  `json:"causa_externa"`
-	FinalidadConsulta          string  `json:"finalidad_consulta"`
-	ViaIngreso                 string  `json:"via_ingreso"`
-	MotivoConsulta             string   `json:"motivo_consulta"`
-	TASistolica                *int16   `json:"ta_sistolica"`
-	TADiastolica               *int16   `json:"ta_diastolica"`
-	FrecuenciaCardiaca         *int16   `json:"frecuencia_cardiaca"`
-	FrecuenciaRespiratoria     *int16   `json:"frecuencia_respiratoria"`
-	Temperatura                *float64 `json:"temperatura"`
-	SaturacionO2               *int16   `json:"saturacion_o2"`
-	Peso                       *float64 `json:"peso"`
-	Talla                      *float64 `json:"talla"`
-	ExamenFisico               *string  `json:"examen_fisico"`
-	CodigoDiagnosticoPrincipal string   `json:"codigo_diagnostico_principal"`
-	DescripcionDiagnostico     *string `json:"descripcion_diagnostico"`
-	PlanManejo                 *string `json:"plan_manejo"`
+	EncuentroPadreID       *string            `json:"encuentro_padre_id"`
+	FechaAtencion          *string            `json:"fecha_atencion"` // nil → hora actual
+	CausaExterna           string             `json:"causa_externa"`
+	FinalidadConsulta      string             `json:"finalidad_consulta"`
+	ViaIngreso             string             `json:"via_ingreso"`
+	MotivoConsulta         string             `json:"motivo_consulta"`
+	TASistolica            *int16             `json:"ta_sistolica"`
+	TADiastolica           *int16             `json:"ta_diastolica"`
+	FrecuenciaCardiaca     *int16             `json:"frecuencia_cardiaca"`
+	FrecuenciaRespiratoria *int16             `json:"frecuencia_respiratoria"`
+	Temperatura            *float64           `json:"temperatura"`
+	SaturacionO2           *int16             `json:"saturacion_o2"`
+	Peso                   *float64           `json:"peso"`
+	Talla                  *float64           `json:"talla"`
+	ExamenFisico           *string            `json:"examen_fisico"`
+	Diagnosticos           []DiagnosticoInput `json:"diagnosticos"`
+	PlanManejo             *string            `json:"plan_manejo"`
 }

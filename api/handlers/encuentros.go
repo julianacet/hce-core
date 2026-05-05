@@ -11,6 +11,8 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	appmiddleware "hce/api/middleware"
@@ -38,6 +40,12 @@ func EncuentrosRouter(db *pgxpool.Pool) http.Handler {
 	return r
 }
 
+// encuentroQuerier es satisfecho tanto por *pgxpool.Pool como por pgx.Tx.
+type encuentroQuerier interface {
+	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
+	Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error)
+}
+
 const columnasEncuentro = `
 	id, encuentro_id, numero_version, es_ultima_version, esta_activo,
 	paciente_documento, encuentro_padre_id,
@@ -46,7 +54,7 @@ const columnasEncuentro = `
 	ta_sistolica, ta_diastolica, frecuencia_cardiaca, frecuencia_respiratoria,
 	temperatura, saturacion_o2, peso, talla,
 	examen_fisico,
-	codigo_diagnostico_principal, descripcion_diagnostico, plan_manejo,
+	COALESCE(codigo_diagnostico_principal, ''), descripcion_diagnostico, plan_manejo,
 	hash_integridad, fecha_creacion, creado_por, id_sistema_anterior,
 	CASE finalidad_consulta WHEN '10' THEN 'Consulta de primera vez' WHEN '11' THEN 'Consulta de control o seguimiento' WHEN '12' THEN 'Urgencias' ELSE finalidad_consulta END AS finalidad_consulta_nombre,
 	CASE causa_externa WHEN '13' THEN 'Enfermedad general' WHEN '01' THEN 'Accidente de trabajo' WHEN '02' THEN 'Accidente de tránsito' WHEN '03' THEN 'Otro accidente' WHEN '04' THEN 'Lesión por agresión' WHEN '05' THEN 'Lesión autoinfligida' WHEN '06' THEN 'Evento catastrófico' ELSE causa_externa END AS causa_externa_nombre,
@@ -75,8 +83,10 @@ func (h *EncuentroHandler) listar(w http.ResponseWriter, r *http.Request) {
 	}
 	if diagnostico != "" {
 		args = append(args, "%"+strings.ToLower(diagnostico)+"%")
-		query += ` AND (LOWER(codigo_diagnostico_principal) LIKE $` + fmt.Sprintf("%d", len(args)) +
-			` OR LOWER(descripcion_diagnostico) LIKE $` + fmt.Sprintf("%d", len(args)) + `)`
+		idx := fmt.Sprintf("%d", len(args))
+		query += ` AND (LOWER(COALESCE(codigo_diagnostico_principal,'')) LIKE $` + idx +
+			` OR LOWER(COALESCE(descripcion_diagnostico,'')) LIKE $` + idx +
+			` OR EXISTS (SELECT 1 FROM encuentro_diagnostico ed WHERE ed.encuentro_clinico_id = encuentro_clinico.id AND (LOWER(COALESCE(ed.codigo,'')) LIKE $` + idx + ` OR LOWER(ed.descripcion) LIKE $` + idx + `)))`
 	}
 	query += ` ORDER BY fecha_atencion DESC`
 
@@ -125,6 +135,9 @@ func (h *EncuentroHandler) obtener(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Cargar diagnósticos completos
+	e.Diagnosticos = cargarDiagnosticos(r.Context(), h.db, e.ID)
+
 	responderJSON(w, http.StatusOK, e)
 }
 
@@ -138,8 +151,12 @@ func (h *EncuentroHandler) crear(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if strings.TrimSpace(input.MotivoConsulta) == "" || strings.TrimSpace(input.CodigoDiagnosticoPrincipal) == "" {
-		responderError(w, http.StatusBadRequest, "motivo_consulta y codigo_diagnostico_principal son obligatorios")
+	if strings.TrimSpace(input.MotivoConsulta) == "" {
+		responderError(w, http.StatusBadRequest, "motivo_consulta es obligatorio")
+		return
+	}
+	if !tieneDiagnosticoPrincipal(input.Diagnosticos) {
+		responderError(w, http.StatusBadRequest, "se requiere al menos un diagnóstico principal")
 		return
 	}
 
@@ -153,11 +170,23 @@ func (h *EncuentroHandler) crear(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	tx, err := h.db.Begin(r.Context())
+	if err != nil {
+		responderError(w, http.StatusInternalServerError, "error al iniciar transacción")
+		return
+	}
+	defer tx.Rollback(r.Context())
+
 	u := appmiddleware.UsuarioDesdeContexto(r.Context())
-	e, err := insertarEncuentro(r.Context(), h.db, uuid.New().String(), documento, input, 1, u.Nombre)
+	e, err := insertarEncuentro(r.Context(), tx, uuid.New().String(), documento, input, 1, u.Nombre)
 	if err != nil {
 		log.Printf("crear encuentro: %v", err)
 		responderError(w, http.StatusInternalServerError, "error al crear encuentro")
+		return
+	}
+
+	if err := tx.Commit(r.Context()); err != nil {
+		responderError(w, http.StatusInternalServerError, "error al confirmar transacción")
 		return
 	}
 
@@ -240,11 +269,23 @@ func escanearEncuentro(row scanner) (models.Encuentro, error) {
 	return e, err
 }
 
-func insertarEncuentro(ctx context.Context, db queryRower, encuentroID string, documento string, input models.EncuentroInput, version int, creadoPor string) (models.Encuentro, error) {
+func insertarEncuentro(ctx context.Context, db encuentroQuerier, encuentroID string, documento string, input models.EncuentroInput, version int, creadoPor string) (models.Encuentro, error) {
 	fechaAtencion := time.Now()
 	if input.FechaAtencion != nil {
 		if t, err := time.Parse(time.RFC3339, *input.FechaAtencion); err == nil {
 			fechaAtencion = t
+		}
+	}
+
+	// Derivar campos RIPS desde el primer diagnóstico principal
+	var codigoPrincipal *string
+	var descPrincipal *string
+	for _, d := range input.Diagnosticos {
+		if d.Tipo == "principal" {
+			codigoPrincipal = d.Codigo
+			desc := d.Descripcion
+			descPrincipal = &desc
+			break
 		}
 	}
 
@@ -277,8 +318,68 @@ func insertarEncuentro(ctx context.Context, db queryRower, encuentroID string, d
 		input.TASistolica, input.TADiastolica, input.FrecuenciaCardiaca, input.FrecuenciaRespiratoria,
 		input.Temperatura, input.SaturacionO2, input.Peso, input.Talla,
 		input.ExamenFisico,
-		input.CodigoDiagnosticoPrincipal, input.DescripcionDiagnostico, input.PlanManejo,
+		codigoPrincipal, descPrincipal, input.PlanManejo,
 		creadoPor,
 	)
-	return escanearEncuentro(row)
+
+	e, err := escanearEncuentro(row)
+	if err != nil {
+		return models.Encuentro{}, err
+	}
+
+	// Insertar diagnósticos en encuentro_diagnostico
+	for i, d := range input.Diagnosticos {
+		if strings.TrimSpace(d.Descripcion) == "" {
+			continue
+		}
+		_, err := db.Exec(ctx,
+			`INSERT INTO encuentro_diagnostico (encuentro_clinico_id, tipo, codigo, descripcion, orden)
+			 VALUES ($1, $2, $3, $4, $5)`,
+			e.ID, d.Tipo, d.Codigo, d.Descripcion, i,
+		)
+		if err != nil {
+			return models.Encuentro{}, fmt.Errorf("insertar diagnóstico: %w", err)
+		}
+		e.Diagnosticos = append(e.Diagnosticos, models.EncuentroDiagnostico{
+			Tipo:        d.Tipo,
+			Codigo:      d.Codigo,
+			Descripcion: d.Descripcion,
+			Orden:       i,
+		})
+	}
+
+	return e, nil
+}
+
+func cargarDiagnosticos(ctx context.Context, db *pgxpool.Pool, encuentroClinicID string) []models.EncuentroDiagnostico {
+	rows, err := db.Query(ctx,
+		`SELECT id, tipo, codigo, descripcion, orden
+		 FROM encuentro_diagnostico
+		 WHERE encuentro_clinico_id = $1
+		 ORDER BY orden`,
+		encuentroClinicID,
+	)
+	if err != nil {
+		return nil
+	}
+	defer rows.Close()
+
+	var diags []models.EncuentroDiagnostico
+	for rows.Next() {
+		var d models.EncuentroDiagnostico
+		if err := rows.Scan(&d.ID, &d.Tipo, &d.Codigo, &d.Descripcion, &d.Orden); err != nil {
+			continue
+		}
+		diags = append(diags, d)
+	}
+	return diags
+}
+
+func tieneDiagnosticoPrincipal(diags []models.DiagnosticoInput) bool {
+	for _, d := range diags {
+		if d.Tipo == "principal" {
+			return true
+		}
+	}
+	return false
 }

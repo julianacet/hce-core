@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
-import { useCrearEncuentro } from '../../api/encuentros'
+import { useCrearEncuentro, type DiagnosticoItem } from '../../api/encuentros'
 import { usePaciente } from '../../api/pacientes'
 import AntecedentesTab from '../../components/AntecedentesTab'
+import DiagnosticoSearch from '../../components/DiagnosticoSearch'
 
 type FormState = {
   motivo_consulta: string
@@ -15,8 +16,6 @@ type FormState = {
   peso: string
   talla: string
   examen_fisico: string
-  codigo_diagnostico_principal: string
-  descripcion_diagnostico: string
   plan_manejo: string
   finalidad_consulta: string
   causa_externa: string
@@ -34,8 +33,6 @@ const FORM_INICIAL: FormState = {
   peso: '',
   talla: '',
   examen_fisico: '',
-  codigo_diagnostico_principal: '',
-  descripcion_diagnostico: '',
   plan_manejo: '',
   finalidad_consulta: '10',
   causa_externa: '13',
@@ -67,6 +64,7 @@ export default function NuevoEncuentro() {
   const crear = useCrearEncuentro(id ?? '')
   const { data: paciente } = usePaciente(id ?? '')
   const [form, setForm] = useState<FormState>(FORM_INICIAL)
+  const [diagnosticos, setDiagnosticos] = useState<DiagnosticoItem[]>([])
   const [tab, setTab] = useState<Tab>('consulta')
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) {
@@ -75,6 +73,8 @@ export default function NuevoEncuentro() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    if (!diagnosticos.some(d => d.tipo === 'principal')) return
+
     const encuentro = await crear.mutateAsync({
       motivo_consulta: form.motivo_consulta,
       ta_sistolica: intONull(form.ta_sistolica),
@@ -86,8 +86,7 @@ export default function NuevoEncuentro() {
       peso: numONull(form.peso),
       talla: numONull(form.talla),
       examen_fisico: form.examen_fisico || undefined,
-      codigo_diagnostico_principal: form.codigo_diagnostico_principal,
-      descripcion_diagnostico: form.descripcion_diagnostico || undefined,
+      diagnosticos,
       plan_manejo: form.plan_manejo || undefined,
       finalidad_consulta: form.finalidad_consulta,
       causa_externa: form.causa_externa,
@@ -97,6 +96,7 @@ export default function NuevoEncuentro() {
   }
 
   const imc = calcularIMC(form.peso, form.talla)
+  const faltaDiagnostico = !diagnosticos.some(d => d.tipo === 'principal')
 
   const TABS: { key: Tab; label: string }[] = [
     { key: 'consulta', label: 'Consulta' },
@@ -238,20 +238,10 @@ export default function NuevoEncuentro() {
               rows={3} placeholder="Hallazgos por sistemas..." className="input-hce resize-none" />
           </div>
 
-          {/* Diagnóstico */}
+          {/* Diagnósticos */}
           <div className="card-hce p-6 space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="label-hce">Código diagnóstico (CIE-10) *</label>
-                <input type="text" name="codigo_diagnostico_principal" value={form.codigo_diagnostico_principal}
-                  onChange={handleChange} required placeholder="Ej: J00" className="input-hce uppercase" />
-              </div>
-              <div>
-                <label className="label-hce">Descripción del diagnóstico</label>
-                <input type="text" name="descripcion_diagnostico" value={form.descripcion_diagnostico}
-                  onChange={handleChange} placeholder="Rinofaringitis aguda" className="input-hce" />
-              </div>
-            </div>
+            <h3 className="card-title">Diagnósticos *</h3>
+            <DiagnosticoSearch value={diagnosticos} onChange={setDiagnosticos} />
             <div>
               <label className="label-hce">Plan de manejo</label>
               <textarea name="plan_manejo" value={form.plan_manejo} onChange={handleChange}
@@ -269,7 +259,7 @@ export default function NuevoEncuentro() {
             <button type="button" onClick={() => navigate(-1)} disabled={crear.isPending} className="btn-secondary">
               Cancelar
             </button>
-            <button type="submit" disabled={crear.isPending} className="btn-primary">
+            <button type="submit" disabled={crear.isPending || faltaDiagnostico} className="btn-primary">
               {crear.isPending ? 'Guardando...' : 'Guardar encuentro'}
             </button>
           </div>
