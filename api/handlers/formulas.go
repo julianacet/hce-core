@@ -165,8 +165,8 @@ func (h *FormulaHandler) crear(w http.ResponseWriter, r *http.Request) {
 	// Insertar medicamentos en orden
 	meds := make([]models.Medicamento, 0, len(input.Medicamentos))
 	for i, m := range input.Medicamentos {
-		if m.NombreMedicamento == "" || m.Dosis == "" || m.Frecuencia == "" {
-			responderError(w, http.StatusBadRequest, "cada medicamento requiere nombre, dosis y frecuencia")
+		if m.NombreMedicamento == "" {
+			responderError(w, http.StatusBadRequest, "cada medicamento requiere nombre")
 			return
 		}
 		var med models.Medicamento

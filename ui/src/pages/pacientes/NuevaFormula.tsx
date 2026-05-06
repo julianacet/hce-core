@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
-import { PDFViewer, PDFDownloadLink, pdf } from '@react-pdf/renderer'
+import { PDFViewer, pdf } from '@react-pdf/renderer'
 import { Plus, Trash2, Download, Printer, ChevronLeft, Eye, EyeOff } from 'lucide-react'
 import { useMedico } from '../../context/MedicoContext'
 import FormulaPDF, { type Medicamento } from '../../components/pdf/FormulaPDF'
 import { usePaciente } from '../../api/pacientes'
 import { useEncuentro } from '../../api/encuentros'
+import { useCrearFormula } from '../../api/formulas'
 
 const medVacio: Medicamento = {
   nombre: '',
@@ -42,10 +43,14 @@ export default function NuevaFormula() {
     ? [encuentroData.codigo_diagnostico_principal, encuentroData.descripcion_diagnostico].filter(Boolean).join(' - ')
     : ''
 
+  const crearFormula = useCrearFormula(id ?? '', encId ?? '')
+
   const [medicamentos, setMedicamentos] = useState<Medicamento[]>([{ ...medVacio }])
   const [incluirFirma, setIncluirFirma] = useState(!!medico.firmaBase64)
   const [vistaPrevia, setVistaPrevia] = useState(false)
   const [imprimiendo, setImprimiendo] = useState(false)
+  const [descargando, setDescargando] = useState(false)
+  const [guardadaId, setGuardadaId] = useState<string | null>(null)
 
   const fecha = new Date().toLocaleDateString('es-CO', {
     day: '2-digit', month: 'long', year: 'numeric',
@@ -65,7 +70,7 @@ export default function NuevaFormula() {
     )
   }
 
-  const formulaValida = !!paciente && medicamentos.every((m) => m.nombre && m.dosis && m.frecuencia)
+  const formulaValida = !!paciente && medicamentos.every((m) => m.nombre)
 
   const docPDF = paciente ? (
     <FormulaPDF
@@ -78,11 +83,33 @@ export default function NuevaFormula() {
     />
   ) : null
 
-  // Genera el PDF como blob y abre el diálogo de impresión del sistema operativo
+  async function guardarEnBD(): Promise<void> {
+    if (guardadaId || crearFormula.isPending) return
+    try {
+      const result = await crearFormula.mutateAsync({
+        tipo: 'pos',
+        medicamentos: medicamentos.map((m) => ({
+          nombre_medicamento: m.nombre,
+          concentracion: m.concentracion || undefined,
+          forma_farmaceutica: m.formaFarmaceutica || undefined,
+          dosis: m.dosis,
+          frecuencia: m.frecuencia,
+          duracion_tratamiento: m.duracion,
+          cantidad_dispensar: parseInt(m.cantidad) || undefined,
+          indicaciones: m.indicaciones || undefined,
+        })),
+      })
+      setGuardadaId(result.id)
+    } catch {
+      // No bloqueamos la impresión si el guardado falla
+    }
+  }
+
   async function imprimir() {
-    if (!docPDF) return
+    if (!docPDF || !formulaValida) return
     setImprimiendo(true)
     try {
+      await guardarEnBD()
       const blob = await pdf(docPDF).toBlob()
       const url = URL.createObjectURL(blob)
       const ventana = window.open(url)
@@ -90,12 +117,28 @@ export default function NuevaFormula() {
         ventana.addEventListener('load', () => {
           ventana.focus()
           ventana.print()
-          // Libera la URL del blob cuando se cierre el diálogo
           ventana.addEventListener('afterprint', () => URL.revokeObjectURL(url))
         })
       }
     } finally {
       setImprimiendo(false)
+    }
+  }
+
+  async function descargar() {
+    if (!docPDF || !paciente || !formulaValida) return
+    setDescargando(true)
+    try {
+      await guardarEnBD()
+      const blob = await pdf(docPDF).toBlob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `formula_${paciente.documento}_${Date.now()}.pdf`
+      a.click()
+      URL.revokeObjectURL(url)
+    } finally {
+      setDescargando(false)
     }
   }
 
@@ -153,6 +196,13 @@ export default function NuevaFormula() {
             {vistaPrevia ? 'Editar' : 'Vista previa'}
           </button>
 
+          {/* Badge guardada */}
+          {guardadaId && (
+            <span className="text-xs text-green-700 bg-green-50 border border-green-200 px-2.5 py-1 rounded-full">
+              Guardada ✓
+            </span>
+          )}
+
           {/* Imprimir */}
           {formulaValida && docPDF && (
             <button
@@ -166,26 +216,20 @@ export default function NuevaFormula() {
               }}
             >
               <Printer size={15} />
-              {imprimiendo ? 'Preparando...' : 'Imprimir'}
+              {imprimiendo ? 'Preparando...' : guardadaId ? 'Reimprimir' : 'Imprimir'}
             </button>
           )}
 
           {/* Descargar PDF */}
           {formulaValida && docPDF && (
-            <PDFDownloadLink
-              document={docPDF}
-              fileName={`formula_${paciente?.documento ?? id}_${Date.now()}.pdf`}
+            <button
+              onClick={descargar}
+              disabled={descargando}
+              className="btn-primary disabled:opacity-50"
             >
-              {({ loading }) => (
-                <button
-                  disabled={loading}
-                  className="btn-primary disabled:opacity-50"
-                >
-                  <Download size={15} />
-                  {loading ? 'Generando...' : 'Guardar PDF'}
-                </button>
-              )}
-            </PDFDownloadLink>
+              <Download size={15} />
+              {descargando ? 'Generando...' : 'Guardar PDF'}
+            </button>
           )}
         </div>
       </div>
@@ -242,7 +286,7 @@ export default function NuevaFormula() {
                   </select>
                 </div>
                 <div>
-                  <label className="label-hce">Dosis *</label>
+                  <label className="label-hce">Dosis</label>
                   <input value={m.dosis} onChange={(e) => cambiar(i, 'dosis', e.target.value)}
                     placeholder="Ej: 1 tableta" className="input-hce" />
                 </div>
@@ -250,7 +294,7 @@ export default function NuevaFormula() {
 
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="label-hce">Frecuencia *</label>
+                  <label className="label-hce">Frecuencia</label>
                   <input value={m.frecuencia} onChange={(e) => cambiar(i, 'frecuencia', e.target.value)}
                     placeholder="cada 8 horas" className="input-hce" />
                 </div>

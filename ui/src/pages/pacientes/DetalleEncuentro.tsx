@@ -8,8 +8,10 @@ import { usePaciente } from '../../api/pacientes'
 import { usePlantillas, useConsentimientoEncuentro, useRegistrarConsentimiento } from '../../api/consentimientos'
 import { useMedico } from '../../context/MedicoContext'
 import ConsentimientoPDF from '../../components/pdf/ConsentimientoPDF'
+import FormulaPDF, { type Medicamento } from '../../components/pdf/FormulaPDF'
 import { useAntecedentes } from '../../api/antecedentes'
 import { useCamposClinicosActivos } from '../../api/campos_clinicos'
+import { useFormulas, type FormulaGuardada } from '../../api/formulas'
 
 
 const colorAccion: Record<string, string> = {
@@ -31,6 +33,7 @@ export default function DetalleEncuentro() {
   const { medico } = useMedico()
   const [plantillaSeleccionada, setPlantillaSeleccionada] = useState('')
   const [imprimiendo, setImprimiendo] = useState(false)
+  const [imprimiendoFormulaId, setImprimiendoFormulaId] = useState<string | null>(null)
 
   const { data: e, isLoading, isError } = useEncuentro(id ?? '', encId ?? '')
   const { data: logs = [] } = useAuditoriaEncuentro(encId ?? '')
@@ -40,6 +43,7 @@ export default function DetalleEncuentro() {
   const registrar = useRegistrarConsentimiento(id ?? '', encId ?? '')
   const { data: antecedentes } = useAntecedentes(id ?? '')
   const { data: campos = [] } = useCamposClinicosActivos()
+  const { data: formulas = [] } = useFormulas(id ?? '', encId ?? '')
 
   if (isLoading) {
     return <div className="p-6 text-sm text-slate-400">Cargando encuentro...</div>
@@ -99,6 +103,51 @@ export default function DetalleEncuentro() {
       await registrar.mutateAsync({ plantilla_id: plantillaSeleccionada, contenido_renderizado: contenidoRenderizado })
     } finally {
       setImprimiendo(false)
+    }
+  }
+
+  async function handleReimprimirFormula(formula: FormulaGuardada) {
+    setImprimiendoFormulaId(formula.id)
+    try {
+      const meds: Medicamento[] = formula.medicamentos.map((m) => ({
+        nombre: m.nombre_medicamento,
+        concentracion: m.concentracion ?? '',
+        formaFarmaceutica: m.forma_farmaceutica ?? 'tableta',
+        dosis: m.dosis,
+        frecuencia: m.frecuencia,
+        duracion: m.duracion_tratamiento,
+        cantidad: m.cantidad_dispensar?.toString() ?? '',
+        indicaciones: m.indicaciones ?? '',
+      }))
+      const fechaFormula = new Date(formula.fecha_creacion).toLocaleDateString('es-CO', {
+        day: '2-digit', month: 'long', year: 'numeric',
+      })
+      const blob = await pdf(
+        <FormulaPDF
+          medico={medico}
+          paciente={{
+            nombre: pacienteNombre,
+            documento: paciente?.numero_documento ?? id ?? '',
+            tipoDocumento: paciente?.tipo_documento ?? '',
+            fechaNacimiento: paciente ? new Date(paciente.fecha_nacimiento).toLocaleDateString('es-CO') : '',
+          }}
+          diagnostico={diagnostico}
+          medicamentos={meds}
+          incluirFirma={!!medico.firmaBase64}
+          fecha={fechaFormula}
+        />
+      ).toBlob()
+      const url = URL.createObjectURL(blob)
+      const ventana = window.open(url)
+      if (ventana) {
+        ventana.addEventListener('load', () => {
+          ventana.focus()
+          ventana.print()
+          ventana.addEventListener('afterprint', () => URL.revokeObjectURL(url))
+        })
+      }
+    } finally {
+      setImprimiendoFormulaId(null)
     }
   }
 
@@ -331,6 +380,51 @@ export default function DetalleEncuentro() {
                 </div>
               )
             })}
+          </div>
+        </div>
+      )}
+
+      {/* Fórmulas guardadas */}
+      {formulas.length > 0 && (
+        <div className="card-hce p-5 space-y-4">
+          <div className="flex items-center gap-2">
+            <FileText size={16} className="text-slate-400" />
+            <h3 className="card-title">Fórmulas médicas</h3>
+            <span className="ml-auto text-xs text-slate-400">
+              {formulas.length} guardada{formulas.length > 1 ? 's' : ''}
+            </span>
+          </div>
+          <div className="space-y-3">
+            {formulas.map((f) => (
+              <div key={f.id} className="border border-slate-100 rounded-lg p-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-xs text-slate-400">
+                    <span>{new Date(f.fecha_creacion).toLocaleDateString('es-CO')}</span>
+                    <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full uppercase">{f.tipo}</span>
+                  </div>
+                  <button
+                    onClick={() => handleReimprimirFormula(f)}
+                    disabled={imprimiendoFormulaId === f.id}
+                    className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors disabled:opacity-40"
+                  >
+                    <Printer size={13} />
+                    {imprimiendoFormulaId === f.id ? 'Preparando...' : 'Reimprimir'}
+                  </button>
+                </div>
+                <div className="space-y-1">
+                  {f.medicamentos.map((m) => (
+                    <div key={m.id} className="text-sm text-slate-700">
+                      <span className="font-medium">{m.nombre_medicamento}</span>
+                      {m.concentracion && <span className="text-slate-400"> {m.concentracion}</span>}
+                      <span className="text-slate-400"> — {m.dosis}, {m.frecuencia}</span>
+                      {m.duracion_tratamiento && (
+                        <span className="text-slate-400"> × {m.duracion_tratamiento}</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}
