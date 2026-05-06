@@ -12,6 +12,7 @@ import FormulaPDF, { type Medicamento } from '../../components/pdf/FormulaPDF'
 import { useAntecedentes } from '../../api/antecedentes'
 import { useCamposClinicosActivos } from '../../api/campos_clinicos'
 import { useFormulas, type FormulaGuardada } from '../../api/formulas'
+import { useNotasEncuentro, useCrearNotaEncuentro } from '../../api/notas_encuentro'
 
 
 const colorAccion: Record<string, string> = {
@@ -34,6 +35,8 @@ export default function DetalleEncuentro() {
   const [plantillaSeleccionada, setPlantillaSeleccionada] = useState('')
   const [imprimiendo, setImprimiendo] = useState(false)
   const [imprimiendoFormulaId, setImprimiendoFormulaId] = useState<string | null>(null)
+  const [notaAbierta, setNotaAbierta] = useState(false)
+  const [notaTexto, setNotaTexto] = useState('')
 
   const { data: e, isLoading, isError } = useEncuentro(id ?? '', encId ?? '')
   const { data: logs = [] } = useAuditoriaEncuentro(encId ?? '')
@@ -44,6 +47,8 @@ export default function DetalleEncuentro() {
   const { data: antecedentes } = useAntecedentes(id ?? '')
   const { data: campos = [] } = useCamposClinicosActivos()
   const { data: formulas = [] } = useFormulas(id ?? '', encId ?? '')
+  const { data: notas = [] } = useNotasEncuentro(id ?? '', encId ?? '')
+  const crearNota = useCrearNotaEncuentro(id ?? '', encId ?? '')
 
   if (isLoading) {
     return <div className="p-6 text-sm text-slate-400">Cargando encuentro...</div>
@@ -149,6 +154,14 @@ export default function DetalleEncuentro() {
     } finally {
       setImprimiendoFormulaId(null)
     }
+  }
+
+  async function handleGuardarNota(e: React.FormEvent) {
+    e.preventDefault()
+    if (!notaTexto.trim()) return
+    await crearNota.mutateAsync(notaTexto.trim())
+    setNotaTexto('')
+    setNotaAbierta(false)
   }
 
   return (
@@ -317,7 +330,7 @@ export default function DetalleEncuentro() {
         </div>
 
         <div className="border-t border-slate-100 pt-4 flex items-center justify-between">
-          <p className="text-xs text-slate-400">Este registro es inmutable. Para modificar, se creará una nueva versión.</p>
+          <p className="text-xs text-slate-400">Este registro es inmutable. Use las notas de corrección para aclaraciones.</p>
           <div className="flex gap-2">
             <button
               onClick={() => navigate(`/pacientes/${id}/encuentros/${encId}/formula`)}
@@ -335,6 +348,73 @@ export default function DetalleEncuentro() {
             </button>
           </div>
         </div>
+      </div>
+
+      {/* Notas de corrección */}
+      <div className="card-hce p-5 space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <ScrollText size={16} className="text-slate-400" />
+            <h3 className="card-title">Notas de corrección</h3>
+            {notas.length > 0 && (
+              <span className="text-xs text-slate-400">({notas.length})</span>
+            )}
+          </div>
+          {!notaAbierta && (
+            <button
+              onClick={() => setNotaAbierta(true)}
+              className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors"
+            >
+              + Agregar nota
+            </button>
+          )}
+        </div>
+
+        {notas.length === 0 && !notaAbierta && (
+          <p className="text-xs text-slate-400">Sin notas registradas.</p>
+        )}
+
+        {notas.length > 0 && (
+          <div className="space-y-3">
+            {notas.map((n) => (
+              <div key={n.id} className="border-l-2 border-slate-200 pl-3 space-y-0.5">
+                <p className="text-sm text-slate-800 leading-relaxed">{n.texto}</p>
+                <p className="text-xs text-slate-400">
+                  {n.creado_por} · {new Date(n.fecha_creacion).toLocaleString('es-CO')}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {notaAbierta && (
+          <form onSubmit={handleGuardarNota} className="space-y-2">
+            <textarea
+              rows={3}
+              value={notaTexto}
+              onChange={(e) => setNotaTexto(e.target.value)}
+              placeholder="Escribí la corrección o aclaración…"
+              className="input-hce resize-none w-full"
+              autoFocus
+            />
+            <div className="flex gap-2 justify-end">
+              <button
+                type="button"
+                onClick={() => { setNotaAbierta(false); setNotaTexto('') }}
+                className="btn-secondary text-xs"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                disabled={!notaTexto.trim() || crearNota.isPending}
+                className="btn-primary text-xs disabled:opacity-50"
+              >
+                {crearNota.isPending ? 'Guardando...' : 'Guardar nota'}
+              </button>
+            </div>
+          </form>
+        )}
       </div>
 
       {/* Antecedentes */}
