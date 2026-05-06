@@ -19,6 +19,8 @@ export type Encuentro = {
   encuentro_id: string
   numero_version: number
   es_ultima_version: boolean
+  esta_activo: boolean
+  estado: 'borrador' | 'finalizado'
   paciente_documento: string
   encuentro_padre_id?: string
   fecha_atencion: string
@@ -93,6 +95,17 @@ export function useCrearEncuentro(documento: string) {
       apiFetch<Encuentro>(`/pacientes/${documento}/encuentros`, {
         method: 'POST',
         body: JSON.stringify(data),
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['encuentros', documento] }),
+  })
+}
+
+export function useFinalizarEncuentro(documento: string, encuentroId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () =>
+      apiFetch<Encuentro>(`/pacientes/${documento}/encuentros/${encuentroId}/finalizar`, {
+        method: 'PATCH',
       }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['encuentros', documento] }),
   })

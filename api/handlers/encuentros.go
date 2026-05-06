@@ -40,6 +40,7 @@ func EncuentrosRouter(db *pgxpool.Pool) http.Handler {
 	r.Route("/{encuentroId}", func(r chi.Router) {
 		r.Get("/", h.obtener)
 		r.Put("/", h.actualizar)
+		r.Patch("/finalizar", h.finalizar)
 		r.Mount("/formulas", FormulasRouter(db))
 		r.Mount("/facturas", FacturasRouter(db))
 		r.Mount("/consentimiento", ConsentimientoEncuentroRouter(db))
@@ -56,7 +57,7 @@ type encuentroQuerier interface {
 }
 
 const columnasEncuentro = `
-	id, encuentro_id, numero_version, es_ultima_version, esta_activo,
+	id, encuentro_id, numero_version, es_ultima_version, esta_activo, estado,
 	paciente_documento, encuentro_padre_id,
 	fecha_atencion, causa_externa, finalidad_consulta, via_ingreso,
 	motivo_consulta,
@@ -206,7 +207,8 @@ func (h *EncuentroHandler) crear(w http.ResponseWriter, r *http.Request) {
 }
 
 // PUT /pacientes/{documento}/encuentros/{encuentroId}
-// Crea una nueva versión del encuentro (SCD2).
+// Actualiza un encuentro en borrador (UPDATE directo, sin SCD2).
+// Los encuentros finalizados son inmutables; usar notas de corrección.
 func (h *EncuentroHandler) actualizar(w http.ResponseWriter, r *http.Request) {
 	documento := chi.URLParam(r, "documento")
 	encuentroID := chi.URLParam(r, "encuentroId")
@@ -217,48 +219,53 @@ func (h *EncuentroHandler) actualizar(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var versionActual int
+	var rowID, estadoActual string
 	err := h.db.QueryRow(r.Context(), `
-		SELECT numero_version FROM encuentro_clinico
+		SELECT id, estado FROM encuentro_clinico
 		WHERE encuentro_id = $1 AND paciente_documento = $2
 		  AND es_ultima_version = TRUE AND esta_activo = TRUE`,
 		encuentroID, documento,
-	).Scan(&versionActual)
+	).Scan(&rowID, &estadoActual)
 	if err != nil {
 		responderError(w, http.StatusNotFound, "encuentro no encontrado")
 		return
 	}
-
-	tx, err := h.db.Begin(r.Context())
-	if err != nil {
-		responderError(w, http.StatusInternalServerError, "error al iniciar transacción")
+	if estadoActual != "borrador" {
+		responderError(w, http.StatusUnprocessableEntity, "el encuentro ya fue finalizado; use notas de corrección para aclaraciones")
 		return
 	}
-	defer tx.Rollback(r.Context())
 
-	_, err = tx.Exec(r.Context(), `
-		UPDATE encuentro_clinico SET es_ultima_version = FALSE
-		WHERE encuentro_id = $1 AND es_ultima_version = TRUE`,
-		encuentroID,
+	e, err := actualizarBorradorEncuentro(r.Context(), h.db, rowID, input)
+	if err != nil {
+		log.Printf("actualizar encuentro borrador: %v", err)
+		responderError(w, http.StatusInternalServerError, "error al actualizar encuentro")
+		return
+	}
+
+	responderJSON(w, http.StatusOK, e)
+}
+
+// PATCH /pacientes/{documento}/encuentros/{encuentroId}/finalizar
+// Cierra el encuentro: borrador → finalizado. A partir de aquí es inmutable.
+func (h *EncuentroHandler) finalizar(w http.ResponseWriter, r *http.Request) {
+	documento := chi.URLParam(r, "documento")
+	encuentroID := chi.URLParam(r, "encuentroId")
+
+	row := h.db.QueryRow(r.Context(), `
+		UPDATE encuentro_clinico SET estado = 'finalizado'
+		WHERE encuentro_id = $1 AND paciente_documento = $2
+		  AND es_ultima_version = TRUE AND esta_activo = TRUE AND estado = 'borrador'
+		RETURNING `+columnasEncuentro,
+		encuentroID, documento,
 	)
+
+	e, err := escanearEncuentro(row)
 	if err != nil {
-		responderError(w, http.StatusInternalServerError, "error al versionar encuentro")
+		responderError(w, http.StatusNotFound, "encuentro borrador no encontrado")
 		return
 	}
 
-	u := appmiddleware.UsuarioDesdeContexto(r.Context())
-	e, err := insertarEncuentro(r.Context(), tx, encuentroID, documento, input, versionActual+1, u.Nombre)
-	if err != nil {
-		log.Printf("actualizar encuentro: %v", err)
-		responderError(w, http.StatusInternalServerError, "error al guardar nueva versión")
-		return
-	}
-
-	if err := tx.Commit(r.Context()); err != nil {
-		responderError(w, http.StatusInternalServerError, "error al confirmar transacción")
-		return
-	}
-
+	e.Diagnosticos = cargarDiagnosticos(r.Context(), h.db, e.ID)
 	responderJSON(w, http.StatusOK, e)
 }
 
@@ -268,7 +275,7 @@ func escanearEncuentro(row scanner) (models.Encuentro, error) {
 	var e models.Encuentro
 	var svRaw, efRaw []byte
 	err := row.Scan(
-		&e.ID, &e.EncuentroID, &e.NumeroVersion, &e.EsUltimaVersion, &e.EstaActivo,
+		&e.ID, &e.EncuentroID, &e.NumeroVersion, &e.EsUltimaVersion, &e.EstaActivo, &e.Estado,
 		&e.PacienteDocumento, &e.EncuentroPadreID,
 		&e.FechaAtencion, &e.CausaExterna, &e.FinalidadConsulta, &e.ViaIngreso,
 		&e.MotivoConsulta,
@@ -383,6 +390,84 @@ func cargarDiagnosticos(ctx context.Context, db *pgxpool.Pool, encuentroClinicID
 		diags = append(diags, d)
 	}
 	return diags
+}
+
+func actualizarBorradorEncuentro(ctx context.Context, db *pgxpool.Pool, rowID string, input models.EncuentroInput) (models.Encuentro, error) {
+	fechaAtencion := time.Now()
+	if input.FechaAtencion != nil {
+		if t, err := time.Parse(time.RFC3339, *input.FechaAtencion); err == nil {
+			fechaAtencion = t
+		}
+	}
+
+	var codigoPrincipal *string
+	var descPrincipal *string
+	for _, d := range input.Diagnosticos {
+		if d.Tipo == "principal" {
+			codigoPrincipal = d.Codigo
+			desc := d.Descripcion
+			descPrincipal = &desc
+			break
+		}
+	}
+
+	tx, err := db.Begin(ctx)
+	if err != nil {
+		return models.Encuentro{}, err
+	}
+	defer tx.Rollback(ctx)
+
+	row := tx.QueryRow(ctx, `
+		UPDATE encuentro_clinico SET
+			encuentro_padre_id           = $1,
+			fecha_atencion               = $2,
+			causa_externa                = $3,
+			finalidad_consulta           = $4,
+			via_ingreso                  = $5,
+			motivo_consulta              = $6,
+			signos_vitales               = $7,
+			examen_fisico                = $8,
+			codigo_diagnostico_principal = $9,
+			descripcion_diagnostico      = $10,
+			plan_manejo                  = $11
+		WHERE id = $12
+		RETURNING `+columnasEncuentro,
+		input.EncuentroPadreID, fechaAtencion, input.CausaExterna, input.FinalidadConsulta, input.ViaIngreso,
+		input.MotivoConsulta, asJSON(input.SignosVitales), asJSON(input.ExamenFisico),
+		codigoPrincipal, descPrincipal, input.PlanManejo,
+		rowID,
+	)
+
+	e, err := escanearEncuentro(row)
+	if err != nil {
+		return models.Encuentro{}, err
+	}
+
+	_, err = tx.Exec(ctx, `DELETE FROM encuentro_diagnostico WHERE encuentro_clinico_id = $1`, rowID)
+	if err != nil {
+		return models.Encuentro{}, err
+	}
+
+	for i, d := range input.Diagnosticos {
+		if strings.TrimSpace(d.Descripcion) == "" {
+			continue
+		}
+		_, err = tx.Exec(ctx,
+			`INSERT INTO encuentro_diagnostico (encuentro_clinico_id, tipo, codigo, descripcion, orden) VALUES ($1, $2, $3, $4, $5)`,
+			e.ID, d.Tipo, d.Codigo, d.Descripcion, i,
+		)
+		if err != nil {
+			return models.Encuentro{}, fmt.Errorf("insertar diagnóstico: %w", err)
+		}
+		e.Diagnosticos = append(e.Diagnosticos, models.EncuentroDiagnostico{
+			Tipo: d.Tipo, Codigo: d.Codigo, Descripcion: d.Descripcion, Orden: i,
+		})
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return models.Encuentro{}, err
+	}
+	return e, nil
 }
 
 func tieneDiagnosticoPrincipal(diags []models.DiagnosticoInput) bool {

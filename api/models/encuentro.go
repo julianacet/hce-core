@@ -11,6 +11,7 @@ type Encuentro struct {
 	NumeroVersion              int             `json:"numero_version"`
 	EsUltimaVersion            bool            `json:"es_ultima_version"`
 	EstaActivo                 bool            `json:"esta_activo"`
+	Estado                     string          `json:"estado"`
 	PacienteDocumento          string          `json:"paciente_documento"`
 	EncuentroPadreID           *string         `json:"encuentro_padre_id"`
 	FechaAtencion              time.Time       `json:"fecha_atencion"`

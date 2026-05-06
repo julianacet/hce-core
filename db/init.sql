@@ -107,6 +107,8 @@ CREATE TABLE encuentro_clinico (
     numero_version    INTEGER     NOT NULL DEFAULT 1,
     es_ultima_version BOOLEAN     NOT NULL DEFAULT TRUE,
     esta_activo       BOOLEAN     NOT NULL DEFAULT TRUE,
+    estado            VARCHAR(20) NOT NULL DEFAULT 'borrador'
+                      CHECK (estado IN ('borrador', 'finalizado')),
     paciente_documento  VARCHAR(20) NOT NULL,
 
     encuentro_padre_id  UUID        NULL,
