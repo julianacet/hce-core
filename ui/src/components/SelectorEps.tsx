@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useRegimenes, useEps, useEpsInfo } from '../api/eps'
+import { SelectorBuscable } from './SelectorBuscable'
 
 interface Props {
   value: string
@@ -14,7 +15,6 @@ export function SelectorEps({ value, onChange, required }: Props) {
   const { data: entidades = [], isLoading: loadingEps } = useEps(regimen)
   const { data: epsInfo } = useEpsInfo(value)
 
-  // Cuando carga el dato de la EPS actual, inicializar el régimen
   useEffect(() => {
     if (epsInfo?.regimen && !regimen) setRegimen(epsInfo.regimen)
   }, [epsInfo])
@@ -44,17 +44,15 @@ export function SelectorEps({ value, onChange, required }: Props) {
         <label className="label-hce">
           EPS / Aseguradora{required && <span className="text-red-400 ml-0.5">*</span>}
         </label>
-        <select
+        <SelectorBuscable
+          key={regimen}
+          opciones={entidades}
           value={value}
-          onChange={e => onChange(e.target.value)}
-          className="input-hce"
+          onChange={onChange}
+          placeholder={loadingEps ? 'Cargando...' : regimen ? 'Buscar EPS...' : '— Seleccione régimen primero —'}
           disabled={!regimen || loadingEps}
-        >
-          <option value="">{loadingEps ? 'Cargando...' : '— Seleccionar —'}</option>
-          {entidades.map(e => (
-            <option key={`${e.codigo}-${e.regimen}`} value={e.codigo}>{e.nombre}</option>
-          ))}
-        </select>
+          required={required}
+        />
       </div>
     </>
   )

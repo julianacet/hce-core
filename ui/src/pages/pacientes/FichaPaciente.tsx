@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useParams } from 'react-router'
+import { useParams, useNavigate } from 'react-router'
 import { usePaciente, useActualizarPaciente, type PacienteInput } from '../../api/pacientes'
 import { SelectorMunicipioCol, SelectorPais } from '../../components/SelectorUbicacion'
 import { SelectorOcupacion } from '../../components/SelectorOcupacion'
@@ -30,6 +30,7 @@ function Campo({ label, children }: { label: string; children: React.ReactNode }
 
 export default function FichaPaciente() {
   const { id } = useParams()
+  const navigate = useNavigate()
   const { data: p, isLoading, isError } = usePaciente(id ?? '')
   const actualizar = useActualizarPaciente(id ?? '')
   const [editando, setEditando] = useState(false)
@@ -46,6 +47,7 @@ export default function FichaPaciente() {
     setEditOcupacionNombre(ocupacionData?.nombre ?? '')
     setForm({
       tipo_documento: p!.tipo_documento,
+      numero_documento: p!.numero_documento,
       nombre_primero: p!.nombre_primero,
       nombre_segundo: p!.nombre_segundo ?? '',
       apellido_primero: p!.apellido_primero,
@@ -89,6 +91,9 @@ export default function FichaPaciente() {
     }
     await actualizar.mutateAsync(payload)
     setEditando(false)
+    if (payload.numero_documento && payload.numero_documento !== p!.numero_documento) {
+      navigate(`/pacientes/${payload.numero_documento}`, { replace: true })
+    }
   }
 
   // ── Vista de lectura ──────────────────────────────────────────────────────────
@@ -160,8 +165,8 @@ export default function FichaPaciente() {
           </select>
         </Campo>
         <Campo label="Número de documento">
-          <input type="text" value={p.numero_documento} disabled
-            className="input-hce" />
+          <input type="text" value={form.numero_documento ?? ''} onChange={(e) => set('numero_documento', e.target.value)}
+            required className="input-hce" />
         </Campo>
       </div>
 

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useDepartamentos, useMunicipios } from '../api/divipola'
 import { PAISES } from '../data/paises'
+import { SelectorBuscable } from './SelectorBuscable'
 
 interface SelectorMunicipioColProps {
   value: string
@@ -25,34 +26,28 @@ export function SelectorMunicipioCol({ value, onChange, required }: SelectorMuni
         <label className="label-hce">
           Departamento{required && <span className="text-red-400 ml-0.5">*</span>}
         </label>
-        <select
+        <SelectorBuscable
+          opciones={departamentos}
           value={dep}
-          onChange={e => handleDep(e.target.value)}
-          className="input-hce"
+          onChange={handleDep}
+          placeholder={loadingDeps ? 'Cargando...' : 'Buscar departamento...'}
           disabled={loadingDeps}
-        >
-          <option value="">{loadingDeps ? 'Cargando...' : '— Seleccionar —'}</option>
-          {departamentos.map(d => (
-            <option key={d.codigo} value={d.codigo}>{d.nombre}</option>
-          ))}
-        </select>
+          required={required}
+        />
       </div>
       <div>
         <label className="label-hce">
           Municipio{required && <span className="text-red-400 ml-0.5">*</span>}
         </label>
-        <select
+        <SelectorBuscable
+          key={dep}
+          opciones={municipios}
           value={value}
-          onChange={e => onChange(e.target.value)}
-          className="input-hce"
-          required={required}
+          onChange={onChange}
+          placeholder={loadingMuns ? 'Cargando...' : dep ? 'Buscar municipio...' : '— Seleccione departamento —'}
           disabled={!dep || loadingMuns}
-        >
-          <option value="">{loadingMuns ? 'Cargando...' : '— Seleccionar —'}</option>
-          {municipios.map(m => (
-            <option key={m.codigo} value={m.codigo}>{m.nombre}</option>
-          ))}
-        </select>
+          required={required}
+        />
       </div>
     </>
   )
@@ -66,15 +61,12 @@ interface SelectorPaisProps {
 
 export function SelectorPais({ value, onChange, required }: SelectorPaisProps) {
   return (
-    <select
+    <SelectorBuscable
+      opciones={PAISES}
       value={value}
-      onChange={e => onChange(e.target.value)}
-      className="input-hce"
+      onChange={onChange}
+      placeholder="Buscar país..."
       required={required}
-    >
-      {PAISES.map(p => (
-        <option key={p.codigo} value={p.codigo}>{p.nombre}</option>
-      ))}
-    </select>
+    />
   )
 }
