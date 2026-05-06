@@ -354,7 +354,6 @@ export default function DetalleEncuentro() {
       <div className="card-hce p-5 space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <ScrollText size={16} className="text-slate-400" />
             <h3 className="card-title">Notas de corrección</h3>
             {notas.length > 0 && (
               <span className="text-xs text-slate-400">({notas.length})</span>

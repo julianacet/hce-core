@@ -77,18 +77,26 @@ func (h *PacienteHandler) listar(w http.ResponseWriter, r *http.Request) {
 	)
 
 	if q == "" {
-		rows, err = h.db.Query(r.Context(), base+" ORDER BY apellido_primero, nombre_primero")
+		rows, err = h.db.Query(r.Context(), base+
+			` ORDER BY fecha_creacion DESC LIMIT 100`)
 	} else {
 		like := "%" + strings.ToLower(q) + "%"
 		rows, err = h.db.Query(r.Context(), base+`
 			AND (
 				numero_documento ILIKE $1 OR
 				LOWER(nombre_primero)   LIKE $1 OR
+				LOWER(nombre_segundo)   LIKE $1 OR
 				LOWER(apellido_primero) LIKE $1 OR
 				LOWER(apellido_segundo) LIKE $1 OR
-				telefono LIKE $1
+				telefono                LIKE $1 OR
+				LOWER(correo_electronico) LIKE $1 OR
+				LOWER(nombre_primero || ' ' || apellido_primero) LIKE $1 OR
+				LOWER(nombre_primero || ' ' || COALESCE(nombre_segundo,'') || ' ' || apellido_primero) LIKE $1 OR
+				LOWER(apellido_primero || ' ' || nombre_primero) LIKE $1 OR
+				LOWER(apellido_primero || ' ' || apellido_segundo) LIKE $1
 			)
-			ORDER BY apellido_primero, nombre_primero`, like)
+			ORDER BY apellido_primero, nombre_primero
+			LIMIT 50`, like)
 	}
 	if err != nil {
 		log.Printf("listar pacientes: %v", err)
