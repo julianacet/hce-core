@@ -2,7 +2,7 @@ import { useNavigate, useParams } from 'react-router'
 import { Download, Printer, ChevronLeft, FileCode2 } from 'lucide-react'
 import { PDFDownloadLink, pdf } from '@react-pdf/renderer'
 import { useState } from 'react'
-import { useFactura } from '../../api/facturas'
+import { useFactura, useCambiarEstadoFactura } from '../../api/facturas'
 import { usePaciente } from '../../api/pacientes'
 import { useEncuentro } from '../../api/encuentros'
 import { useMedico } from '../../context/MedicoContext'
@@ -42,6 +42,14 @@ export default function DetalleFactura() {
   const { data: ripsExistente } = useRips(id ?? '', encId ?? '', facturaId ?? '')
 
   const generarRips = useGenerarRips(id ?? '', encId ?? '', facturaId ?? '')
+  const cambiarEstado = useCambiarEstadoFactura(id ?? '', encId ?? '', facturaId ?? '')
+
+  async function handleCambiarEstado(nuevoEstado: 'emitida' | 'pagada' | 'anulada') {
+    if (nuevoEstado === 'anulada') {
+      if (!window.confirm('¿Seguro que querés anular esta factura? Esta acción no se puede deshacer.')) return
+    }
+    await cambiarEstado.mutateAsync(nuevoEstado)
+  }
 
   if (isLoading) return <div className="p-6 text-sm text-slate-400">Cargando factura...</div>
   if (isError || !factura) return <div className="p-6 text-sm text-red-500">Error al cargar la factura.</div>
@@ -118,6 +126,42 @@ export default function DetalleFactura() {
         </div>
 
         <div className="flex items-center gap-2">
+          {factura.estado === 'borrador' && (
+            <>
+              <button
+                onClick={() => handleCambiarEstado('emitida')}
+                disabled={cambiarEstado.isPending}
+                className="flex items-center gap-2 text-sm px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white transition-colors disabled:opacity-50"
+              >
+                Emitir
+              </button>
+              <button
+                onClick={() => handleCambiarEstado('anulada')}
+                disabled={cambiarEstado.isPending}
+                className="flex items-center gap-2 text-sm px-4 py-2 rounded-md border border-red-300 text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50"
+              >
+                Anular
+              </button>
+            </>
+          )}
+          {factura.estado === 'emitida' && (
+            <>
+              <button
+                onClick={() => handleCambiarEstado('pagada')}
+                disabled={cambiarEstado.isPending}
+                className="flex items-center gap-2 text-sm px-4 py-2 rounded-md bg-green-600 hover:bg-green-700 text-white transition-colors disabled:opacity-50"
+              >
+                Registrar pago
+              </button>
+              <button
+                onClick={() => handleCambiarEstado('anulada')}
+                disabled={cambiarEstado.isPending}
+                className="flex items-center gap-2 text-sm px-4 py-2 rounded-md border border-red-300 text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50"
+              >
+                Anular
+              </button>
+            </>
+          )}
           <button onClick={imprimir} disabled={imprimiendo}
             className="flex items-center gap-2 text-sm px-4 py-2 rounded-md border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors disabled:opacity-50">
             <Printer size={14} />

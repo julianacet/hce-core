@@ -64,3 +64,18 @@ export function useCrearFactura(documento: string, encuentroId: string) {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['facturas', documento, encuentroId] }),
   })
 }
+
+export function useCambiarEstadoFactura(documento: string, encuentroId: string, facturaId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (nuevoEstado: Factura['estado']) =>
+      apiFetch<Factura>(
+        `/pacientes/${documento}/encuentros/${encuentroId}/facturas/${facturaId}/estado`,
+        { method: 'PATCH', body: JSON.stringify({ nuevo_estado: nuevoEstado }) },
+      ),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['facturas', documento, encuentroId, facturaId] })
+      qc.invalidateQueries({ queryKey: ['facturas', documento, encuentroId] })
+    },
+  })
+}

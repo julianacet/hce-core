@@ -25,6 +25,7 @@ func FacturasRouter(db *pgxpool.Pool) http.Handler {
 	r.Post("/", h.crear)
 	r.Route("/{facturaId}", func(r chi.Router) {
 		r.Get("/", h.obtener)
+		r.Patch("/estado", h.cambiarEstado)
 		r.Mount("/rips", RipsRouter(db))
 	})
 	return r
@@ -180,6 +181,64 @@ func (h *FacturaHandler) crear(w http.ResponseWriter, r *http.Request) {
 	f.Items = items
 
 	responderJSON(w, http.StatusCreated, f)
+}
+
+var transicionesValidas = map[string]map[string]bool{
+	"borrador": {"emitida": true, "anulada": true},
+	"emitida":  {"pagada": true, "anulada": true},
+}
+
+// PATCH /pacientes/{doc}/encuentros/{encId}/facturas/{facturaId}/estado
+func (h *FacturaHandler) cambiarEstado(w http.ResponseWriter, r *http.Request) {
+	facturaID := chi.URLParam(r, "facturaId")
+
+	var body struct {
+		NuevoEstado string `json:"nuevo_estado"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		responderError(w, http.StatusBadRequest, "body inválido")
+		return
+	}
+
+	var estadoActual string
+	err := h.db.QueryRow(r.Context(),
+		`SELECT estado FROM factura WHERE factura_id = $1 AND es_ultima_version = TRUE AND esta_activo = TRUE`,
+		facturaID,
+	).Scan(&estadoActual)
+	if err != nil {
+		responderError(w, http.StatusNotFound, "factura no encontrada")
+		return
+	}
+
+	if !transicionesValidas[estadoActual][body.NuevoEstado] {
+		responderError(w, http.StatusUnprocessableEntity,
+			"transición inválida: "+estadoActual+" → "+body.NuevoEstado)
+		return
+	}
+
+	_, err = h.db.Exec(r.Context(),
+		`UPDATE factura SET estado = $1 WHERE factura_id = $2 AND es_ultima_version = TRUE`,
+		body.NuevoEstado, facturaID,
+	)
+	if err != nil {
+		log.Printf("cambiar estado factura: %v", err)
+		responderError(w, http.StatusInternalServerError, "error al actualizar estado")
+		return
+	}
+
+	var f models.Factura
+	h.db.QueryRow(r.Context(), `
+		SELECT id, factura_id, numero_version, encuentro_id, paciente_documento,
+		       estado, fecha_emision, subtotal, total, fecha_creacion, creado_por
+		FROM factura WHERE factura_id = $1 AND es_ultima_version = TRUE`, facturaID,
+	).Scan(
+		&f.ID, &f.FacturaID, &f.NumeroVersion, &f.EncuentroID, &f.PacienteDocumento,
+		&f.Estado, &f.FechaEmision, &f.Subtotal, &f.Total, &f.FechaCreacion, &f.CreadoPor,
+	)
+	items, _ := obtenerItems(r.Context(), h.db, f.ID)
+	f.Items = items
+
+	responderJSON(w, http.StatusOK, f)
 }
 
 func obtenerItems(ctx context.Context, db *pgxpool.Pool, facturaRowID string) ([]models.FacturaItem, error) {
