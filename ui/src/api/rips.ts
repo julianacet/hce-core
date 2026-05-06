@@ -18,10 +18,18 @@ export type RipsGenerado = {
 }
 
 export function useRips(pacienteId: string, encId: string, facturaId: string) {
-  return useQuery<RipsGenerado>({
+  return useQuery<RipsGenerado | null>({
     queryKey: ['rips', pacienteId, encId, facturaId],
-    queryFn: () =>
-      apiFetch(`/pacientes/${pacienteId}/encuentros/${encId}/facturas/${facturaId}/rips`),
+    queryFn: async () => {
+      try {
+        return await apiFetch<RipsGenerado>(
+          `/pacientes/${pacienteId}/encuentros/${encId}/facturas/${facturaId}/rips`
+        )
+      } catch (e) {
+        if ((e as Error).message === 'no hay RIPS generado para esta factura') return null
+        throw e
+      }
+    },
     retry: false,
   })
 }

@@ -64,10 +64,18 @@ export function useDesactivarPlantilla() {
 // ── Por encuentro ─────────────────────────────────────────────────────────────
 
 export function useConsentimientoEncuentro(pacienteId: string, encId: string) {
-  return useQuery<ConsentimientoGenerado>({
+  return useQuery<ConsentimientoGenerado | null>({
     queryKey: ['consentimiento', encId],
-    queryFn: () =>
-      apiFetch(`/pacientes/${pacienteId}/encuentros/${encId}/consentimiento`),
+    queryFn: async () => {
+      try {
+        return await apiFetch<ConsentimientoGenerado>(
+          `/pacientes/${pacienteId}/encuentros/${encId}/consentimiento`
+        )
+      } catch (e) {
+        if ((e as Error).message === 'sin consentimiento generado') return null
+        throw e
+      }
+    },
     retry: false,
   })
 }
