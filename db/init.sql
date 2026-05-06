@@ -942,3 +942,35 @@ INSERT INTO campo_clinico (seccion, nombre, tipo, unidad, clave, orden) VALUES
   ('examen_fisico',  'Musculoesquelético',          'normal_notas', NULL, 'musculoesqueletico', 12),
   ('examen_fisico',  'Genitourinario',              'normal_notas', NULL, 'genitourinario',     13)
 ON CONFLICT DO NOTHING;
+
+-- ============================================================
+-- 22. Notas de corrección por encuentro (Res. 1995/1999)
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS encuentro_nota (
+    id             UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    encuentro_id   UUID        NOT NULL,
+    texto          TEXT        NOT NULL,
+    fecha_creacion TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    creado_por     TEXT        NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_nota_encuentro ON encuentro_nota(encuentro_id);
+
+-- ============================================================
+-- 23. Catálogo de medicamentos predefinidos (POS / No POS)
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS medicamento_predefinido (
+    id                 SERIAL  PRIMARY KEY,
+    codigo             TEXT,
+    nombre             TEXT    NOT NULL,
+    concentracion      TEXT,
+    forma_farmaceutica TEXT,
+    tipo               TEXT    NOT NULL CHECK (tipo IN ('pos', 'no_pos')),
+    esta_activo        BOOLEAN NOT NULL DEFAULT TRUE
+);
+
+CREATE INDEX IF NOT EXISTS idx_medicamento_predefinido_tipo   ON medicamento_predefinido(tipo);
+CREATE INDEX IF NOT EXISTS idx_medicamento_predefinido_nombre ON medicamento_predefinido
+    USING gin(to_tsvector('spanish', nombre));

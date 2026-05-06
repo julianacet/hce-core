@@ -86,6 +86,7 @@ func main() {
 		r.Mount("/eventos-adversos", handlers.EventosAdversosRouter(db))
 		r.Mount("/proveedores", handlers.ProveedoresRouter(db))
 		r.Mount("/citas", handlers.CitasRouter(db))
+		r.Mount("/medicamentos-predefinidos", handlers.MedicamentosPredefinidosRouter(db))
 		r.Put("/configuracion/tema", handlers.PutConfiguracionTema(db))
 		r.Put("/configuracion/medico", handlers.PutConfiguracionMedico(db))
 

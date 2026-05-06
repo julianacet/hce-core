@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router'
 import { PDFViewer, pdf } from '@react-pdf/renderer'
 import { Plus, Trash2, Download, Printer, ChevronLeft, Eye, EyeOff } from 'lucide-react'
@@ -7,11 +7,12 @@ import FormulaPDF, { type Medicamento } from '../../components/pdf/FormulaPDF'
 import { usePaciente } from '../../api/pacientes'
 import { useEncuentro } from '../../api/encuentros'
 import { useCrearFormula } from '../../api/formulas'
+import { useMedicamentosPredefinidos, type MedicamentoPredefinido } from '../../api/medicamentos_predefinidos'
 
 const medVacio: Medicamento = {
   nombre: '',
   concentracion: '',
-  formaFarmaceutica: 'tableta',
+  formaFarmaceutica: '',
   dosis: '',
   frecuencia: '',
   duracion: '',
@@ -19,10 +20,158 @@ const medVacio: Medicamento = {
   indicaciones: '',
 }
 
-const formasFarmaceuticas = [
-  'tableta', 'cápsula', 'jarabe', 'suspensión', 'inyectable',
-  'crema', 'ungüento', 'gotas', 'parche', 'supositorio', 'otro',
-]
+// Autocomplete de nombre de medicamento contra el catálogo
+function InputMedicamento({
+  tipo,
+  value,
+  onChange,
+  onSelect,
+}: {
+  tipo: 'pos' | 'no_pos'
+  value: string
+  onChange: (v: string) => void
+  onSelect: (m: MedicamentoPredefinido) => void
+}) {
+  const [q, setQ] = useState(value)
+  const [abierto, setAbierto] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  const { data: sugerencias = [] } = useMedicamentosPredefinidos(tipo, q.length >= 2 ? q : '')
+
+  useEffect(() => { setQ(value) }, [value])
+
+  useEffect(() => {
+    function cerrar(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setAbierto(false)
+    }
+    document.addEventListener('mousedown', cerrar)
+    return () => document.removeEventListener('mousedown', cerrar)
+  }, [])
+
+  return (
+    <div ref={ref} className="relative">
+      <input
+        value={q}
+        onChange={(e) => {
+          setQ(e.target.value)
+          onChange(e.target.value)
+          setAbierto(true)
+        }}
+        onFocus={() => setAbierto(true)}
+        placeholder="Nombre del medicamento"
+        className="input-hce"
+      />
+      {abierto && sugerencias.length > 0 && (
+        <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-56 overflow-y-auto">
+          {sugerencias.map((m) => (
+            <button
+              key={m.id}
+              type="button"
+              onMouseDown={(e) => {
+                e.preventDefault()
+                onSelect(m)
+                setQ(m.nombre)
+                setAbierto(false)
+              }}
+              className="w-full text-left px-3 py-2 text-sm hover:bg-slate-50 transition-colors"
+            >
+              <span className="font-medium text-slate-800">{m.nombre}</span>
+              {(m.concentracion || m.forma_farmaceutica) && (
+                <span className="text-xs text-slate-400 ml-2">
+                  {[m.concentracion, m.forma_farmaceutica].filter(Boolean).join(' · ')}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Panel de medicamentos para un tipo (pos o no_pos)
+function PanelFormula({
+  tipo,
+  medicamentos,
+  setMedicamentos,
+  guardadaId,
+  setGuardadaId,
+  paciente,
+  diagnostico,
+  medico,
+  incluirFirma,
+  vistaPrevia,
+}: {
+  tipo: 'pos' | 'no_pos'
+  medicamentos: Medicamento[]
+  setMedicamentos: React.Dispatch<React.SetStateAction<Medicamento[]>>
+  guardadaId: string | null
+  setGuardadaId: (id: string) => void
+  paciente: { nombre: string; documento: string; tipoDocumento: string; fechaNacimiento: string } | null
+  diagnostico: string
+  medico: ReturnType<typeof useMedico>['medico']
+  incluirFirma: boolean
+  vistaPrevia: boolean
+}) {
+  const crearFormula = useCrearFormula(
+    paciente?.documento ?? '',
+    // encId viene del contexto superior, lo pasamos via prop
+    ''
+  )
+  const [imprimiendo, setImprimiendo] = useState(false)
+  const [descargando, setDescargando] = useState(false)
+
+  const fecha = new Date().toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' })
+  const formulaValida = !!paciente && medicamentos.every((m) => m.nombre)
+
+  const docPDF = paciente ? (
+    <FormulaPDF
+      medico={medico}
+      paciente={paciente}
+      diagnostico={diagnostico}
+      medicamentos={medicamentos}
+      incluirFirma={incluirFirma}
+      fecha={fecha}
+      tipo={tipo}
+    />
+  ) : null
+
+  function agregar() { setMedicamentos((p) => [...p, { ...medVacio }]) }
+  function quitar(i: number) { setMedicamentos((p) => p.filter((_, idx) => idx !== i)) }
+  function cambiar(i: number, campo: keyof Medicamento, valor: string) {
+    setMedicamentos((p) => p.map((m, idx) => idx === i ? { ...m, [campo]: valor } : m))
+  }
+  function seleccionarCatalogo(i: number, m: MedicamentoPredefinido) {
+    setMedicamentos((p) => p.map((med, idx) => idx === i ? {
+      ...med,
+      nombre: m.nombre,
+      concentracion: m.concentracion ?? '',
+      formaFarmaceutica: m.forma_farmaceutica ?? '',
+    } : med))
+  }
+
+  async function guardarEnBD(encId: string): Promise<void> {
+    if (guardadaId || crearFormula.isPending) return
+    try {
+      const result = await crearFormula.mutateAsync({
+        tipo,
+        medicamentos: medicamentos.map((m) => ({
+          nombre_medicamento: m.nombre,
+          concentracion: m.concentracion || undefined,
+          forma_farmaceutica: m.formaFarmaceutica || undefined,
+          dosis: m.dosis,
+          frecuencia: m.frecuencia,
+          duracion_tratamiento: m.duracion,
+          cantidad_dispensar: parseInt(m.cantidad) || undefined,
+          indicaciones: m.indicaciones || undefined,
+        })),
+      })
+      setGuardadaId(result.id)
+    } catch { /* no bloqueamos la impresión */ }
+  }
+
+  return <span />  // placeholder — ver abajo
+}
 
 export default function NuevaFormula() {
   const { id, encId } = useParams()
@@ -43,52 +192,60 @@ export default function NuevaFormula() {
     ? [encuentroData.codigo_diagnostico_principal, encuentroData.descripcion_diagnostico].filter(Boolean).join(' - ')
     : ''
 
-  const crearFormula = useCrearFormula(id ?? '', encId ?? '')
+  const crearFormulaPos = useCrearFormula(id ?? '', encId ?? '')
+  const crearFormulaNoPos = useCrearFormula(id ?? '', encId ?? '')
 
-  const [medicamentos, setMedicamentos] = useState<Medicamento[]>([{ ...medVacio }])
+  const [tab, setTab] = useState<'pos' | 'no_pos'>('pos')
+  const [medsPos, setMedsPos] = useState<Medicamento[]>([{ ...medVacio }])
+  const [medsNoPos, setMedsNoPos] = useState<Medicamento[]>([{ ...medVacio }])
+  const [guardadaIdPos, setGuardadaIdPos] = useState<string | null>(null)
+  const [guardadaIdNoPos, setGuardadaIdNoPos] = useState<string | null>(null)
   const [incluirFirma, setIncluirFirma] = useState(!!medico.firmaBase64)
   const [vistaPrevia, setVistaPrevia] = useState(false)
   const [imprimiendo, setImprimiendo] = useState(false)
   const [descargando, setDescargando] = useState(false)
-  const [guardadaId, setGuardadaId] = useState<string | null>(null)
 
-  const fecha = new Date().toLocaleDateString('es-CO', {
-    day: '2-digit', month: 'long', year: 'numeric',
-  })
+  const meds = tab === 'pos' ? medsPos : medsNoPos
+  const setMeds = tab === 'pos' ? setMedsPos : setMedsNoPos
+  const guardadaId = tab === 'pos' ? guardadaIdPos : guardadaIdNoPos
+  const setGuardadaId = tab === 'pos' ? setGuardadaIdPos : setGuardadaIdNoPos
+  const crearFormula = tab === 'pos' ? crearFormulaPos : crearFormulaNoPos
 
-  function agregar() {
-    setMedicamentos((prev) => [...prev, { ...medVacio }])
-  }
-
-  function quitar(i: number) {
-    setMedicamentos((prev) => prev.filter((_, idx) => idx !== i))
-  }
-
-  function cambiar(i: number, campo: keyof Medicamento, valor: string) {
-    setMedicamentos((prev) =>
-      prev.map((m, idx) => (idx === i ? { ...m, [campo]: valor } : m))
-    )
-  }
-
-  const formulaValida = !!paciente && medicamentos.every((m) => m.nombre)
+  const fecha = new Date().toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' })
+  const formulaValida = !!paciente && meds.every((m) => m.nombre)
 
   const docPDF = paciente ? (
     <FormulaPDF
       medico={medico}
       paciente={paciente}
       diagnostico={diagnostico}
-      medicamentos={medicamentos}
+      medicamentos={meds}
       incluirFirma={incluirFirma}
       fecha={fecha}
+      tipo={tab}
     />
   ) : null
+
+  function agregar() { setMeds((p) => [...p, { ...medVacio }]) }
+  function quitar(i: number) { setMeds((p) => p.filter((_, idx) => idx !== i)) }
+  function cambiar(i: number, campo: keyof Medicamento, valor: string) {
+    setMeds((p) => p.map((m, idx) => idx === i ? { ...m, [campo]: valor } : m))
+  }
+  function seleccionarCatalogo(i: number, m: MedicamentoPredefinido) {
+    setMeds((p) => p.map((med, idx) => idx === i ? {
+      ...med,
+      nombre: m.nombre,
+      concentracion: m.concentracion ?? '',
+      formaFarmaceutica: m.forma_farmaceutica ?? '',
+    } : med))
+  }
 
   async function guardarEnBD(): Promise<void> {
     if (guardadaId || crearFormula.isPending) return
     try {
       const result = await crearFormula.mutateAsync({
-        tipo: 'pos',
-        medicamentos: medicamentos.map((m) => ({
+        tipo: tab,
+        medicamentos: meds.map((m) => ({
           nombre_medicamento: m.nombre,
           concentracion: m.concentracion || undefined,
           forma_farmaceutica: m.formaFarmaceutica || undefined,
@@ -100,9 +257,7 @@ export default function NuevaFormula() {
         })),
       })
       setGuardadaId(result.id)
-    } catch {
-      // No bloqueamos la impresión si el guardado falla
-    }
+    } catch { /* no bloqueamos la impresión */ }
   }
 
   async function imprimir() {
@@ -120,9 +275,7 @@ export default function NuevaFormula() {
           ventana.addEventListener('afterprint', () => URL.revokeObjectURL(url))
         })
       }
-    } finally {
-      setImprimiendo(false)
-    }
+    } finally { setImprimiendo(false) }
   }
 
   async function descargar() {
@@ -134,12 +287,10 @@ export default function NuevaFormula() {
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `formula_${paciente.documento}_${Date.now()}.pdf`
+      a.download = `formula_${tab}_${paciente.documento}_${Date.now()}.pdf`
       a.click()
       URL.revokeObjectURL(url)
-    } finally {
-      setDescargando(false)
-    }
+    } finally { setDescargando(false) }
   }
 
   return (
@@ -156,9 +307,7 @@ export default function NuevaFormula() {
             <ChevronLeft size={20} />
           </button>
           <div>
-            <h2 className="card-title">
-              Nueva fórmula médica
-            </h2>
+            <h2 className="card-title">Nueva fórmula médica</h2>
             <p className="text-xs" style={{ color: 'var(--hce-text-muted)' }}>
               {cargandoPaciente || cargandoEncuentro
                 ? 'Cargando...'
@@ -168,65 +317,39 @@ export default function NuevaFormula() {
         </div>
 
         <div className="flex items-center gap-3">
-          {/* Incluir firma */}
           {medico.firmaBase64 && (
             <label className="flex items-center gap-2 text-sm cursor-pointer select-none"
               style={{ color: 'var(--hce-text-muted)' }}>
-              <input
-                type="checkbox"
-                checked={incluirFirma}
-                onChange={(e) => setIncluirFirma(e.target.checked)}
-                className="rounded"
-              />
+              <input type="checkbox" checked={incluirFirma}
+                onChange={(e) => setIncluirFirma(e.target.checked)} className="rounded" />
               Incluir firma
             </label>
           )}
 
-          {/* Toggle vista previa */}
-          <button
-            onClick={() => setVistaPrevia((v) => !v)}
+          <button onClick={() => setVistaPrevia((v) => !v)}
             className="flex items-center gap-2 text-sm px-4 py-2 rounded-md border transition-colors"
-            style={{
-              borderColor: 'var(--hce-border)',
-              color: 'var(--hce-text-muted)',
-              backgroundColor: 'transparent',
-            }}
-          >
+            style={{ borderColor: 'var(--hce-border)', color: 'var(--hce-text-muted)', backgroundColor: 'transparent' }}>
             {vistaPrevia ? <EyeOff size={14} /> : <Eye size={14} />}
             {vistaPrevia ? 'Editar' : 'Vista previa'}
           </button>
 
-          {/* Badge guardada */}
           {guardadaId && (
             <span className="text-xs text-green-700 bg-green-50 border border-green-200 px-2.5 py-1 rounded-full">
               Guardada ✓
             </span>
           )}
 
-          {/* Imprimir */}
           {formulaValida && docPDF && (
-            <button
-              onClick={imprimir}
-              disabled={imprimiendo}
+            <button onClick={imprimir} disabled={imprimiendo}
               className="flex items-center gap-2 text-sm px-4 py-2 rounded-md border transition-colors disabled:opacity-50"
-              style={{
-                borderColor: 'var(--hce-primary)',
-                color: 'var(--hce-primary)',
-                backgroundColor: 'transparent',
-              }}
-            >
+              style={{ borderColor: 'var(--hce-primary)', color: 'var(--hce-primary)', backgroundColor: 'transparent' }}>
               <Printer size={15} />
               {imprimiendo ? 'Preparando...' : guardadaId ? 'Reimprimir' : 'Imprimir'}
             </button>
           )}
 
-          {/* Descargar PDF */}
           {formulaValida && docPDF && (
-            <button
-              onClick={descargar}
-              disabled={descargando}
-              className="btn-primary disabled:opacity-50"
-            >
+            <button onClick={descargar} disabled={descargando} className="btn-primary disabled:opacity-50">
               <Download size={15} />
               {descargando ? 'Generando...' : 'Guardar PDF'}
             </button>
@@ -234,12 +357,29 @@ export default function NuevaFormula() {
         </div>
       </div>
 
+      {/* Tabs */}
+      <div style={{ backgroundColor: 'var(--hce-card)', borderBottom: '1px solid var(--hce-border)' }}
+        className="px-6 flex gap-1">
+        {(['pos', 'no_pos'] as const).map((t) => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className="px-4 py-2.5 text-sm font-medium transition-colors border-b-2"
+            style={{
+              borderBottomColor: tab === t ? 'var(--hce-primary)' : 'transparent',
+              color: tab === t ? 'var(--hce-primary)' : 'var(--hce-text-muted)',
+            }}
+          >
+            {t === 'pos' ? 'POS — Alopático' : 'No POS — Homeopático'}
+          </button>
+        ))}
+      </div>
+
       <div className="flex flex-1 overflow-hidden">
         {/* Panel izquierdo: formulario */}
-        <div
-          className={`overflow-auto p-6 space-y-4 ${vistaPrevia ? 'hidden' : 'flex-1'}`}
-          style={{ backgroundColor: 'var(--hce-bg)' }}
-        >
+        <div className={`overflow-auto p-6 space-y-4 ${vistaPrevia ? 'hidden' : 'flex-1'}`}
+          style={{ backgroundColor: 'var(--hce-bg)' }}>
+
           {!medico.nombre && (
             <div className="rounded-lg px-4 py-3 text-sm bg-amber-50 text-amber-700 border border-amber-200">
               Los datos del médico no están configurados.{' '}
@@ -249,13 +389,11 @@ export default function NuevaFormula() {
             </div>
           )}
 
-          {medicamentos.map((m, i) => (
+          {meds.map((m, i) => (
             <div key={i} className="card-hce p-5 space-y-4">
               <div className="flex items-center justify-between">
-                <span className="card-title">
-                  Medicamento {i + 1}
-                </span>
-                {medicamentos.length > 1 && (
+                <span className="card-title">Medicamento {i + 1}</span>
+                {meds.length > 1 && (
                   <button onClick={() => quitar(i)} className="text-red-400 hover:text-red-600 transition-colors">
                     <Trash2 size={15} />
                   </button>
@@ -265,12 +403,17 @@ export default function NuevaFormula() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="label-hce">Nombre del medicamento *</label>
-                  <input value={m.nombre} onChange={(e) => cambiar(i, 'nombre', e.target.value)}
-                    placeholder="Ej: Acetaminofén" className="input-hce" />
+                  <InputMedicamento
+                    tipo={tab}
+                    value={m.nombre}
+                    onChange={(v) => cambiar(i, 'nombre', v)}
+                    onSelect={(cat) => seleccionarCatalogo(i, cat)}
+                  />
                 </div>
                 <div>
                   <label className="label-hce">Concentración</label>
-                  <input value={m.concentracion} onChange={(e) => cambiar(i, 'concentracion', e.target.value)}
+                  <input value={m.concentracion}
+                    onChange={(e) => cambiar(i, 'concentracion', e.target.value)}
                     placeholder="Ej: 500 mg" className="input-hce" />
                 </div>
               </div>
@@ -278,12 +421,9 @@ export default function NuevaFormula() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="label-hce">Forma farmacéutica</label>
-                  <select value={m.formaFarmaceutica} onChange={(e) => cambiar(i, 'formaFarmaceutica', e.target.value)}
-                    className="input-hce">
-                    {formasFarmaceuticas.map((f) => (
-                      <option key={f} value={f}>{f.charAt(0).toUpperCase() + f.slice(1)}</option>
-                    ))}
-                  </select>
+                  <input value={m.formaFarmaceutica}
+                    onChange={(e) => cambiar(i, 'formaFarmaceutica', e.target.value)}
+                    placeholder="Ej: Tableta, Gotas, Jarabe…" className="input-hce" />
                 </div>
                 <div>
                   <label className="label-hce">Dosis</label>
@@ -326,7 +466,7 @@ export default function NuevaFormula() {
           </button>
         </div>
 
-        {/* Panel derecho o pantalla completa: visor PDF sin toolbar propio */}
+        {/* Vista previa PDF */}
         {(vistaPrevia || formulaValida) && docPDF && (
           <div className={`flex flex-col ${vistaPrevia ? 'flex-1' : 'w-96'}`}
             style={{ backgroundColor: '#525659' }}>
@@ -335,13 +475,7 @@ export default function NuevaFormula() {
               <span className="text-xs" style={{ color: '#b0b0b0' }}>
                 {vistaPrevia ? 'Vista previa completa' : 'Vista previa'}
               </span>
-              {formulaValida && !vistaPrevia && (
-                <span className="text-xs" style={{ color: '#888' }}>
-                  Usá los botones de arriba para imprimir o guardar
-                </span>
-              )}
             </div>
-            {/* showToolbar siempre false — usamos nuestros propios botones */}
             <PDFViewer width="100%" height="100%" showToolbar={false} style={{ border: 'none', flex: 1 }}>
               {docPDF}
             </PDFViewer>
