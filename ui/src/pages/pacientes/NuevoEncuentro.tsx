@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
-import { useCrearEncuentro, type DiagnosticoItem, type ValorNormalNotas } from '../../api/encuentros'
+import { useCrearEncuentro, useEncuentros, type DiagnosticoItem, type ValorNormalNotas } from '../../api/encuentros'
 import { usePaciente } from '../../api/pacientes'
 import { useCamposClinicosActivos } from '../../api/campos_clinicos'
 import AntecedentesTab from '../../components/AntecedentesTab'
@@ -13,6 +13,7 @@ type FormState = {
   finalidad_consulta: string
   causa_externa: string
   via_ingreso: string
+  encuentro_padre_id: string
 }
 
 const FORM_INICIAL: FormState = {
@@ -21,6 +22,7 @@ const FORM_INICIAL: FormState = {
   finalidad_consulta: '10',
   causa_externa: '13',
   via_ingreso: '02',
+  encuentro_padre_id: '',
 }
 
 type Tab = 'consulta' | 'antecedentes'
@@ -31,6 +33,7 @@ export default function NuevoEncuentro() {
   const crear = useCrearEncuentro(id ?? '')
   const { data: paciente } = usePaciente(id ?? '')
   const { data: campos = [] } = useCamposClinicosActivos()
+  const { data: encuentrosPrevios = [] } = useEncuentros(id ?? '')
 
   const [form, setForm] = useState<FormState>(FORM_INICIAL)
   const [signos, setSignos] = useState<Record<string, string>>({})
@@ -60,6 +63,8 @@ export default function NuevoEncuentro() {
       finalidad_consulta: form.finalidad_consulta,
       causa_externa: form.causa_externa,
       via_ingreso: form.via_ingreso,
+      encuentro_padre_id: form.finalidad_consulta === '11' && form.encuentro_padre_id
+        ? form.encuentro_padre_id : undefined,
     })
     navigate(`/pacientes/${id}/encuentros/${encuentro.encuentro_id}`)
   }
@@ -131,6 +136,32 @@ export default function NuevoEncuentro() {
                 </select>
               </div>
             </div>
+
+            {form.finalidad_consulta === '11' && (
+              <div>
+                <label className="label-hce">Consulta de origen <span className="text-slate-400 font-normal">(opcional)</span></label>
+                <select
+                  name="encuentro_padre_id"
+                  value={form.encuentro_padre_id}
+                  onChange={handleChange}
+                  className="input-hce"
+                >
+                  <option value="">— Sin vincular —</option>
+                  {encuentrosPrevios
+                    .filter(e => e.finalidad_consulta !== '11')
+                    .map(e => (
+                      <option key={e.encuentro_id} value={e.encuentro_id}>
+                        {new Date(e.fecha_atencion).toLocaleDateString('es-CO')}
+                        {e.descripcion_diagnostico ? ` · ${e.descripcion_diagnostico}` : ''}
+                      </option>
+                    ))
+                  }
+                </select>
+                <p className="text-xs text-slate-400 mt-1">
+                  Vincular permite aplicar la regla de primer control sin cargo.
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Motivo */}

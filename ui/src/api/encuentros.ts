@@ -40,6 +40,8 @@ export type Encuentro = {
   via_ingreso_nombre: string
   // Full diagnosis list (populated on detail view)
   diagnosticos?: EncuentroDiagnostico[]
+  // Only set on detail view for controls. true = primer control → sin cargo.
+  es_primer_control?: boolean
 }
 
 export type EncuentroInput = {

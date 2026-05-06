@@ -34,6 +34,9 @@ type Encuentro struct {
 	ViaIngresoNombre        string `json:"via_ingreso_nombre"`
 	// Full diagnosis list — populated on detail view.
 	Diagnosticos []EncuentroDiagnostico `json:"diagnosticos,omitempty"`
+	// Populated on detail view for controls (finalidad_consulta = '11').
+	// true = primer control tras la consulta origen → sin cargo. nil = no aplica.
+	EsPrimerControl *bool `json:"es_primer_control,omitempty"`
 }
 
 type EncuentroInput struct {

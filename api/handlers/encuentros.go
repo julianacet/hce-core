@@ -145,6 +145,11 @@ func (h *EncuentroHandler) obtener(w http.ResponseWriter, r *http.Request) {
 	// Cargar diagnósticos completos
 	e.Diagnosticos = cargarDiagnosticos(r.Context(), h.db, e.ID)
 
+	// Para controles con padre: calcular si es el primero sin factura previa
+	if e.FinalidadConsulta == "11" && e.EncuentroPadreID != nil {
+		e.EsPrimerControl = esPrimerControl(r.Context(), h.db, *e.EncuentroPadreID, e.EncuentroID)
+	}
+
 	responderJSON(w, http.StatusOK, e)
 }
 
@@ -387,4 +392,39 @@ func tieneDiagnosticoPrincipal(diags []models.DiagnosticoInput) bool {
 		}
 	}
 	return false
+}
+
+// esPrimerControl devuelve un *bool: true si este control es el primero para el
+// encuentro padre (no existen controles previos con factura no anulada para ese padre),
+// siempre que la configuración tenga primer_control_gratis = true.
+// Devuelve nil si la config no se puede leer o si la opción está desactivada.
+func esPrimerControl(ctx context.Context, db *pgxpool.Pool, padreID string, propioEncuentroID string) *bool {
+	// Leer configuración
+	var primerControlGratis bool
+	err := db.QueryRow(ctx,
+		`SELECT COALESCE((medico->>'primer_control_gratis')::boolean, true)
+		 FROM configuracion_sistema WHERE id = 1`,
+	).Scan(&primerControlGratis)
+	if err != nil || !primerControlGratis {
+		f := false
+		return &f
+	}
+
+	// Contar controles anteriores con factura activa para el mismo padre
+	var count int
+	db.QueryRow(ctx, `
+		SELECT COUNT(*)
+		FROM encuentro_clinico ec
+		JOIN factura f ON f.encuentro_id = ec.encuentro_id
+		WHERE ec.encuentro_padre_id = $1
+		  AND ec.finalidad_consulta = '11'
+		  AND ec.es_ultima_version = TRUE AND ec.esta_activo = TRUE
+		  AND f.es_ultima_version = TRUE AND f.esta_activo = TRUE
+		  AND f.estado != 'anulada'
+		  AND ec.encuentro_id != $2`,
+		padreID, propioEncuentroID,
+	).Scan(&count)
+
+	result := count == 0
+	return &result
 }

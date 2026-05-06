@@ -331,7 +331,12 @@ export default function DetalleEncuentro() {
 
         <div className="border-t border-slate-100 pt-4 flex items-center justify-between">
           <p className="text-xs text-slate-400">Este registro es inmutable. Use las notas de corrección para aclaraciones.</p>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
+            {e.es_primer_control && (
+              <span className="text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-1 rounded-full">
+                Control sin cargo
+              </span>
+            )}
             <button
               onClick={() => navigate(`/pacientes/${id}/encuentros/${encId}/formula`)}
               className="flex items-center gap-2 text-sm px-4 py-2 rounded-md border border-blue-700 text-blue-700 hover:bg-blue-50 transition-colors"
@@ -339,13 +344,15 @@ export default function DetalleEncuentro() {
               <FileText size={15} />
               Fórmula médica
             </button>
-            <button
-              onClick={() => navigate(`/pacientes/${id}/encuentros/${encId}/facturas/nueva`)}
-              className="btn-primary"
-            >
-              <Receipt size={15} />
-              Generar factura
-            </button>
+            {!e.es_primer_control && (
+              <button
+                onClick={() => navigate(`/pacientes/${id}/encuentros/${encId}/facturas/nueva`)}
+                className="btn-primary"
+              >
+                <Receipt size={15} />
+                Generar factura
+              </button>
+            )}
           </div>
         </div>
       </div>

@@ -141,6 +141,25 @@ export default function Configuracion() {
           </div>
         </div>
 
+        {/* Reglas de negocio */}
+        <div className="card-hce p-5 space-y-3">
+          <h3 className="card-title">Reglas del consultorio</h3>
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={!!form.primerControlGratis}
+              onChange={(e) => setForm((prev) => ({ ...prev, primerControlGratis: e.target.checked }))}
+              className="mt-0.5 rounded"
+            />
+            <div>
+              <p className="text-sm font-medium" style={{ color: 'var(--hce-text)' }}>Primer control sin cargo</p>
+              <p className="text-xs mt-0.5" style={{ color: 'var(--hce-text-muted)' }}>
+                El primer control después de cualquier consulta no se factura. Los siguientes controles sí.
+              </p>
+            </div>
+          </label>
+        </div>
+
         {/* Firma */}
         <div className="card-hce p-5 space-y-4">
           <div>

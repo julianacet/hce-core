@@ -13,6 +13,7 @@ export type DatosMedico = {
   nit: string
   codPrestador: string
   firmaBase64: string | null
+  primerControlGratis: boolean
 }
 
 const DEFAULTS: DatosMedico = {
@@ -23,10 +24,11 @@ const DEFAULTS: DatosMedico = {
   telefono: '',
   ciudad: '',
   nombreConsultorio: '',
-  correoElectronico: '',
   nit: '',
   codPrestador: '',
+  correoElectronico: '',
   firmaBase64: null,
+  primerControlGratis: true,
 }
 
 type MedicoContextType = {
