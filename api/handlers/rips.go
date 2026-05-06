@@ -61,7 +61,7 @@ func (h *RipsHandler) generar(w http.ResponseWriter, r *http.Request) {
 	// 2. Cargar paciente (solo los campos necesarios para RIPS)
 	var p models.Paciente
 	err = h.db.QueryRow(r.Context(), `
-		SELECT tipo_documento, numero_documento, fecha_nacimiento, genero,
+		SELECT tipo_documento, numero_documento, fecha_nacimiento::text, genero,
 		       codigo_pais_origen, codigo_municipio_residencia, zona_residencia, tipo_usuario
 		FROM paciente
 		WHERE numero_documento = $1 AND es_ultima_version = TRUE AND esta_activo = TRUE`,
@@ -71,6 +71,7 @@ func (h *RipsHandler) generar(w http.ResponseWriter, r *http.Request) {
 		&p.CodigoPaisOrigen, &p.CodigoMunicipioResidencia, &p.ZonaResidencia, &p.TipoUsuario,
 	)
 	if err != nil {
+		log.Printf("rips paciente no encontrado doc=%s: %v", documento, err)
 		responderError(w, http.StatusNotFound, "paciente no encontrado")
 		return
 	}

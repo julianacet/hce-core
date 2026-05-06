@@ -202,6 +202,10 @@ export default function NuevaFormula() {
   const [guardadaIdNoPos, setGuardadaIdNoPos] = useState<string | null>(null)
   const [incluirFirma, setIncluirFirma] = useState(!!medico.firmaBase64)
   const [vistaPrevia, setVistaPrevia] = useState(false)
+
+  useEffect(() => {
+    if (medico.firmaBase64) setIncluirFirma(true)
+  }, [medico.firmaBase64])
   const [imprimiendo, setImprimiendo] = useState(false)
   const [descargando, setDescargando] = useState(false)
 

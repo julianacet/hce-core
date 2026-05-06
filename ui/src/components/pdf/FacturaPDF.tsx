@@ -1,4 +1,4 @@
-import { Document, Page, View, Text, StyleSheet } from '@react-pdf/renderer'
+import { Document, Page, View, Text, Image, StyleSheet } from '@react-pdf/renderer'
 import type { DatosMedico } from '../../context/MedicoContext'
 import type { Factura } from '../../api/facturas'
 
@@ -96,6 +96,7 @@ const s = StyleSheet.create({
 
   pie: { marginTop: 48, flexDirection: 'row', justifyContent: 'flex-end' },
   firmaBloque: { alignItems: 'center', width: 180 },
+  firmaImagen: { width: 140, height: 56, objectFit: 'contain', marginBottom: 4 },
   firmaLinea: { width: 160, borderBottomWidth: 1, borderBottomColor: '#0f172a', marginBottom: 4 },
   firmaNombre: { fontSize: 9, fontFamily: 'Helvetica-Bold', textAlign: 'center' },
   firmaTP: { fontSize: 8, color: '#64748b', textAlign: 'center' },
@@ -209,7 +210,11 @@ export default function FacturaPDF({ medico, factura, pacienteNombre, diagnostic
         {/* Firma */}
         <View style={s.pie}>
           <View style={s.firmaBloque}>
-            <View style={{ height: 56 }} />
+            {medico.firmaBase64 ? (
+              <Image src={medico.firmaBase64} style={s.firmaImagen} />
+            ) : (
+              <View style={{ height: 56 }} />
+            )}
             <View style={s.firmaLinea} />
             <Text style={s.firmaNombre}>{medico.nombre || 'Nombre del médico'}</Text>
             <Text style={s.firmaTP}>{medico.especialidad || ''}</Text>
