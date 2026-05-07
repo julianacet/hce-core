@@ -54,7 +54,7 @@ export default function DetalleEncuentro() {
   const actualizar = useActualizarEncuentro(id ?? '', encId ?? '')
   const finalizar = useFinalizarEncuentro(id ?? '', encId ?? '')
   const { data: plantillas = [] } = usePlantillas()
-  const { data: consentimientoPrevio } = useConsentimientoEncuentro(id ?? '', encId ?? '')
+  const { data: consentimientoPrevio } = useConsentimientoEncuentro(id ?? '', encId ?? '', tab === 'consentimiento')
   const registrar = useRegistrarConsentimiento(id ?? '', encId ?? '')
   const { data: campos = [] } = useCamposClinicosActivos()
   const { data: formulas = [] } = useFormulas(id ?? '', encId ?? '')

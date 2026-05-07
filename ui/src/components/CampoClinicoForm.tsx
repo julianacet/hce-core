@@ -7,10 +7,12 @@ interface SignosProps {
   campos: CampoClinico[]
   values: Record<string, string>
   onChange: (values: Record<string, string>) => void
+  disabled?: boolean
 }
 
-export function SignosVitalesForm({ campos, values, onChange }: SignosProps) {
+export function SignosVitalesForm({ campos, values, onChange, disabled }: SignosProps) {
   function set(clave: string, valor: string) {
+    if (disabled) return
     onChange({ ...values, [clave]: valor })
   }
 
@@ -44,6 +46,7 @@ export function SignosVitalesForm({ campos, values, onChange }: SignosProps) {
                   type="number" placeholder="Sistólica" min={40} max={300}
                   value={values['ta_sistolica'] ?? ''}
                   onChange={(e) => set('ta_sistolica', e.target.value)}
+                  disabled={disabled}
                   className="input-hce"
                 />
                 <span className="text-slate-400 shrink-0">/</span>
@@ -51,6 +54,7 @@ export function SignosVitalesForm({ campos, values, onChange }: SignosProps) {
                   type="number" placeholder="Diastólica" min={20} max={200}
                   value={values['ta_diastolica'] ?? ''}
                   onChange={(e) => set('ta_diastolica', e.target.value)}
+                  disabled={disabled}
                   className="input-hce"
                 />
               </div>
@@ -67,6 +71,7 @@ export function SignosVitalesForm({ campos, values, onChange }: SignosProps) {
               type="number" step={c.clave === 'temperatura' || c.clave === 'peso' || c.clave === 'talla' ? '0.1' : '1'}
               value={values[c.clave] ?? ''}
               onChange={(e) => set(c.clave, e.target.value)}
+              disabled={disabled}
               className="input-hce"
             />
           </div>
@@ -91,9 +96,10 @@ interface ExamenProps {
   campos: CampoClinico[]
   values: Record<string, string | ValorNormalNotas>
   onChange: (values: Record<string, string | ValorNormalNotas>) => void
+  disabled?: boolean
 }
 
-export function ExamenFisicoForm({ campos, values, onChange }: ExamenProps) {
+export function ExamenFisicoForm({ campos, values, onChange, disabled }: ExamenProps) {
   const activos = campos.filter((c) => c.seccion === 'examen_fisico' && c.esta_activo)
 
   function setTexto(clave: string, valor: string) {
@@ -135,6 +141,7 @@ export function ExamenFisicoForm({ campos, values, onChange }: ExamenProps) {
                 rows={2}
                 value={typeof values[c.clave] === 'string' ? (values[c.clave] as string) : ''}
                 onChange={(e) => setTexto(c.clave, e.target.value)}
+                disabled={disabled}
                 className="input-hce resize-none"
                 placeholder="Descripción general del paciente…"
               />
@@ -150,6 +157,7 @@ export function ExamenFisicoForm({ campos, values, onChange }: ExamenProps) {
                 className="input-hce text-sm flex-1 max-w-xs"
                 value={typeof values[c.clave] === 'string' ? (values[c.clave] as string) : ''}
                 onChange={(e) => setTexto(c.clave, e.target.value)}
+                disabled={disabled}
               >
                 <option value="">— seleccionar —</option>
                 {(c.opciones ?? []).map((op) => (
@@ -166,11 +174,12 @@ export function ExamenFisicoForm({ campos, values, onChange }: ExamenProps) {
 
         return (
           <div key={c.clave} className="flex items-start gap-3">
-            <label className="flex items-center gap-2 min-w-44 cursor-pointer pt-1.5">
+            <label className={`flex items-center gap-2 min-w-44 pt-1.5 ${disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}>
               <input
                 type="checkbox"
                 checked={normal}
-                onChange={(e) => setNormal(c.clave, e.target.checked)}
+                onChange={(e) => !disabled && setNormal(c.clave, e.target.checked)}
+                disabled={disabled}
                 className="rounded"
               />
               <span className="text-sm" style={{ color: 'var(--hce-text)' }}>{c.nombre}</span>
@@ -181,11 +190,12 @@ export function ExamenFisicoForm({ campos, values, onChange }: ExamenProps) {
                 value={notas}
                 onChange={(e) => setNotas(c.clave, e.target.value)}
                 placeholder="Hallazgos…"
+                disabled={disabled}
                 className="input-hce flex-1 resize-none text-sm"
-                autoFocus
+                autoFocus={!disabled}
               />
             )}
-            {normal && (
+            {normal && !disabled && (
               <button
                 type="button"
                 onClick={() => setNormal(c.clave, false)}

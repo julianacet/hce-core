@@ -6,6 +6,7 @@ import type { DiagnosticoItem } from '../api/encuentros'
 interface Props {
   value: DiagnosticoItem[]
   onChange: (items: DiagnosticoItem[]) => void
+  disabled?: boolean
 }
 
 const TIPO_LABEL: Record<string, string> = {
@@ -20,7 +21,7 @@ const TIPO_STYLE: Record<string, string> = {
   nota: 'bg-amber-50 border-amber-200 text-amber-800',
 }
 
-export default function DiagnosticoSearch({ value, onChange }: Props) {
+export default function DiagnosticoSearch({ value, onChange, disabled }: Props) {
   const [query, setQuery] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
   const [showDropdown, setShowDropdown] = useState(false)
@@ -87,8 +88,9 @@ export default function DiagnosticoSearch({ value, onChange }: Props) {
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          onFocus={() => debouncedQuery.length >= 2 && resultados.length > 0 && setShowDropdown(true)}
+          onFocus={() => !disabled && debouncedQuery.length >= 2 && resultados.length > 0 && setShowDropdown(true)}
           placeholder="Buscar por código CIE-10 o nombre…"
+          disabled={disabled}
           className="input-hce pr-8"
         />
         {isFetching && (
@@ -129,29 +131,36 @@ export default function DiagnosticoSearch({ value, onChange }: Props) {
                 )}
                 <span>{d.descripcion}</span>
               </div>
-              <select
-                value={d.tipo}
-                onChange={(e) => cambiarTipo(i, e.target.value as DiagnosticoItem['tipo'])}
-                className="text-xs bg-transparent border-none outline-none cursor-pointer shrink-0"
-              >
-                <option value="principal">Principal</option>
-                <option value="secundario">Secundario</option>
-                {d.tipo === 'nota' && <option value="nota">Nota clínica</option>}
-              </select>
-              <button
-                type="button"
-                onClick={() => quitar(i)}
-                className="shrink-0 opacity-60 hover:opacity-100"
-              >
-                <X size={13} />
-              </button>
+              {!disabled && (
+                <select
+                  value={d.tipo}
+                  onChange={(e) => cambiarTipo(i, e.target.value as DiagnosticoItem['tipo'])}
+                  className="text-xs bg-transparent border-none outline-none cursor-pointer shrink-0"
+                >
+                  <option value="principal">Principal</option>
+                  <option value="secundario">Secundario</option>
+                  {d.tipo === 'nota' && <option value="nota">Nota clínica</option>}
+                </select>
+              )}
+              {disabled && (
+                <span className="text-xs shrink-0 opacity-60">{TIPO_LABEL[d.tipo]}</span>
+              )}
+              {!disabled && (
+                <button
+                  type="button"
+                  onClick={() => quitar(i)}
+                  className="shrink-0 opacity-60 hover:opacity-100"
+                >
+                  <X size={13} />
+                </button>
+              )}
             </div>
           ))}
         </div>
       )}
 
       {/* Nota clínica sin código */}
-      {!mostrarNota ? (
+      {!disabled && !mostrarNota ? (
         <button
           type="button"
           onClick={() => setMostrarNota(true)}

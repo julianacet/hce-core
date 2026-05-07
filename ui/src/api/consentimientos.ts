@@ -63,7 +63,7 @@ export function useDesactivarPlantilla() {
 
 // ── Por encuentro ─────────────────────────────────────────────────────────────
 
-export function useConsentimientoEncuentro(pacienteId: string, encId: string) {
+export function useConsentimientoEncuentro(pacienteId: string, encId: string, enabled = false) {
   return useQuery<ConsentimientoGenerado | null>({
     queryKey: ['consentimiento', encId],
     queryFn: async () => {
@@ -76,6 +76,7 @@ export function useConsentimientoEncuentro(pacienteId: string, encId: string) {
         throw e
       }
     },
+    enabled,
     retry: false,
   })
 }

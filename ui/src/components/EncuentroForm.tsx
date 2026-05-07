@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { CheckCircle, ChevronDown } from 'lucide-react'
+import { CheckCircle, ChevronDown, Pencil } from 'lucide-react'
 import { useEncuentros, type DiagnosticoItem, type ValorNormalNotas, type EncuentroInput } from '../api/encuentros'
 import { useCamposClinicosActivos } from '../api/campos_clinicos'
 import DiagnosticoSearch from './DiagnosticoSearch'
@@ -65,6 +65,8 @@ function CollapsibleSection({
   summary,
   onToggle,
   children,
+  locked,
+  onEditar,
   onGuardar,
   isSaving,
 }: {
@@ -73,6 +75,8 @@ function CollapsibleSection({
   summary?: string
   onToggle: () => void
   children: React.ReactNode
+  locked?: boolean
+  onEditar?: () => void
   onGuardar?: () => void
   isSaving?: boolean
 }) {
@@ -97,18 +101,27 @@ function CollapsibleSection({
       {isOpen && (
         <div className="border-t border-slate-100 px-6 pt-4 pb-6 space-y-4">
           {children}
-          {onGuardar && (
-            <div className="flex justify-end pt-2">
-              <button
-                type="button"
-                onClick={onGuardar}
-                disabled={isSaving}
-                className="btn-secondary text-sm disabled:opacity-50"
-              >
-                {isSaving ? 'Guardando...' : 'Guardar y continuar'}
-              </button>
-            </div>
-          )}
+          <div className="flex justify-end gap-2 pt-2">
+            {locked ? (
+              onEditar && (
+                <button type="button" onClick={onEditar} className="btn-ghost text-sm flex items-center gap-1.5">
+                  <Pencil size={13} />
+                  Editar sección
+                </button>
+              )
+            ) : (
+              onGuardar && (
+                <button
+                  type="button"
+                  onClick={onGuardar}
+                  disabled={isSaving}
+                  className="btn-secondary text-sm disabled:opacity-50"
+                >
+                  {isSaving ? 'Guardando...' : 'Guardar y continuar'}
+                </button>
+              )
+            )}
+          </div>
         </div>
       )}
     </div>
@@ -129,12 +142,23 @@ export default function EncuentroForm({
   const { data: campos = [] } = useCamposClinicosActivos()
   const { data: encuentrosPrevios = [] } = useEncuentros(documento)
 
+  const esBorrador = !!initialValues
+
   const [form, setForm] = useState<FormState>({ ...FORM_INICIAL, ...initialValues })
   const [signos, setSignos] = useState<Record<string, string>>(initialValues?.signos_vitales ?? {})
   const [examen, setExamen] = useState<Record<string, string | ValorNormalNotas>>(initialValues?.examen_fisico ?? {})
   const [diagnosticos, setDiagnosticos] = useState<DiagnosticoItem[]>(initialValues?.diagnosticos ?? [])
   const [error, setError] = useState<string | null>(null)
-  const [openSections, setOpenSections] = useState<Set<SectionKey>>(new Set(['clasificacion']))
+
+  // En borrador: todas las secciones empiezan colapsadas y bloqueadas
+  const [openSections, setOpenSections] = useState<Set<SectionKey>>(
+    esBorrador ? new Set() : new Set<SectionKey>(['clasificacion'])
+  )
+  const [lockedSections, setLockedSections] = useState<Set<SectionKey>>(
+    esBorrador
+      ? new Set<SectionKey>(['clasificacion', 'motivo', 'signos', 'examen', 'diagnosticos'])
+      : new Set<SectionKey>()
+  )
   const [savingSection, setSavingSection] = useState<SectionKey | null>(null)
 
   useEffect(() => {
@@ -196,6 +220,14 @@ export default function EncuentroForm({
     })
   }
 
+  function unlockSection(key: SectionKey) {
+    setLockedSections(prev => {
+      const next = new Set(prev)
+      next.delete(key)
+      return next
+    })
+  }
+
   async function guardarSeccion(key: SectionKey, data: Partial<EncuentroInput>, availableSections: SectionKey[]) {
     if (onGuardarSeccion) {
       setSavingSection(key)
@@ -208,6 +240,7 @@ export default function EncuentroForm({
       }
       setSavingSection(null)
     }
+    setLockedSections(prev => new Set([...prev, key]))
     const idx = availableSections.indexOf(key)
     const next = availableSections[idx + 1]
     setOpenSections(prev => {
@@ -246,6 +279,12 @@ export default function EncuentroForm({
     ? `${dxPrincipal.codigo ? dxPrincipal.codigo + ' · ' : ''}${dxPrincipal.descripcion}`
     : undefined
 
+  const clasifLocked = lockedSections.has('clasificacion')
+  const motivoLocked = lockedSections.has('motivo')
+  const signosLocked = lockedSections.has('signos')
+  const examenLocked = lockedSections.has('examen')
+  const diagLocked = lockedSections.has('diagnosticos')
+
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
 
@@ -254,6 +293,8 @@ export default function EncuentroForm({
         isOpen={openSections.has('clasificacion')}
         summary={clasifSummary}
         onToggle={() => toggleSection('clasificacion')}
+        locked={clasifLocked}
+        onEditar={() => unlockSection('clasificacion')}
         onGuardar={() => guardarSeccion('clasificacion', {
           finalidad_consulta: form.finalidad_consulta,
           causa_externa: form.causa_externa,
@@ -265,7 +306,7 @@ export default function EncuentroForm({
         <div className="grid grid-cols-3 gap-4">
           <div>
             <label className="label-hce">Finalidad de consulta</label>
-            <select name="finalidad_consulta" value={form.finalidad_consulta} onChange={handleChange} className="input-hce">
+            <select name="finalidad_consulta" value={form.finalidad_consulta} onChange={handleChange} disabled={clasifLocked} className="input-hce">
               <option value="10">Consulta de primera vez</option>
               <option value="11">Consulta de control</option>
               <option value="12">Urgencias</option>
@@ -273,7 +314,7 @@ export default function EncuentroForm({
           </div>
           <div>
             <label className="label-hce">Causa externa</label>
-            <select name="causa_externa" value={form.causa_externa} onChange={handleChange} className="input-hce">
+            <select name="causa_externa" value={form.causa_externa} onChange={handleChange} disabled={clasifLocked} className="input-hce">
               <option value="13">Enfermedad general</option>
               <option value="01">Accidente de trabajo</option>
               <option value="02">Accidente de tránsito</option>
@@ -281,7 +322,7 @@ export default function EncuentroForm({
           </div>
           <div>
             <label className="label-hce">Vía de ingreso</label>
-            <select name="via_ingreso" value={form.via_ingreso} onChange={handleChange} className="input-hce">
+            <select name="via_ingreso" value={form.via_ingreso} onChange={handleChange} disabled={clasifLocked} className="input-hce">
               <option value="02">Consulta externa</option>
               <option value="01">Urgencias</option>
               <option value="03">Hospitalización</option>
@@ -292,7 +333,7 @@ export default function EncuentroForm({
         {form.finalidad_consulta === '11' && (
           <div>
             <label className="label-hce">Consulta de origen <span className="text-slate-400 font-normal">(opcional)</span></label>
-            <select name="encuentro_padre_id" value={form.encuentro_padre_id} onChange={handleChange} className="input-hce">
+            <select name="encuentro_padre_id" value={form.encuentro_padre_id} onChange={handleChange} disabled={clasifLocked} className="input-hce">
               <option value="">— Sin vincular —</option>
               {consultasPrevias.map(e => (
                 <option key={e.encuentro_id} value={e.encuentro_id}>
@@ -311,6 +352,8 @@ export default function EncuentroForm({
         isOpen={openSections.has('motivo')}
         summary={motivoSummary}
         onToggle={() => toggleSection('motivo')}
+        locked={motivoLocked}
+        onEditar={() => unlockSection('motivo')}
         onGuardar={() => guardarSeccion('motivo', { motivo_consulta: form.motivo_consulta }, availableSections)}
         isSaving={savingSection === 'motivo'}
       >
@@ -320,6 +363,7 @@ export default function EncuentroForm({
           onChange={handleChange}
           required
           rows={4}
+          disabled={motivoLocked}
           className="input-hce resize-none"
           placeholder="Describa el motivo de consulta…"
         />
@@ -331,12 +375,14 @@ export default function EncuentroForm({
           isOpen={openSections.has('signos')}
           summary={signosSummary ?? 'Opcional'}
           onToggle={() => toggleSection('signos')}
+          locked={signosLocked}
+          onEditar={() => unlockSection('signos')}
           onGuardar={() => guardarSeccion('signos', {
             signos_vitales: Object.keys(signosLimpios).length > 0 ? signosLimpios : undefined,
           }, availableSections)}
           isSaving={savingSection === 'signos'}
         >
-          <SignosVitalesForm campos={camposSignos} values={signos} onChange={setSignos} />
+          <SignosVitalesForm campos={camposSignos} values={signos} onChange={setSignos} disabled={signosLocked} />
         </CollapsibleSection>
       )}
 
@@ -346,12 +392,14 @@ export default function EncuentroForm({
           isOpen={openSections.has('examen')}
           summary={examenSummary ?? 'Opcional — marcar Normal o describir hallazgos'}
           onToggle={() => toggleSection('examen')}
+          locked={examenLocked}
+          onEditar={() => unlockSection('examen')}
           onGuardar={() => guardarSeccion('examen', {
             examen_fisico: Object.keys(examen).length > 0 ? examen : undefined,
           }, availableSections)}
           isSaving={savingSection === 'examen'}
         >
-          <ExamenFisicoForm campos={camposExamen} values={examen} onChange={setExamen} />
+          <ExamenFisicoForm campos={camposExamen} values={examen} onChange={setExamen} disabled={examenLocked} />
         </CollapsibleSection>
       )}
 
@@ -360,9 +408,16 @@ export default function EncuentroForm({
         isOpen={openSections.has('diagnosticos')}
         summary={diagSummary}
         onToggle={() => toggleSection('diagnosticos')}
+        locked={diagLocked}
+        onEditar={() => unlockSection('diagnosticos')}
+        onGuardar={() => guardarSeccion('diagnosticos', {
+          diagnosticos,
+          plan_manejo: form.plan_manejo || undefined,
+        }, availableSections)}
+        isSaving={savingSection === 'diagnosticos'}
       >
         <div className="space-y-4">
-          <DiagnosticoSearch value={diagnosticos} onChange={setDiagnosticos} />
+          <DiagnosticoSearch value={diagnosticos} onChange={setDiagnosticos} disabled={diagLocked} />
           <div>
             <label className="label-hce">Plan de manejo <span className="text-slate-400 font-normal">(opcional)</span></label>
             <textarea
@@ -370,6 +425,7 @@ export default function EncuentroForm({
               value={form.plan_manejo}
               onChange={handleChange}
               rows={3}
+              disabled={diagLocked}
               className="input-hce resize-none"
             />
           </div>

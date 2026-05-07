@@ -5,11 +5,13 @@ import { usePaciente } from '../../api/pacientes'
 import EncuentroForm from '../../components/EncuentroForm'
 import AntecedentesTab from '../../components/AntecedentesTab'
 
-type Tab = 'consulta' | 'antecedentes'
+type Tab = 'consulta' | 'antecedentes' | 'formula' | 'consentimiento'
 
-const TABS: { key: Tab; label: string }[] = [
-  { key: 'consulta', label: 'Consulta' },
+const TABS: { key: Tab; label: string; disabled?: boolean }[] = [
+  { key: 'consulta', label: 'Nota clínica' },
   { key: 'antecedentes', label: 'Antecedentes' },
+  { key: 'formula', label: 'Fórmula', disabled: true },
+  { key: 'consentimiento', label: 'Consentimiento', disabled: true },
 ]
 
 export default function NuevoEncuentro() {
@@ -27,15 +29,20 @@ export default function NuevoEncuentro() {
   return (
     <div className="space-y-4">
       <div className="flex gap-1 bg-slate-100 p-1 rounded-lg w-fit">
-        {TABS.map(({ key, label }) => (
+        {TABS.map(({ key, label, disabled }) => (
           <button
             key={key}
             type="button"
-            onClick={() => setTab(key)}
+            onClick={() => !disabled && setTab(key)}
+            disabled={disabled}
             className={`px-4 py-1.5 text-sm rounded-md transition-colors ${
-              tab === key ? 'bg-white shadow-sm font-medium' : 'text-slate-500 hover:text-slate-700'
+              disabled
+                ? 'text-slate-300 cursor-not-allowed'
+                : tab === key
+                ? 'bg-white shadow-sm font-medium'
+                : 'text-slate-500 hover:text-slate-700'
             }`}
-            style={tab === key ? { color: 'var(--hce-primary)' } : {}}
+            style={!disabled && tab === key ? { color: 'var(--hce-primary)' } : {}}
           >
             {label}
           </button>
