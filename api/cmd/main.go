@@ -6,6 +6,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/joho/godotenv"
+
 	"github.com/go-chi/chi/v5"
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
@@ -16,19 +18,30 @@ import (
 )
 
 func main() {
-	dbURL := os.Getenv("DATABASE_URL")
-	if dbURL == "" {
-		log.Fatal("DATABASE_URL no está definida")
+	err := godotenv.Load("../.env")
+	if err != nil {
+		log.Fatal(err)
 	}
 
-	jwtSecreto := os.Getenv("JWT_SECRET")
-	if jwtSecreto == "" {
+	dbURL, dbURLExists := os.LookupEnv("DATABASE_URL")
+	if !dbURLExists {
+		log.Fatal("La variable de entorno DATABASE_URL no existe en el sistema")
+	} else if dbURL == "" {
+		log.Fatal("La URL de la base de datos no está definida")
+	}
+
+	jwtSecreto, jwtSecretoExists := os.LookupEnv("JWT_SECRET")
+	if !jwtSecretoExists {
+		log.Fatal("La variable de entorno JWT_SECRET no existe en el sistema")
+	} else if jwtSecreto == "" {
 		log.Fatal("JWT_SECRET no está definida")
 	}
 
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8000"
+	port, portExists := os.LookupEnv("PORT")
+	if !portExists {
+		log.Fatal("La variable de entorno PORT no existe en el sistema")
+	} else if port == "" {
+		log.Fatal("PORT no está definida")
 	}
 
 	db, err := repository.Connect(dbURL)
@@ -43,7 +56,7 @@ func main() {
 	r.Use(chimiddleware.Logger)
 	r.Use(chimiddleware.Recoverer)
 
-	if allowedOrigins := os.Getenv("ALLOWED_ORIGIN"); allowedOrigins != "" {
+	if allowedOrigins, allowedOriginsExists := os.LookupEnv("ALLOWED_ORIGIN"); allowedOriginsExists && allowedOrigins != "" {
 		origins := strings.Split(allowedOrigins, ",")
 		for i, o := range origins {
 			origins[i] = strings.TrimSpace(o)
