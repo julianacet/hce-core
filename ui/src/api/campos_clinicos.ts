@@ -58,3 +58,11 @@ export function useToggleCampoClinico(id: string) {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['campos-clinicos'] }),
   })
 }
+
+export function useEliminarCampoClinico() {
+  const qc = useQueryClient()
+  return useMutation<void, Error, string>({
+    mutationFn: (id) => apiFetch(`/campos-clinicos/${id}`, { method: 'DELETE' }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['campos-clinicos'] }),
+  })
+}

@@ -29,7 +29,7 @@ export function useCrearUsuario() {
   return useMutation<Usuario, Error, UsuarioInput>({
     mutationFn: (input) =>
       apiFetch('/usuarios', { method: 'POST', body: JSON.stringify(input) }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['usuarios'] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['usuarios'], refetchType: 'all' }),
   })
 }
 
@@ -38,14 +38,22 @@ export function useActualizarUsuario(id: string) {
   return useMutation<Usuario, Error, UsuarioInput>({
     mutationFn: (input) =>
       apiFetch(`/usuarios/${id}`, { method: 'PUT', body: JSON.stringify(input) }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['usuarios'] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['usuarios'], refetchType: 'all' }),
   })
 }
 
 export function useDesactivarUsuario() {
   const qc = useQueryClient()
-  return useMutation<void, Error, string>({
+  return useMutation<{ esta_activo: boolean }, Error, string>({
     mutationFn: (id) => apiFetch(`/usuarios/${id}/toggle`, { method: 'PATCH' }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['usuarios'] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['usuarios'], refetchType: 'all' }),
+  })
+}
+
+export function useEliminarUsuario() {
+  const qc = useQueryClient()
+  return useMutation<void, Error, string>({
+    mutationFn: (id) => apiFetch(`/usuarios/${id}`, { method: 'DELETE' }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['usuarios'], refetchType: 'all' }),
   })
 }

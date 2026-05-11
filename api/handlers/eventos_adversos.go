@@ -185,6 +185,7 @@ func EventosAdversosRouter(db *pgxpool.Pool) chi.Router {
 	r.Get("/", h.listar)
 	r.Post("/", h.crear)
 	r.Get("/{eventoId}", h.obtener)
+	r.Put("/{eventoId}", h.actualizar)
 	r.Put("/{eventoId}/seguimiento", h.actualizarSeguimiento)
 	r.Patch("/{eventoId}/toggle", h.toggle)
 	r.Delete("/{eventoId}", h.eliminar)
@@ -391,6 +392,75 @@ func (h *eventosAdversosHandler) eliminar(w http.ResponseWriter, r *http.Request
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *eventosAdversosHandler) actualizar(w http.ResponseWriter, r *http.Request) {
+	u := appmiddleware.UsuarioDesdeContexto(r.Context())
+	if u.Rol != "admin" && u.Rol != "medico" {
+		responderError(w, http.StatusForbidden, "acceso denegado")
+		return
+	}
+
+	id := chi.URLParam(r, "eventoId")
+	var input models.EventoAdversoInput
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		responderError(w, http.StatusBadRequest, "cuerpo inválido")
+		return
+	}
+	if strings.TrimSpace(input.Descripcion) == "" {
+		responderError(w, http.StatusBadRequest, "la descripción es obligatoria")
+		return
+	}
+	if input.Clasificacion == "" || input.CategoriaDanio == "" {
+		responderError(w, http.StatusBadRequest, "clasificación y categoría del daño son obligatorias")
+		return
+	}
+
+	fechaEvento, err := time.Parse(time.RFC3339, input.FechaEvento)
+	if err != nil {
+		fechaEvento, err = time.Parse("2006-01-02T15:04", input.FechaEvento)
+		if err != nil {
+			responderError(w, http.StatusBadRequest, "fecha_evento inválida")
+			return
+		}
+	}
+
+	factoresJSON := models.MarshalFactores(input.FactoresContribuyentes)
+
+	_, err = h.db.Exec(r.Context(),
+		`UPDATE evento_adverso
+		 SET tipo_id = $1, fecha_evento = $2, paciente_documento = $3,
+		     diagnostico_activo = $4, clasificacion = $5, categoria_danio = $6,
+		     se_informo_paciente = $7, descripcion = $8, como_se_detecto = $9,
+		     factores_contribuyentes = $10, acciones_inmediatas = $11,
+		     requiere_causa_raiz = $12
+		 WHERE id = $13`,
+		input.TipoID, fechaEvento, input.PacienteDocumento,
+		input.DiagnosticoActivo, input.Clasificacion, input.CategoriaDanio,
+		input.SeInformoPaciente, strings.TrimSpace(input.Descripcion),
+		input.ComoSeDetecto, factoresJSON, input.AccionesInmediatas,
+		input.RequiereCausaRaiz, id,
+	)
+	if err != nil {
+		log.Printf("actualizar evento adverso: %v", err)
+		responderError(w, http.StatusInternalServerError, "error al actualizar evento")
+		return
+	}
+
+	row := h.db.QueryRow(r.Context(),
+		`SELECT `+colsEvento+`
+		 FROM evento_adverso e
+		 LEFT JOIN tipo_evento_adverso t ON t.id = e.tipo_id
+		 WHERE e.id = $1`, id)
+
+	e, err := escanearEvento(row)
+	if err != nil {
+		responderError(w, http.StatusInternalServerError, "error al leer evento")
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(e)
 }
 
 func (h *eventosAdversosHandler) actualizarSeguimiento(w http.ResponseWriter, r *http.Request) {

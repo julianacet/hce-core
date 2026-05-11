@@ -85,3 +85,11 @@ export function useTogglePregunta(id: string) {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['antecedentes-preguntas'] }),
   })
 }
+
+export function useEliminarPregunta() {
+  const qc = useQueryClient()
+  return useMutation<void, Error, string>({
+    mutationFn: (id) => apiFetch(`/antecedentes/preguntas/${id}`, { method: 'DELETE' }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['antecedentes-preguntas'] }),
+  })
+}

@@ -61,6 +61,14 @@ export function useDesactivarPlantilla() {
   })
 }
 
+export function useEliminarPlantilla() {
+  const qc = useQueryClient()
+  return useMutation<void, Error, string>({
+    mutationFn: (id) => apiFetch(`/consentimientos/plantillas/${id}`, { method: 'DELETE' }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['plantillas-consentimiento'] }),
+  })
+}
+
 // ── Por encuentro ─────────────────────────────────────────────────────────────
 
 export function useConsentimientoEncuentro(pacienteId: string, encId: string, enabled = false) {

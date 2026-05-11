@@ -1,11 +1,13 @@
 import { useState, useRef } from 'react'
 import { useTema, DEFAULTS, type Tema } from '../../context/TemaContext'
-import { Upload, Trash2, CheckCircle, RotateCcw, Plus, Pencil, X, ShieldCheck, Stethoscope, Users, AlertTriangle, ExternalLink, ClipboardList, Activity, Info } from 'lucide-react'
+import { Upload, Trash2, CheckCircle, RotateCcw, Plus, Pencil, X, ShieldCheck, Stethoscope, Users, AlertTriangle, ExternalLink, ClipboardList, Activity, Info, PowerOff, Power } from 'lucide-react'
+import { RowMenu } from '../../components/RowMenu'
 import {
   usePlantillas,
   useCrearPlantilla,
   useActualizarPlantilla,
   useDesactivarPlantilla,
+  useEliminarPlantilla,
   type PlantillaConsentimiento,
 } from '../../api/consentimientos'
 import {
@@ -13,6 +15,7 @@ import {
   useCrearUsuario,
   useActualizarUsuario,
   useDesactivarUsuario,
+  useEliminarUsuario,
   type Usuario,
   type UsuarioInput,
 } from '../../api/usuarios'
@@ -29,6 +32,7 @@ import {
   useCrearPregunta,
   useActualizarPregunta,
   useTogglePregunta,
+  useEliminarPregunta,
   type AntecedentePregunta,
 } from '../../api/antecedentes'
 import {
@@ -36,6 +40,7 @@ import {
   useCrearCampoClinico,
   useActualizarCampoClinico,
   useToggleCampoClinico,
+  useEliminarCampoClinico,
   type CampoClinico,
   type CampoClinicoInput,
 } from '../../api/campos_clinicos'
@@ -202,9 +207,10 @@ function TiposEventoAdversoAdmin() {
 
 function TipoRow({ tipo, onEditar }: { tipo: TipoEventoAdverso; onEditar: () => void }) {
   const toggle = useToggleTipo(tipo.id)
+  const loading = toggle.isPending
   return (
-    <div className={`flex items-start gap-3 px-4 py-3 ${!tipo.esta_activo ? 'opacity-50' : ''}`}>
-      <AlertTriangle className={`w-4 h-4 mt-0.5 shrink-0 ${tipo.esta_activo ? 'text-orange-400' : 'text-slate-300'}`} />
+    <div className={`flex items-center gap-3 px-4 py-3 ${!tipo.esta_activo ? 'opacity-60' : ''}`}>
+      <AlertTriangle className={`w-4 h-4 shrink-0 ${tipo.esta_activo ? 'text-orange-400' : 'text-slate-300'}`} />
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <span className="card-title">{tipo.nombre}</span>
@@ -221,19 +227,14 @@ function TipoRow({ tipo, onEditar }: { tipo: TipoEventoAdverso; onEditar: () => 
           <p className="text-xs mt-0.5 truncate" style={{ color: 'var(--hce-text-muted)' }}>{tipo.descripcion}</p>
         )}
       </div>
-      <div className="flex items-center gap-2 shrink-0">
-        <button onClick={onEditar} className="text-slate-400 hover:text-slate-600">
-          <Pencil className="w-3.5 h-3.5" />
-        </button>
-        <button onClick={() => toggle.mutate()}
-          className={`text-xs px-2 py-0.5 rounded border transition-colors ${
-            tipo.esta_activo
-              ? 'border-slate-200 text-slate-500 hover:border-red-300 hover:text-red-600'
-              : 'border-green-200 text-green-600 hover:bg-green-50'
-          }`}>
-          {tipo.esta_activo ? 'Desactivar' : 'Activar'}
-        </button>
-      </div>
+      <RowMenu loading={loading} items={[
+        { label: 'Editar', icon: <Pencil size={14} />, onClick: onEditar },
+        {
+          label: tipo.esta_activo ? 'Desactivar' : 'Activar',
+          icon: tipo.esta_activo ? <PowerOff size={14} /> : <Power size={14} />,
+          onClick: () => toggle.mutate(),
+        },
+      ]} />
     </div>
   )
 }
@@ -242,6 +243,7 @@ function PlantillasAdmin() {
   const { data: plantillas = [] } = usePlantillas()
   const crear = useCrearPlantilla()
   const desactivar = useDesactivarPlantilla()
+  const eliminar = useEliminarPlantilla()
   const [editando, setEditando] = useState<PlantillaConsentimiento | null>(null)
   const [nueva, setNueva] = useState(false)
   const [formP, setFormP] = useState({ nombre: '', contenido: '' })
@@ -299,25 +301,30 @@ function PlantillasAdmin() {
           <p className="px-4 py-6 text-center text-sm text-slate-400">Sin plantillas.</p>
         )}
         {plantillas.map((p) => (
-          <div key={p.id} className="px-4 py-3 flex items-center justify-between gap-3">
+          <div key={p.id} className={`px-4 py-3 flex items-center gap-3 ${!p.esta_activo ? 'opacity-60' : ''}`}>
             <div className="flex-1 min-w-0">
               <p className={`text-sm font-medium ${p.esta_activo ? 'text-slate-700' : 'text-slate-400 line-through'}`}>
                 {p.nombre}
               </p>
               <p className="text-xs text-slate-400 truncate mt-0.5">{p.contenido.slice(0, 80)}…</p>
             </div>
-            <div className="flex gap-2 shrink-0">
-              <button onClick={() => abrirEditar(p)}
-                className="p-1.5 text-slate-400 hover:text-slate-700 transition-colors">
-                <Pencil size={14} />
-              </button>
-              {p.esta_activo && (
-                <button onClick={() => desactivar.mutateAsync(p.id)}
-                  className="p-1.5 text-slate-400 hover:text-red-500 transition-colors">
-                  <Trash2 size={14} />
-                </button>
-              )}
-            </div>
+            <RowMenu loading={desactivar.isPending || eliminar.isPending} items={[
+              { label: 'Editar', icon: <Pencil size={14} />, onClick: () => abrirEditar(p) },
+              {
+                label: p.esta_activo ? 'Desactivar' : 'Activar',
+                icon: p.esta_activo ? <PowerOff size={14} /> : <Power size={14} />,
+                onClick: () => desactivar.mutate(p.id),
+              },
+              {
+                label: 'Eliminar permanentemente',
+                icon: <Trash2 size={14} />,
+                danger: true,
+                onClick: () => {
+                  if (confirm(`¿Eliminar la plantilla "${p.nombre}"? Esta acción no se puede deshacer.`))
+                    eliminar.mutate(p.id)
+                },
+              },
+            ]} />
           </div>
         ))}
       </div>
@@ -384,7 +391,8 @@ const FORM_USUARIO_INICIAL: UsuarioInput = {
 function UsuariosAdmin() {
   const { data: usuarios = [] } = useUsuarios()
   const crear = useCrearUsuario()
-  const desactivar = useDesactivarUsuario()
+  const toggle = useDesactivarUsuario()
+  const eliminar = useEliminarUsuario()
   const [editando, setEditando] = useState<Usuario | null>(null)
   const [nuevo, setNuevo] = useState(false)
   const [form, setForm] = useState<UsuarioInput>(FORM_USUARIO_INICIAL)
@@ -426,9 +434,15 @@ function UsuariosAdmin() {
     }
   }
 
-  async function handleDesactivar(u: Usuario) {
-    if (!confirm(`¿Desactivar al usuario "${u.nombre_completo}"?`)) return
-    await desactivar.mutateAsync(u.id)
+  async function handleToggle(u: Usuario) {
+    const accion = u.esta_activo ? 'Desactivar' : 'Reactivar'
+    if (!confirm(`¿${accion} al usuario "${u.nombre_completo}"?`)) return
+    await toggle.mutateAsync(u.id)
+  }
+
+  async function handleEliminar(u: Usuario) {
+    if (!confirm(`¿Eliminar permanentemente al usuario "${u.nombre_completo}"? Esta acción no se puede deshacer.`)) return
+    await eliminar.mutateAsync(u.id)
   }
 
   const activos = usuarios.filter((u) => u.esta_activo)
@@ -533,14 +547,11 @@ function UsuariosAdmin() {
               <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${ROL_BADGE[u.rol]}`}>
                 {ROL_LABEL[u.rol]}
               </span>
-              <div className="flex gap-2 shrink-0">
-                <button onClick={() => abrirEditar(u)} className="text-slate-400 hover:text-blue-700 transition-colors">
-                  <Pencil size={14} />
-                </button>
-                <button onClick={() => handleDesactivar(u)} className="text-slate-400 hover:text-red-600 transition-colors">
-                  <Trash2 size={14} />
-                </button>
-              </div>
+              <RowMenu loading={toggle.isPending || eliminar.isPending} items={[
+                { label: 'Editar', icon: <Pencil size={14} />, onClick: () => abrirEditar(u) },
+                { label: 'Desactivar', icon: <PowerOff size={14} />, onClick: () => handleToggle(u) },
+                { label: 'Eliminar permanentemente', icon: <Trash2 size={14} />, danger: true, onClick: () => handleEliminar(u) },
+              ]} />
             </div>
           )
         })}
@@ -550,9 +561,9 @@ function UsuariosAdmin() {
       {inactivos.length > 0 && (
         <div>
           <p className="text-xs text-slate-400 mb-2">Usuarios desactivados</p>
-          <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100 overflow-hidden opacity-60">
+          <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100 overflow-hidden">
             {inactivos.map((u) => (
-              <div key={u.id} className="px-5 py-3 flex items-center gap-4">
+              <div key={u.id} className="px-5 py-3 flex items-center gap-4 opacity-60">
                 <Users size={16} className="text-slate-300 shrink-0" />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-slate-400 line-through">{u.nombre_completo}</p>
@@ -561,6 +572,10 @@ function UsuariosAdmin() {
                 <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-400">
                   Inactivo
                 </span>
+                <RowMenu loading={toggle.isPending || eliminar.isPending} items={[
+                  { label: 'Reactivar', icon: <Power size={14} />, onClick: () => handleToggle(u) },
+                  { label: 'Eliminar permanentemente', icon: <Trash2 size={14} />, danger: true, onClick: () => handleEliminar(u) },
+                ]} />
               </div>
             ))}
           </div>
@@ -813,9 +828,11 @@ function AntecedentesAdmin() {
 
 function PreguntaRow({ pregunta, onEditar }: { pregunta: AntecedentePregunta; onEditar: () => void }) {
   const toggle = useTogglePregunta(pregunta.id)
+  const eliminar = useEliminarPregunta()
+  const loading = toggle.isPending || eliminar.isPending
   return (
-    <div className={`flex items-start gap-3 px-4 py-3 ${!pregunta.esta_activo ? 'opacity-50' : ''}`}>
-      <ClipboardList className={`w-4 h-4 mt-0.5 shrink-0 ${pregunta.esta_activo ? 'text-blue-400' : 'text-slate-300'}`} />
+    <div className={`flex items-center gap-3 px-4 py-3 ${!pregunta.esta_activo ? 'opacity-60' : ''}`}>
+      <ClipboardList className={`w-4 h-4 shrink-0 ${pregunta.esta_activo ? 'text-blue-400' : 'text-slate-300'}`} />
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-sm text-slate-700">{pregunta.texto}</span>
@@ -835,20 +852,23 @@ function PreguntaRow({ pregunta, onEditar }: { pregunta: AntecedentePregunta; on
           <p className="text-xs mt-0.5 text-slate-400 truncate">Detalle: {pregunta.placeholder_detalle}</p>
         )}
       </div>
-      <div className="flex items-center gap-2 shrink-0">
-        <button onClick={onEditar} className="text-slate-400 hover:text-slate-600">
-          <Pencil className="w-3.5 h-3.5" />
-        </button>
-        <button
-          onClick={() => toggle.mutate()}
-          className={`text-xs px-2 py-0.5 rounded border transition-colors ${
-            pregunta.esta_activo
-              ? 'border-slate-200 text-slate-500 hover:border-red-300 hover:text-red-600'
-              : 'border-green-200 text-green-600 hover:bg-green-50'
-          }`}>
-          {pregunta.esta_activo ? 'Desactivar' : 'Activar'}
-        </button>
-      </div>
+      <RowMenu loading={loading} items={[
+        { label: 'Editar', icon: <Pencil size={14} />, onClick: onEditar },
+        {
+          label: pregunta.esta_activo ? 'Desactivar' : 'Activar',
+          icon: pregunta.esta_activo ? <PowerOff size={14} /> : <Power size={14} />,
+          onClick: () => toggle.mutate(),
+        },
+        {
+          label: 'Eliminar permanentemente',
+          icon: <Trash2 size={14} />,
+          danger: true,
+          onClick: () => {
+            if (confirm(`¿Eliminar la pregunta "${pregunta.texto}"? Esta acción no se puede deshacer.`))
+              eliminar.mutate(pregunta.id)
+          },
+        },
+      ]} />
     </div>
   )
 }
@@ -1071,9 +1091,11 @@ function CamposClinicosAdmin() {
 
 function CampoRow({ campo, onEditar }: { campo: CampoClinico; onEditar: () => void }) {
   const toggle = useToggleCampoClinico(campo.id)
+  const eliminar = useEliminarCampoClinico()
+  const loading = toggle.isPending || eliminar.isPending
   return (
-    <div className={`flex items-start gap-3 px-4 py-3 ${!campo.esta_activo ? 'opacity-50' : ''}`}>
-      <Activity className={`w-4 h-4 mt-0.5 shrink-0 ${campo.esta_activo ? 'text-blue-400' : 'text-slate-300'}`} />
+    <div className={`flex items-center gap-3 px-4 py-3 ${!campo.esta_activo ? 'opacity-60' : ''}`}>
+      <Activity className={`w-4 h-4 shrink-0 ${campo.esta_activo ? 'text-blue-400' : 'text-slate-300'}`} />
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-sm text-slate-700">{campo.nombre}</span>
@@ -1094,20 +1116,23 @@ function CampoRow({ campo, onEditar }: { campo: CampoClinico; onEditar: () => vo
           <p className="text-xs mt-0.5 truncate" style={{ color: 'var(--hce-text-muted)' }}>{campo.descripcion}</p>
         )}
       </div>
-      <div className="flex items-center gap-2 shrink-0">
-        <button onClick={onEditar} className="text-slate-400 hover:text-slate-600">
-          <Pencil className="w-3.5 h-3.5" />
-        </button>
-        <button
-          onClick={() => toggle.mutate()}
-          className={`text-xs px-2 py-0.5 rounded border transition-colors ${
-            campo.esta_activo
-              ? 'border-slate-200 text-slate-500 hover:border-red-300 hover:text-red-600'
-              : 'border-green-200 text-green-600 hover:bg-green-50'
-          }`}>
-          {campo.esta_activo ? 'Desactivar' : 'Activar'}
-        </button>
-      </div>
+      <RowMenu loading={loading} items={[
+        { label: 'Editar', icon: <Pencil size={14} />, onClick: onEditar },
+        {
+          label: campo.esta_activo ? 'Desactivar' : 'Activar',
+          icon: campo.esta_activo ? <PowerOff size={14} /> : <Power size={14} />,
+          onClick: () => toggle.mutate(),
+        },
+        {
+          label: 'Eliminar permanentemente',
+          icon: <Trash2 size={14} />,
+          danger: true,
+          onClick: () => {
+            if (confirm(`¿Eliminar el campo "${campo.nombre}"? Se perderán todos los datos registrados. Esta acción no se puede deshacer.`))
+              eliminar.mutate(campo.id)
+          },
+        },
+      ]} />
     </div>
   )
 }

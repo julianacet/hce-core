@@ -1,9 +1,12 @@
 import { useState } from 'react'
-import { AlertTriangle, Plus, ChevronRight, X, CheckCircle, Clock, AlertCircle } from 'lucide-react'
+import { AlertTriangle, Plus, ChevronRight, X, CheckCircle, Clock, AlertCircle, Pencil, Trash2, ClipboardList } from 'lucide-react'
+import { RowMenu } from '../components/RowMenu'
 import {
   useTiposEventoAdverso,
   useEventosAdversos,
   useCrearEventoAdverso,
+  useActualizarEventoAdverso,
+  useEliminarEventoAdverso,
   useActualizarSeguimiento,
   type EventoAdverso,
   type FactoresContribuyentes,
@@ -56,26 +59,52 @@ function hoy() {
   return new Date().toISOString().slice(0, 16)
 }
 
-// ── Formulario de nuevo reporte ───────────────────────────────────────────────
+function fechaParaInput(fecha: string | Date) {
+  return new Date(fecha).toISOString().slice(0, 16)
+}
 
-function FormNuevoReporte({ onExito }: { onExito: () => void }) {
+const FACTORES_VACIOS: FactoresContribuyentes = {
+  humano: false, entorno: false, equipos: false, organizacional: false, paciente: false, notas: '',
+}
+
+// ── Formulario crear / editar ─────────────────────────────────────────────────
+
+function FormEvento({
+  eventoInicial,
+  onExito,
+  onCancelar,
+}: {
+  eventoInicial?: EventoAdverso
+  onExito: () => void
+  onCancelar?: () => void
+}) {
   const { data: tipos = [] } = useTiposEventoAdverso()
   const crear = useCrearEventoAdverso()
+  const actualizar = useActualizarEventoAdverso(eventoInicial?.id ?? '')
+  const isPending = crear.isPending || actualizar.isPending
 
-  const [tipoId, setTipoId] = useState('')
-  const [fechaEvento, setFechaEvento] = useState(hoy())
-  const [pacienteDoc, setPacienteDoc] = useState('')
-  const [diagnostico, setDiagnostico] = useState('')
-  const [clasificacion, setClasificacion] = useState('')
-  const [categoriaDanio, setCategoriaDanio] = useState('')
-  const [seInformoPaciente, setSeInformoPaciente] = useState<boolean | null>(null)
-  const [descripcion, setDescripcion] = useState('')
-  const [comoDetecto, setComoDetecto] = useState('')
-  const [factores, setFactores] = useState<FactoresContribuyentes>({
-    humano: false, entorno: false, equipos: false, organizacional: false, paciente: false, notas: '',
-  })
-  const [accionesInmediatas, setAccionesInmediatas] = useState('')
-  const [requiereCausaRaiz, setRequiereCausaRaiz] = useState(false)
+  const [tipoId, setTipoId] = useState(eventoInicial?.tipo_id ?? '')
+  const [fechaEvento, setFechaEvento] = useState(
+    eventoInicial ? fechaParaInput(eventoInicial.fecha_evento) : hoy()
+  )
+  const [pacienteDoc, setPacienteDoc] = useState(eventoInicial?.paciente_documento ?? '')
+  const [diagnostico, setDiagnostico] = useState(eventoInicial?.diagnostico_activo ?? '')
+  const [clasificacion, setClasificacion] = useState(eventoInicial?.clasificacion ?? '')
+  const [categoriaDanio, setCategoriaDanio] = useState(eventoInicial?.categoria_danio ?? '')
+  const [seInformoPaciente, setSeInformoPaciente] = useState<boolean | null>(
+    eventoInicial?.se_informo_paciente ?? null
+  )
+  const [descripcion, setDescripcion] = useState(eventoInicial?.descripcion ?? '')
+  const [comoDetecto, setComoDetecto] = useState(eventoInicial?.como_se_detecto ?? '')
+  const [factores, setFactores] = useState<FactoresContribuyentes>(
+    eventoInicial?.factores_contribuyentes ?? FACTORES_VACIOS
+  )
+  const [accionesInmediatas, setAccionesInmediatas] = useState(
+    eventoInicial?.acciones_inmediatas ?? ''
+  )
+  const [requiereCausaRaiz, setRequiereCausaRaiz] = useState(
+    eventoInicial?.requiere_causa_raiz ?? false
+  )
   const [error, setError] = useState('')
 
   async function handleSubmit(e: React.FormEvent) {
@@ -85,24 +114,29 @@ function FormNuevoReporte({ onExito }: { onExito: () => void }) {
       setError('Clasificación, categoría del daño y descripción son obligatorias.')
       return
     }
+    const payload = {
+      tipo_id: tipoId || null,
+      fecha_evento: fechaEvento,
+      paciente_documento: pacienteDoc.trim() || null,
+      diagnostico_activo: diagnostico.trim() || null,
+      clasificacion,
+      categoria_danio: categoriaDanio,
+      se_informo_paciente: seInformoPaciente,
+      descripcion: descripcion.trim(),
+      como_se_detecto: comoDetecto.trim() || null,
+      factores_contribuyentes: factores,
+      acciones_inmediatas: accionesInmediatas.trim() || null,
+      requiere_causa_raiz: requiereCausaRaiz,
+    }
     try {
-      await crear.mutateAsync({
-        tipo_id: tipoId || null,
-        fecha_evento: fechaEvento,
-        paciente_documento: pacienteDoc.trim() || null,
-        diagnostico_activo: diagnostico.trim() || null,
-        clasificacion,
-        categoria_danio: categoriaDanio,
-        se_informo_paciente: seInformoPaciente,
-        descripcion: descripcion.trim(),
-        como_se_detecto: comoDetecto.trim() || null,
-        factores_contribuyentes: factores,
-        acciones_inmediatas: accionesInmediatas.trim() || null,
-        requiere_causa_raiz: requiereCausaRaiz,
-      })
+      if (eventoInicial) {
+        await actualizar.mutateAsync(payload)
+      } else {
+        await crear.mutateAsync(payload)
+      }
       onExito()
     } catch {
-      setError('Error al registrar el evento. Intenta de nuevo.')
+      setError('Error al guardar el evento. Intenta de nuevo.')
     }
   }
 
@@ -247,13 +281,49 @@ function FormNuevoReporte({ onExito }: { onExito: () => void }) {
 
       {error && <p className="text-sm text-red-600">{error}</p>}
 
-      <div className="flex justify-end">
-        <button type="submit" disabled={crear.isPending}
-          className="btn-primary">
-          {crear.isPending ? 'Registrando…' : 'Registrar evento'}
+      <div className="flex justify-end gap-2">
+        {onCancelar && (
+          <button type="button" onClick={onCancelar} className="btn-secondary">
+            Cancelar
+          </button>
+        )}
+        <button type="submit" disabled={isPending} className="btn-primary">
+          {isPending
+            ? (eventoInicial ? 'Guardando…' : 'Registrando…')
+            : (eventoInicial ? 'Guardar cambios' : 'Registrar evento')}
         </button>
       </div>
     </form>
+  )
+}
+
+// ── Modal de edición ──────────────────────────────────────────────────────────
+
+function ModalEditarEvento({ evento, onCerrar }: { evento: EventoAdverso; onCerrar: () => void }) {
+  const Icon = ESTADO_ICON[evento.estado]
+  return (
+    <div className="fixed inset-0 bg-black/40 z-50 flex items-start justify-center pt-12 px-4">
+      <div className="card-hce w-full max-w-2xl max-h-[85vh] overflow-y-auto">
+        <div className="flex items-start justify-between p-5 border-b" style={{ borderColor: 'var(--hce-border)' }}>
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-xs font-mono text-slate-400">#{String(evento.numero).padStart(4, '0')}</span>
+              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${ESTADO_BADGE[evento.estado]}`}>
+                <Icon className="w-3 h-3 inline mr-1" />
+                {ESTADO_LABEL[evento.estado]}
+              </span>
+            </div>
+            <p className="card-title">Editar evento adverso</p>
+          </div>
+          <button onClick={onCerrar} className="text-slate-400 hover:text-slate-600">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        <div className="p-5">
+          <FormEvento eventoInicial={evento} onExito={onCerrar} onCancelar={onCerrar} />
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -413,7 +483,9 @@ function ModalSeguimiento({ evento, onCerrar }: { evento: EventoAdverso; onCerra
 export default function EventosAdversos() {
   const [tab, setTab] = useState<'registros' | 'nuevo'>('registros')
   const [filtroEstado, setFiltroEstado] = useState('')
-  const [eventoSeleccionado, setEventoSeleccionado] = useState<EventoAdverso | null>(null)
+  const [eventoSeguimiento, setEventoSeguimiento] = useState<EventoAdverso | null>(null)
+  const [eventoEditando, setEventoEditando] = useState<EventoAdverso | null>(null)
+  const eliminar = useEliminarEventoAdverso()
 
   const { data: eventos = [], isLoading } = useEventosAdversos(
     filtroEstado ? { estado: filtroEstado } : undefined
@@ -422,8 +494,9 @@ export default function EventosAdversos() {
   const abiertos = eventos.filter(e => e.estado === 'abierto').length
   const enSeguimiento = eventos.filter(e => e.estado === 'en_seguimiento').length
 
-  function handleExito() {
-    setTab('registros')
+  async function handleEliminar(ev: EventoAdverso) {
+    if (!confirm(`¿Eliminar permanentemente el evento #${String(ev.numero).padStart(4, '0')}? Esta acción no se puede deshacer.`)) return
+    await eliminar.mutateAsync(ev.id)
   }
 
   return (
@@ -498,38 +571,50 @@ export default function EventosAdversos() {
               {eventos.map(ev => {
                 const Icon = ESTADO_ICON[ev.estado]
                 return (
-                  <button key={ev.id}
-                    onClick={() => setEventoSeleccionado(ev)}
-                    className="w-full flex items-center gap-4 px-4 py-3 text-left hover:bg-slate-50 transition-colors">
-                    <span className="text-xs font-mono w-10 shrink-0" style={{ color: 'var(--hce-text-muted)' }}>
-                      #{String(ev.numero).padStart(4, '0')}
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${ESTADO_BADGE[ev.estado]}`}>
-                          <Icon className="w-3 h-3 inline mr-1" />
-                          {ESTADO_LABEL[ev.estado]}
-                        </span>
-                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${DANIO_BADGE[ev.categoria_danio]}`}>
-                          {DANIO_LABEL[ev.categoria_danio]}
-                        </span>
-                        {ev.tipo_nombre && (
-                          <span className="px-2 py-0.5 rounded text-xs bg-slate-100 text-slate-500">
-                            {ev.tipo_nombre}
+                  <div key={ev.id} className="flex items-center gap-2 px-4 py-3 hover:bg-slate-50 transition-colors">
+                    <button
+                      onClick={() => setEventoSeguimiento(ev)}
+                      className="flex-1 flex items-center gap-4 text-left min-w-0">
+                      <span className="text-xs font-mono w-10 shrink-0" style={{ color: 'var(--hce-text-muted)' }}>
+                        #{String(ev.numero).padStart(4, '0')}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${ESTADO_BADGE[ev.estado]}`}>
+                            <Icon className="w-3 h-3 inline mr-1" />
+                            {ESTADO_LABEL[ev.estado]}
                           </span>
-                        )}
+                          <span className={`px-2 py-0.5 rounded text-xs font-medium ${DANIO_BADGE[ev.categoria_danio]}`}>
+                            {DANIO_LABEL[ev.categoria_danio]}
+                          </span>
+                          {ev.tipo_nombre && (
+                            <span className="px-2 py-0.5 rounded text-xs bg-slate-100 text-slate-500">
+                              {ev.tipo_nombre}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-sm mt-1 truncate" style={{ color: 'var(--hce-text)' }}>
+                          {ev.descripcion}
+                        </p>
                       </div>
-                      <p className="text-sm mt-1 truncate" style={{ color: 'var(--hce-text)' }}>
-                        {ev.descripcion}
-                      </p>
-                    </div>
-                    <div className="text-right shrink-0">
-                      <p className="text-xs" style={{ color: 'var(--hce-text-muted)' }}>
-                        {new Date(ev.fecha_evento).toLocaleDateString('es-CO')}
-                      </p>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-slate-300" />
-                  </button>
+                      <div className="text-right shrink-0">
+                        <p className="text-xs" style={{ color: 'var(--hce-text-muted)' }}>
+                          {new Date(ev.fecha_evento).toLocaleDateString('es-CO')}
+                        </p>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-slate-300 shrink-0" />
+                    </button>
+                    <RowMenu loading={eliminar.isPending} items={[
+                      { label: 'Editar', icon: <Pencil size={14} />, onClick: () => setEventoEditando(ev) },
+                      { label: 'Ver seguimiento', icon: <ClipboardList size={14} />, onClick: () => setEventoSeguimiento(ev) },
+                      {
+                        label: 'Eliminar permanentemente',
+                        icon: <Trash2 size={14} />,
+                        danger: true,
+                        onClick: () => handleEliminar(ev),
+                      },
+                    ]} />
+                  </div>
                 )
               })}
             </div>
@@ -538,13 +623,21 @@ export default function EventosAdversos() {
       )}
 
       {/* Nuevo reporte */}
-      {tab === 'nuevo' && <FormNuevoReporte onExito={handleExito} />}
+      {tab === 'nuevo' && <FormEvento onExito={() => setTab('registros')} />}
 
       {/* Modal de seguimiento */}
-      {eventoSeleccionado && (
+      {eventoSeguimiento && (
         <ModalSeguimiento
-          evento={eventoSeleccionado}
-          onCerrar={() => setEventoSeleccionado(null)}
+          evento={eventoSeguimiento}
+          onCerrar={() => setEventoSeguimiento(null)}
+        />
+      )}
+
+      {/* Modal de edición */}
+      {eventoEditando && (
+        <ModalEditarEvento
+          evento={eventoEditando}
+          onCerrar={() => setEventoEditando(null)}
         />
       )}
     </div>

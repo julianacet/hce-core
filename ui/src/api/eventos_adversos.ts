@@ -142,6 +142,26 @@ export function useCrearEventoAdverso() {
   })
 }
 
+export function useActualizarEventoAdverso(id: string) {
+  const qc = useQueryClient()
+  return useMutation<EventoAdverso, Error, EventoAdversoInput>({
+    mutationFn: (input) =>
+      apiFetch(`/eventos-adversos/${id}`, { method: 'PUT', body: JSON.stringify(input) }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['eventos-adversos'] })
+      qc.invalidateQueries({ queryKey: ['eventos-adversos', id] })
+    },
+  })
+}
+
+export function useEliminarEventoAdverso() {
+  const qc = useQueryClient()
+  return useMutation<void, Error, string>({
+    mutationFn: (id) => apiFetch(`/eventos-adversos/${id}`, { method: 'DELETE' }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['eventos-adversos'] }),
+  })
+}
+
 export function useActualizarSeguimiento(id: string) {
   const qc = useQueryClient()
   return useMutation<EventoAdverso, Error, SeguimientoInput>({
