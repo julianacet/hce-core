@@ -198,31 +198,26 @@ CREATE TABLE factura (
     es_ultima_version BOOLEAN     NOT NULL DEFAULT TRUE,
     esta_activo       BOOLEAN     NOT NULL DEFAULT TRUE,
 
-    -- Vínculos
-    encuentro_id       UUID        NOT NULL,
     paciente_documento VARCHAR(20) NOT NULL,
 
-    estado        VARCHAR(20) NOT NULL DEFAULT 'borrador'
-                  CHECK (estado IN ('borrador', 'emitida', 'pagada', 'anulada')),
+    estado        VARCHAR(20) NOT NULL DEFAULT 'activa'
+                  CHECK (estado IN ('activa', 'anulada')),
 
-    fecha_emision TIMESTAMPTZ,
     subtotal      NUMERIC(15, 2) NOT NULL DEFAULT 0,
     total         NUMERIC(15, 2) NOT NULL DEFAULT 0,
 
-    -- Resultados de validación externa
-    cuv  TEXT,   -- del MUV (MinSalud), tras validar RIPS
-    cufe TEXT,   -- de la DIAN, tras enviar FEV
+    -- Resultados de validación externa (FEV/DIAN — fase futura)
+    cuv  TEXT,
+    cufe TEXT,
 
-    -- Auditoría interna de la fila
     fecha_creacion TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     creado_por     TEXT        NOT NULL
 );
 
 CREATE INDEX idx_factura_ultima
     ON factura(factura_id) WHERE es_ultima_version = TRUE;
-CREATE INDEX idx_factura_encuentro ON factura(encuentro_id);
-CREATE INDEX idx_factura_paciente  ON factura(paciente_documento);
-CREATE INDEX idx_factura_estado    ON factura(estado);
+CREATE INDEX idx_factura_paciente ON factura(paciente_documento);
+CREATE INDEX idx_factura_estado   ON factura(estado);
 
 -- Items de la factura: ligados a la versión exacta
 CREATE TABLE factura_item (

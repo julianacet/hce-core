@@ -86,6 +86,7 @@ func main() {
 
 		// Accesibles por cualquier usuario autenticado (admin, medico, auxiliar)
 		r.Mount("/pacientes", handlers.PacientesRouter(db))
+		r.Mount("/facturas", handlers.FacturasRouter(db))
 		r.Mount("/campos-clinicos", handlers.CamposClinicosRouter(db))
 		r.Mount("/auditoria", handlers.AuditoriaRouter(db))
 		r.Mount("/cups", handlers.CupsRouter(db))

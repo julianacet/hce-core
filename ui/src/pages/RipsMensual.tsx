@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { FileCode2, AlertCircle, Users, Calendar, FileCheck, FileX } from 'lucide-react'
+import { FileCode2, AlertCircle, Users, Calendar } from 'lucide-react'
 import { useMedico } from '../context/MedicoContext'
 import {
   useRipsMensualResumen,
@@ -122,12 +122,10 @@ export default function RipsMensual() {
 
         {/* Resumen del período */}
         {resumen && (
-          <div className="grid grid-cols-4 gap-3 pt-2">
+          <div className="grid grid-cols-2 gap-3 pt-2">
             {[
               { label: 'Pacientes', value: resumen.pacientes, icon: Users, color: 'text-blue-600' },
               { label: 'Encuentros', value: resumen.encuentros, icon: Calendar, color: 'text-slate-600' },
-              { label: 'Con factura', value: resumen.con_factura, icon: FileCheck, color: 'text-green-600' },
-              { label: 'Sin factura', value: resumen.sin_factura, icon: FileX, color: 'text-amber-600' },
             ].map(({ label, value, icon: Icon, color }) => (
               <div key={label} className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 text-center">
                 <Icon size={16} className={`mx-auto mb-1 ${color}`} />
@@ -137,13 +135,6 @@ export default function RipsMensual() {
             ))}
           </div>
         )}
-
-        {resumen?.sin_factura ? (
-          <p className="text-xs text-amber-600">
-            {resumen.sin_factura} encuentro{resumen.sin_factura > 1 ? 's' : ''} sin factura —
-            se incluirá{resumen.sin_factura > 1 ? 'n' : ''} con <code>vrServicio: 0</code> y CUPS según finalidad.
-          </p>
-        ) : null}
 
         <div className="flex justify-end pt-1">
           <button

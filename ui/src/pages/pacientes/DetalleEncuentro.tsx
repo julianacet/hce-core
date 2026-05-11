@@ -1,5 +1,5 @@
 import { useNavigate, useParams } from 'react-router'
-import { FileText, Activity, Receipt, Download, Printer, ClipboardList } from 'lucide-react'
+import { FileText, Activity, Download, Printer, ClipboardList } from 'lucide-react'
 import { useState } from 'react'
 import { pdf, PDFDownloadLink } from '@react-pdf/renderer'
 import { useEncuentro, useActualizarEncuentro, useFinalizarEncuentro, type ValorNormalNotas, type EncuentroInput } from '../../api/encuentros'
@@ -377,22 +377,11 @@ export default function DetalleEncuentro() {
 
               <div className="border-t border-slate-100 pt-4 flex items-center justify-between">
                 <p className="text-xs text-slate-400">Este registro es inmutable. Use las notas de corrección para aclaraciones.</p>
-                <div className="flex items-center gap-2">
-                  {e.es_primer_control && (
-                    <span className="text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-1 rounded-full">
-                      Control sin cargo
-                    </span>
-                  )}
-                  {!e.es_primer_control && (
-                    <button
-                      onClick={() => navigate(`/pacientes/${id}/encuentros/${encId}/facturas/nueva`)}
-                      className="btn-primary flex items-center gap-2"
-                    >
-                      <Receipt size={15} />
-                      Generar factura
-                    </button>
-                  )}
-                </div>
+                {e.es_primer_control && (
+                  <span className="text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-1 rounded-full">
+                    Control sin cargo
+                  </span>
+                )}
               </div>
             </div>
 

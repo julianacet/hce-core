@@ -98,10 +98,8 @@ type RipsMensualInput struct {
 
 // RipsMensualResumen es la vista previa de lo que contiene un período.
 type RipsMensualResumen struct {
-	Pacientes   int `json:"pacientes"`
-	Encuentros  int `json:"encuentros"`
-	ConFactura  int `json:"con_factura"`
-	SinFactura  int `json:"sin_factura"`
+	Pacientes  int `json:"pacientes"`
+	Encuentros int `json:"encuentros"`
 }
 
 // RipsLoteItem es una entrada del historial de lotes generados.

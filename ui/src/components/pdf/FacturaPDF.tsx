@@ -34,10 +34,10 @@ const s = StyleSheet.create({
     color: '#1d4ed8',
     marginBottom: 4,
   },
-  borrador: {
+  anulada: {
     textAlign: 'center',
-    fontSize: 9,
-    color: '#f59e0b',
+    fontSize: 11,
+    color: '#dc2626',
     fontFamily: 'Helvetica-Bold',
     letterSpacing: 1,
     marginBottom: 16,
@@ -141,8 +141,8 @@ export default function FacturaPDF({ medico, factura, pacienteNombre, diagnostic
 
         {/* Título */}
         <Text style={s.titulo}>FACTURA DE VENTA</Text>
-        {factura.estado === 'borrador' && (
-          <Text style={s.borrador}>— BORRADOR —</Text>
+        {factura.estado === 'anulada' && (
+          <Text style={s.anulada}>— ANULADA —</Text>
         )}
 
         {/* Datos */}
@@ -151,10 +151,6 @@ export default function FacturaPDF({ medico, factura, pacienteNombre, diagnostic
           <View style={s.fila}>
             <Text style={s.etiqueta}>Fecha:</Text>
             <Text style={s.valor}>{fecha}</Text>
-          </View>
-          <View style={s.fila}>
-            <Text style={s.etiqueta}>Estado:</Text>
-            <Text style={s.valor}>{factura.estado.toUpperCase()}</Text>
           </View>
           <View style={s.fila}>
             <Text style={s.etiqueta}>Ref. interna:</Text>

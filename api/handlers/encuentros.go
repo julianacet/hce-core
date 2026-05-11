@@ -42,7 +42,6 @@ func EncuentrosRouter(db *pgxpool.Pool) http.Handler {
 		r.Put("/", h.actualizar)
 		r.Patch("/finalizar", h.finalizar)
 		r.Mount("/formulas", FormulasRouter(db))
-		r.Mount("/facturas", FacturasRouter(db))
 		r.Mount("/consentimiento", ConsentimientoEncuentroRouter(db))
 		r.Mount("/notas", NotasEncuentroRouter(db))
 	})
@@ -146,7 +145,6 @@ func (h *EncuentroHandler) obtener(w http.ResponseWriter, r *http.Request) {
 	// Cargar diagnósticos completos
 	e.Diagnosticos = cargarDiagnosticos(r.Context(), h.db, e.ID)
 
-	// Para controles con padre: calcular si es el primero sin factura previa
 	if e.FinalidadConsulta == "11" && e.EncuentroPadreID != nil {
 		e.EsPrimerControl = esPrimerControl(r.Context(), h.db, *e.EncuentroPadreID, e.EncuentroID)
 	}
@@ -479,12 +477,9 @@ func tieneDiagnosticoPrincipal(diags []models.DiagnosticoInput) bool {
 	return false
 }
 
-// esPrimerControl devuelve un *bool: true si este control es el primero para el
-// encuentro padre (no existen controles previos con factura no anulada para ese padre),
-// siempre que la configuración tenga primer_control_gratis = true.
-// Devuelve nil si la config no se puede leer o si la opción está desactivada.
+// esPrimerControl devuelve true si no existen controles previos para el mismo
+// encuentro padre, siempre que primer_control_gratis esté activo en configuración.
 func esPrimerControl(ctx context.Context, db *pgxpool.Pool, padreID string, propioEncuentroID string) *bool {
-	// Leer configuración
 	var primerControlGratis bool
 	err := db.QueryRow(ctx,
 		`SELECT COALESCE((medico->>'primer_control_gratis')::boolean, true)
@@ -495,21 +490,18 @@ func esPrimerControl(ctx context.Context, db *pgxpool.Pool, padreID string, prop
 		return &f
 	}
 
-	// Contar controles anteriores con factura activa para el mismo padre
 	var count int
 	db.QueryRow(ctx, `
 		SELECT COUNT(*)
-		FROM encuentro_clinico ec
-		JOIN factura f ON f.encuentro_id = ec.encuentro_id
-		WHERE ec.encuentro_padre_id = $1
-		  AND ec.finalidad_consulta = '11'
-		  AND ec.es_ultima_version = TRUE AND ec.esta_activo = TRUE
-		  AND f.es_ultima_version = TRUE AND f.esta_activo = TRUE
-		  AND f.estado != 'anulada'
-		  AND ec.encuentro_id != $2`,
+		FROM encuentro_clinico
+		WHERE encuentro_padre_id = $1
+		  AND finalidad_consulta = '11'
+		  AND es_ultima_version = TRUE AND esta_activo = TRUE
+		  AND encuentro_id != $2`,
 		padreID, propioEncuentroID,
 	).Scan(&count)
 
 	result := count == 0
 	return &result
 }
+

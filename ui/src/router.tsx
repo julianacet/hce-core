@@ -14,8 +14,9 @@ import NuevoEncuentro from './pages/pacientes/NuevoEncuentro'
 import DetalleEncuentro from './pages/pacientes/DetalleEncuentro'
 import AuditoriaPaciente from './pages/pacientes/AuditoriaPaciente'
 import NuevaFormula from './pages/pacientes/NuevaFormula'
-import NuevaFactura from './pages/pacientes/NuevaFactura'
-import DetalleFactura from './pages/pacientes/DetalleFactura'
+import Facturas from './pages/Facturas'
+import NuevaFactura from './pages/NuevaFactura'
+import DetalleFactura from './pages/DetalleFactura'
 import NuevoPaciente from './pages/NuevoPaciente'
 import RipsMensual from './pages/RipsMensual'
 import Encuestas from './pages/Encuestas'
@@ -41,6 +42,9 @@ const router = createBrowserRouter([
           { path: 'pacientes/nuevo', element: <NuevoPaciente /> },
           { path: 'configuracion', element: <Configuracion /> },
           { path: 'rips-mensual', element: <RipsMensual /> },
+          { path: 'facturas', element: <Facturas /> },
+          { path: 'facturas/nueva', element: <NuevaFactura /> },
+          { path: 'facturas/:facturaId', element: <DetalleFactura /> },
           { path: 'encuestas', element: <Encuestas /> },
           { path: 'inventario', element: <Inventario /> },
           { path: 'eventos-adversos', element: <EventosAdversos /> },
@@ -65,8 +69,6 @@ const router = createBrowserRouter([
               { path: 'encuentros/nuevo', element: <NuevoEncuentro /> },
               { path: 'encuentros/:encId', element: <DetalleEncuentro /> },
               { path: 'encuentros/:encId/formula', element: <NuevaFormula /> },
-              { path: 'encuentros/:encId/facturas/nueva', element: <NuevaFactura /> },
-              { path: 'encuentros/:encId/facturas/:facturaId', element: <DetalleFactura /> },
               { path: 'auditoria', element: <AuditoriaPaciente /> },
             ],
           },

@@ -25,24 +25,50 @@ func FacturasRouter(db *pgxpool.Pool) http.Handler {
 	r.Post("/", h.crear)
 	r.Route("/{facturaId}", func(r chi.Router) {
 		r.Get("/", h.obtener)
-		r.Patch("/estado", h.cambiarEstado)
-		r.Mount("/rips", RipsRouter(db))
+		r.Patch("/anular", h.anular)
 	})
 	return r
 }
 
-// GET /pacientes/{doc}/encuentros/{encId}/facturas
+// GET /facturas?q=
 func (h *FacturaHandler) listar(w http.ResponseWriter, r *http.Request) {
-	encuentroID := chi.URLParam(r, "encuentroId")
+	q := r.URL.Query().Get("q")
 
-	rows, err := h.db.Query(r.Context(), `
-		SELECT id, factura_id, numero_version, encuentro_id, paciente_documento,
-		       estado, fecha_emision, subtotal, total, fecha_creacion, creado_por
-		FROM factura
-		WHERE encuentro_id = $1 AND es_ultima_version = TRUE AND esta_activo = TRUE
-		ORDER BY fecha_creacion DESC`,
-		encuentroID,
-	)
+	type FacturaResumen struct {
+		models.Factura
+		PacienteNombre string `json:"paciente_nombre"`
+	}
+
+	var rows interface{ Next() bool; Scan(...any) error; Close() }
+	var err error
+
+	if q != "" {
+		param := "%" + q + "%"
+		rows, err = h.db.Query(r.Context(), `
+			SELECT f.id, f.factura_id, f.numero_version, f.paciente_documento,
+			       f.estado, f.subtotal, f.total, f.fecha_creacion, f.creado_por,
+			       CONCAT_WS(' ', p.nombre_primero, p.nombre_segundo, p.apellido_primero, p.apellido_segundo) AS paciente_nombre
+			FROM factura f
+			LEFT JOIN paciente p ON p.numero_documento = f.paciente_documento
+			  AND p.es_ultima_version = TRUE AND p.esta_activo = TRUE
+			WHERE f.es_ultima_version = TRUE AND f.esta_activo = TRUE
+			  AND (p.numero_documento ILIKE $1
+			       OR p.nombre_primero ILIKE $1 OR p.nombre_segundo ILIKE $1
+			       OR p.apellido_primero ILIKE $1 OR p.apellido_segundo ILIKE $1)
+			ORDER BY f.fecha_creacion DESC
+			LIMIT 100`, param)
+	} else {
+		rows, err = h.db.Query(r.Context(), `
+			SELECT f.id, f.factura_id, f.numero_version, f.paciente_documento,
+			       f.estado, f.subtotal, f.total, f.fecha_creacion, f.creado_por,
+			       CONCAT_WS(' ', p.nombre_primero, p.nombre_segundo, p.apellido_primero, p.apellido_segundo) AS paciente_nombre
+			FROM factura f
+			LEFT JOIN paciente p ON p.numero_documento = f.paciente_documento
+			  AND p.es_ultima_version = TRUE AND p.esta_activo = TRUE
+			WHERE f.es_ultima_version = TRUE AND f.esta_activo = TRUE
+			ORDER BY f.fecha_creacion DESC
+			LIMIT 100`)
+	}
 	if err != nil {
 		log.Printf("listar facturas: %v", err)
 		responderError(w, http.StatusInternalServerError, "error al consultar facturas")
@@ -50,12 +76,13 @@ func (h *FacturaHandler) listar(w http.ResponseWriter, r *http.Request) {
 	}
 	defer rows.Close()
 
-	facturas := make([]models.Factura, 0)
+	facturas := make([]FacturaResumen, 0)
 	for rows.Next() {
-		var f models.Factura
+		var f FacturaResumen
 		if err := rows.Scan(
-			&f.ID, &f.FacturaID, &f.NumeroVersion, &f.EncuentroID, &f.PacienteDocumento,
-			&f.Estado, &f.FechaEmision, &f.Subtotal, &f.Total, &f.FechaCreacion, &f.CreadoPor,
+			&f.ID, &f.FacturaID, &f.NumeroVersion, &f.PacienteDocumento,
+			&f.Estado, &f.Subtotal, &f.Total, &f.FechaCreacion, &f.CreadoPor,
+			&f.PacienteNombre,
 		); err != nil {
 			responderError(w, http.StatusInternalServerError, "error al leer factura")
 			return
@@ -67,20 +94,20 @@ func (h *FacturaHandler) listar(w http.ResponseWriter, r *http.Request) {
 	responderJSON(w, http.StatusOK, facturas)
 }
 
-// GET /pacientes/{doc}/encuentros/{encId}/facturas/{facturaId}
+// GET /facturas/{facturaId}
 func (h *FacturaHandler) obtener(w http.ResponseWriter, r *http.Request) {
 	facturaID := chi.URLParam(r, "facturaId")
 
 	var f models.Factura
 	err := h.db.QueryRow(r.Context(), `
-		SELECT id, factura_id, numero_version, encuentro_id, paciente_documento,
-		       estado, fecha_emision, subtotal, total, fecha_creacion, creado_por
+		SELECT id, factura_id, numero_version, paciente_documento,
+		       estado, subtotal, total, fecha_creacion, creado_por
 		FROM factura
 		WHERE factura_id = $1 AND es_ultima_version = TRUE AND esta_activo = TRUE`,
 		facturaID,
 	).Scan(
-		&f.ID, &f.FacturaID, &f.NumeroVersion, &f.EncuentroID, &f.PacienteDocumento,
-		&f.Estado, &f.FechaEmision, &f.Subtotal, &f.Total, &f.FechaCreacion, &f.CreadoPor,
+		&f.ID, &f.FacturaID, &f.NumeroVersion, &f.PacienteDocumento,
+		&f.Estado, &f.Subtotal, &f.Total, &f.FechaCreacion, &f.CreadoPor,
 	)
 	if err != nil {
 		responderError(w, http.StatusNotFound, "factura no encontrada")
@@ -98,15 +125,18 @@ func (h *FacturaHandler) obtener(w http.ResponseWriter, r *http.Request) {
 	responderJSON(w, http.StatusOK, f)
 }
 
-
-// POST /pacientes/{doc}/encuentros/{encId}/facturas
+// POST /facturas   body: { paciente_documento, items }
 func (h *FacturaHandler) crear(w http.ResponseWriter, r *http.Request) {
-	documento := chi.URLParam(r, "documento")
-	encuentroID := chi.URLParam(r, "encuentroId")
-
-	var input models.FacturaInput
+	var input struct {
+		PacienteDocumento string                 `json:"paciente_documento"`
+		Items             []models.FacturaItemInput `json:"items"`
+	}
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		responderError(w, http.StatusBadRequest, "body inválido")
+		return
+	}
+	if input.PacienteDocumento == "" {
+		responderError(w, http.StatusBadRequest, "paciente_documento es obligatorio")
 		return
 	}
 	if len(input.Items) == 0 {
@@ -114,7 +144,6 @@ func (h *FacturaHandler) crear(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Calcular totales
 	var subtotal float64
 	for _, item := range input.Items {
 		if item.Cantidad <= 0 || item.ValorUnitario < 0 {
@@ -137,10 +166,10 @@ func (h *FacturaHandler) crear(w http.ResponseWriter, r *http.Request) {
 	var rowID string
 	err = tx.QueryRow(r.Context(), `
 		INSERT INTO factura (factura_id, numero_version, es_ultima_version, esta_activo,
-		                     encuentro_id, paciente_documento, estado, subtotal, total, creado_por)
-		VALUES ($1, 1, TRUE, TRUE, $2, $3, 'borrador', $4, $4, $5)
+		                     paciente_documento, estado, subtotal, total, creado_por)
+		VALUES ($1, 1, TRUE, TRUE, $2, 'activa', $3, $3, $4)
 		RETURNING id`,
-		facturaEntityID, encuentroID, documento, subtotal, u.Nombre,
+		facturaEntityID, input.PacienteDocumento, subtotal, u.Nombre,
 	).Scan(&rowID)
 	if err != nil {
 		log.Printf("crear factura: %v", err)
@@ -167,15 +196,14 @@ func (h *FacturaHandler) crear(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Devolver la factura completa
 	var f models.Factura
 	h.db.QueryRow(r.Context(), `
-		SELECT id, factura_id, numero_version, encuentro_id, paciente_documento,
-		       estado, fecha_emision, subtotal, total, fecha_creacion, creado_por
+		SELECT id, factura_id, numero_version, paciente_documento,
+		       estado, subtotal, total, fecha_creacion, creado_por
 		FROM factura WHERE id = $1`, rowID,
 	).Scan(
-		&f.ID, &f.FacturaID, &f.NumeroVersion, &f.EncuentroID, &f.PacienteDocumento,
-		&f.Estado, &f.FechaEmision, &f.Subtotal, &f.Total, &f.FechaCreacion, &f.CreadoPor,
+		&f.ID, &f.FacturaID, &f.NumeroVersion, &f.PacienteDocumento,
+		&f.Estado, &f.Subtotal, &f.Total, &f.FechaCreacion, &f.CreadoPor,
 	)
 	items, _ := obtenerItems(r.Context(), h.db, rowID)
 	f.Items = items
@@ -183,22 +211,9 @@ func (h *FacturaHandler) crear(w http.ResponseWriter, r *http.Request) {
 	responderJSON(w, http.StatusCreated, f)
 }
 
-var transicionesValidas = map[string]map[string]bool{
-	"borrador": {"emitida": true, "anulada": true},
-	"emitida":  {"pagada": true, "anulada": true},
-}
-
-// PATCH /pacientes/{doc}/encuentros/{encId}/facturas/{facturaId}/estado
-func (h *FacturaHandler) cambiarEstado(w http.ResponseWriter, r *http.Request) {
+// PATCH /facturas/{facturaId}/anular
+func (h *FacturaHandler) anular(w http.ResponseWriter, r *http.Request) {
 	facturaID := chi.URLParam(r, "facturaId")
-
-	var body struct {
-		NuevoEstado string `json:"nuevo_estado"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		responderError(w, http.StatusBadRequest, "body inválido")
-		return
-	}
 
 	var estadoActual string
 	err := h.db.QueryRow(r.Context(),
@@ -209,31 +224,29 @@ func (h *FacturaHandler) cambiarEstado(w http.ResponseWriter, r *http.Request) {
 		responderError(w, http.StatusNotFound, "factura no encontrada")
 		return
 	}
-
-	if !transicionesValidas[estadoActual][body.NuevoEstado] {
-		responderError(w, http.StatusUnprocessableEntity,
-			"transición inválida: "+estadoActual+" → "+body.NuevoEstado)
+	if estadoActual == "anulada" {
+		responderError(w, http.StatusUnprocessableEntity, "la factura ya está anulada")
 		return
 	}
 
 	_, err = h.db.Exec(r.Context(),
-		`UPDATE factura SET estado = $1 WHERE factura_id = $2 AND es_ultima_version = TRUE`,
-		body.NuevoEstado, facturaID,
+		`UPDATE factura SET estado = 'anulada' WHERE factura_id = $1 AND es_ultima_version = TRUE`,
+		facturaID,
 	)
 	if err != nil {
-		log.Printf("cambiar estado factura: %v", err)
-		responderError(w, http.StatusInternalServerError, "error al actualizar estado")
+		log.Printf("anular factura: %v", err)
+		responderError(w, http.StatusInternalServerError, "error al anular factura")
 		return
 	}
 
 	var f models.Factura
 	h.db.QueryRow(r.Context(), `
-		SELECT id, factura_id, numero_version, encuentro_id, paciente_documento,
-		       estado, fecha_emision, subtotal, total, fecha_creacion, creado_por
+		SELECT id, factura_id, numero_version, paciente_documento,
+		       estado, subtotal, total, fecha_creacion, creado_por
 		FROM factura WHERE factura_id = $1 AND es_ultima_version = TRUE`, facturaID,
 	).Scan(
-		&f.ID, &f.FacturaID, &f.NumeroVersion, &f.EncuentroID, &f.PacienteDocumento,
-		&f.Estado, &f.FechaEmision, &f.Subtotal, &f.Total, &f.FechaCreacion, &f.CreadoPor,
+		&f.ID, &f.FacturaID, &f.NumeroVersion, &f.PacienteDocumento,
+		&f.Estado, &f.Subtotal, &f.Total, &f.FechaCreacion, &f.CreadoPor,
 	)
 	items, _ := obtenerItems(r.Context(), h.db, f.ID)
 	f.Items = items
