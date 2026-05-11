@@ -41,6 +41,7 @@ func EncuentrosRouter(db *pgxpool.Pool) http.Handler {
 		r.Get("/", h.obtener)
 		r.Put("/", h.actualizar)
 		r.Patch("/finalizar", h.finalizar)
+		r.Delete("/", h.eliminar)
 		r.Mount("/formulas", FormulasRouter(db))
 		r.Mount("/consentimiento", ConsentimientoEncuentroRouter(db))
 		r.Mount("/notas", NotasEncuentroRouter(db))
@@ -265,6 +266,28 @@ func (h *EncuentroHandler) finalizar(w http.ResponseWriter, r *http.Request) {
 
 	e.Diagnosticos = cargarDiagnosticos(r.Context(), h.db, e.ID)
 	responderJSON(w, http.StatusOK, e)
+}
+
+// DELETE /pacientes/{documento}/encuentros/{encuentroId} — elimina todas las versiones
+func (h *EncuentroHandler) eliminar(w http.ResponseWriter, r *http.Request) {
+	u := appmiddleware.UsuarioDesdeContexto(r.Context())
+	if u.Rol != "admin" {
+		responderError(w, http.StatusForbidden, "solo el administrador puede eliminar encuentros")
+		return
+	}
+	encuentroID := chi.URLParam(r, "encuentroId")
+	tag, err := h.db.Exec(r.Context(),
+		`DELETE FROM encuentro_clinico WHERE encuentro_id=$1`, encuentroID)
+	if err != nil {
+		log.Printf("eliminar encuentro: %v", err)
+		responderError(w, http.StatusInternalServerError, "error al eliminar encuentro")
+		return
+	}
+	if tag.RowsAffected() == 0 {
+		responderError(w, http.StatusNotFound, "encuentro no encontrado")
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // ── helpers ──────────────────────────────────────────────────────────────────

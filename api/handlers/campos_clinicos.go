@@ -23,6 +23,7 @@ func CamposClinicosRouter(db *pgxpool.Pool) http.Handler {
 	r.Post("/", h.crear)
 	r.Put("/{id}", h.actualizar)
 	r.Patch("/{id}/toggle", h.toggle)
+	r.Delete("/{id}", h.eliminar)
 	return r
 }
 
@@ -135,6 +136,25 @@ func (h *CampoClinicoHandler) actualizar(w http.ResponseWriter, r *http.Request)
 	}
 	c.Opciones = json.RawMessage(opRaw)
 	responderJSON(w, http.StatusOK, c)
+}
+
+func (h *CampoClinicoHandler) eliminar(w http.ResponseWriter, r *http.Request) {
+	u := appmiddleware.UsuarioDesdeContexto(r.Context())
+	if u.Rol != "admin" {
+		responderError(w, http.StatusForbidden, "solo administradores")
+		return
+	}
+	id := chi.URLParam(r, "id")
+	tag, err := h.db.Exec(r.Context(), `DELETE FROM campo_clinico WHERE id=$1`, id)
+	if err != nil {
+		responderError(w, http.StatusInternalServerError, "error al eliminar campo")
+		return
+	}
+	if tag.RowsAffected() == 0 {
+		responderError(w, http.StatusNotFound, "campo no encontrado")
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *CampoClinicoHandler) toggle(w http.ResponseWriter, r *http.Request) {

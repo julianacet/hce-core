@@ -25,6 +25,7 @@ func FormulasRouter(db *pgxpool.Pool) http.Handler {
 	r.Get("/", h.listar)
 	r.Post("/", h.crear)
 	r.Get("/{formulaId}", h.obtener)
+	r.Delete("/{formulaId}", h.eliminar)
 
 	return r
 }
@@ -202,6 +203,28 @@ func (h *FormulaHandler) crear(w http.ResponseWriter, r *http.Request) {
 
 	f.Medicamentos = meds
 	responderJSON(w, http.StatusCreated, f)
+}
+
+// DELETE /pacientes/{documento}/encuentros/{encuentroId}/formulas/{formulaId}
+func (h *FormulaHandler) eliminar(w http.ResponseWriter, r *http.Request) {
+	u := appmiddleware.UsuarioDesdeContexto(r.Context())
+	if u.Rol != "admin" {
+		responderError(w, http.StatusForbidden, "solo el administrador puede eliminar fórmulas")
+		return
+	}
+	formulaID := chi.URLParam(r, "formulaId")
+	tag, err := h.db.Exec(r.Context(),
+		`DELETE FROM formula_medica WHERE formula_id=$1`, formulaID)
+	if err != nil {
+		log.Printf("eliminar formula: %v", err)
+		responderError(w, http.StatusInternalServerError, "error al eliminar fórmula")
+		return
+	}
+	if tag.RowsAffected() == 0 {
+		responderError(w, http.StatusNotFound, "fórmula no encontrada")
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // ── helpers ──────────────────────────────────────────────────────────────────

@@ -22,7 +22,8 @@ func ProveedoresRouter(db *pgxpool.Pool) chi.Router {
 	r.Post("/", h.crear)
 	r.Get("/{id}", h.obtener)
 	r.Put("/{id}", h.actualizar)
-	r.Delete("/{id}", h.desactivar)
+	r.Patch("/{id}/toggle", h.toggle)
+	r.Delete("/{id}", h.eliminar)
 
 	return r
 }
@@ -200,16 +201,35 @@ func (h *proveedoresHandler) actualizar(w http.ResponseWriter, r *http.Request) 
 	json.NewEncoder(w).Encode(p)
 }
 
-func (h *proveedoresHandler) desactivar(w http.ResponseWriter, r *http.Request) {
+func (h *proveedoresHandler) toggle(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	var activo bool
 	err := h.db.QueryRow(r.Context(),
 		`UPDATE proveedor SET esta_activo = NOT esta_activo WHERE id = $1 RETURNING esta_activo`, id,
 	).Scan(&activo)
 	if err != nil {
-		responderError(w, http.StatusInternalServerError, "error al actualizar proveedor")
+		responderError(w, http.StatusNotFound, "proveedor no encontrado")
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]bool{"esta_activo": activo})
+}
+
+func (h *proveedoresHandler) eliminar(w http.ResponseWriter, r *http.Request) {
+	u := appmiddleware.UsuarioDesdeContexto(r.Context())
+	if u.Rol != "admin" {
+		responderError(w, http.StatusForbidden, "solo el administrador puede eliminar proveedores")
+		return
+	}
+	id := chi.URLParam(r, "id")
+	tag, err := h.db.Exec(r.Context(), `DELETE FROM proveedor WHERE id = $1`, id)
+	if err != nil {
+		responderError(w, http.StatusInternalServerError, "error al eliminar proveedor")
+		return
+	}
+	if tag.RowsAffected() == 0 {
+		responderError(w, http.StatusNotFound, "proveedor no encontrado")
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }

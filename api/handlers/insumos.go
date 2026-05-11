@@ -20,7 +20,8 @@ func InsumosRouter(db *pgxpool.Pool) chi.Router {
 	r.Post("/", h.crear)
 	r.Route("/{insumoId}", func(r chi.Router) {
 		r.Put("/", h.actualizar)
-		r.Delete("/", h.desactivar)
+		r.Patch("/toggle", h.toggle)
+		r.Delete("/", h.eliminar)
 		r.Get("/movimientos", h.listarMovimientos)
 		r.Post("/movimientos", h.registrarMovimiento)
 	})
@@ -128,12 +129,33 @@ func (h *insumosHandler) actualizar(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(i)
 }
 
-func (h *insumosHandler) desactivar(w http.ResponseWriter, r *http.Request) {
+func (h *insumosHandler) toggle(w http.ResponseWriter, r *http.Request) {
 	insumoID := chi.URLParam(r, "insumoId")
+	var activo bool
+	err := h.db.QueryRow(r.Context(),
+		`UPDATE insumo SET esta_activo = NOT esta_activo WHERE id=$1 RETURNING esta_activo`, insumoID,
+	).Scan(&activo)
+	if err != nil {
+		http.Error(w, "insumo no encontrado", http.StatusNotFound)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]bool{"esta_activo": activo})
+}
 
-	ct, err := h.db.Exec(r.Context(),
-		`UPDATE insumo SET esta_activo=FALSE WHERE id=$1 AND esta_activo=TRUE`, insumoID)
-	if err != nil || ct.RowsAffected() == 0 {
+func (h *insumosHandler) eliminar(w http.ResponseWriter, r *http.Request) {
+	u := appmiddleware.UsuarioDesdeContexto(r.Context())
+	if u.Rol != "admin" {
+		http.Error(w, "solo el administrador puede eliminar insumos", http.StatusForbidden)
+		return
+	}
+	insumoID := chi.URLParam(r, "insumoId")
+	tag, err := h.db.Exec(r.Context(), `DELETE FROM insumo WHERE id=$1`, insumoID)
+	if err != nil {
+		http.Error(w, "error al eliminar insumo", http.StatusInternalServerError)
+		return
+	}
+	if tag.RowsAffected() == 0 {
 		http.Error(w, "insumo no encontrado", http.StatusNotFound)
 		return
 	}

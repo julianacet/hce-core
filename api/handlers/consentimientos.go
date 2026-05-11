@@ -24,7 +24,8 @@ func PlantillasRouter(db *pgxpool.Pool) http.Handler {
 	r.Get("/", h.listarPlantillas)
 	r.Post("/", h.crearPlantilla)
 	r.Put("/{plantillaId}", h.actualizarPlantilla)
-	r.Delete("/{plantillaId}", h.desactivarPlantilla)
+	r.Patch("/{plantillaId}/toggle", h.togglePlantilla)
+	r.Delete("/{plantillaId}", h.eliminarPlantilla)
 	return r
 }
 
@@ -114,18 +115,40 @@ func (h *ConsentimientoHandler) actualizarPlantilla(w http.ResponseWriter, r *ht
 	responderJSON(w, http.StatusOK, p)
 }
 
-// DELETE /consentimientos/plantillas/:plantillaId  (soft delete)
-func (h *ConsentimientoHandler) desactivarPlantilla(w http.ResponseWriter, r *http.Request) {
+// PATCH /consentimientos/plantillas/:plantillaId/toggle
+func (h *ConsentimientoHandler) togglePlantilla(w http.ResponseWriter, r *http.Request) {
 	plantillaID := chi.URLParam(r, "plantillaId")
-	_, err := h.db.Exec(r.Context(), `
-		UPDATE plantilla_consentimiento SET esta_activo = FALSE WHERE id = $1`,
+	var activo bool
+	err := h.db.QueryRow(r.Context(),
+		`UPDATE plantilla_consentimiento SET esta_activo = NOT esta_activo WHERE id=$1 RETURNING esta_activo`,
 		plantillaID,
-	)
+	).Scan(&activo)
 	if err != nil {
-		responderError(w, http.StatusInternalServerError, "error al desactivar plantilla")
+		responderError(w, http.StatusNotFound, "plantilla no encontrada")
 		return
 	}
-	responderJSON(w, http.StatusOK, map[string]string{"mensaje": "plantilla desactivada"})
+	responderJSON(w, http.StatusOK, map[string]bool{"esta_activo": activo})
+}
+
+// DELETE /consentimientos/plantillas/:plantillaId
+func (h *ConsentimientoHandler) eliminarPlantilla(w http.ResponseWriter, r *http.Request) {
+	u := appmiddleware.UsuarioDesdeContexto(r.Context())
+	if u.Rol != "admin" {
+		responderError(w, http.StatusForbidden, "solo el administrador puede eliminar plantillas")
+		return
+	}
+	plantillaID := chi.URLParam(r, "plantillaId")
+	tag, err := h.db.Exec(r.Context(),
+		`DELETE FROM plantilla_consentimiento WHERE id=$1`, plantillaID)
+	if err != nil {
+		responderError(w, http.StatusInternalServerError, "error al eliminar plantilla")
+		return
+	}
+	if tag.RowsAffected() == 0 {
+		responderError(w, http.StatusNotFound, "plantilla no encontrada")
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // GET /pacientes/:doc/encuentros/:encId/consentimiento

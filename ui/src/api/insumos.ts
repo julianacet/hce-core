@@ -73,7 +73,7 @@ export function useActualizarInsumo(id: string) {
 export function useDesactivarInsumo() {
   const qc = useQueryClient()
   return useMutation<void, Error, string>({
-    mutationFn: (id) => apiFetch(`/insumos/${id}`, { method: 'DELETE' }),
+    mutationFn: (id) => apiFetch(`/insumos/${id}/toggle`, { method: 'PATCH' }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['insumos'] }),
   })
 }

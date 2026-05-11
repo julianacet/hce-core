@@ -24,7 +24,8 @@ func TiposEventoAdversoRouter(db *pgxpool.Pool) chi.Router {
 	r.Get("/", h.listar)
 	r.Post("/", h.crear)
 	r.Put("/{tipoId}", h.actualizar)
-	r.Delete("/{tipoId}", h.desactivar)
+	r.Patch("/{tipoId}/toggle", h.desactivar)
+	r.Delete("/{tipoId}", h.eliminarTipo)
 
 	return r
 }
@@ -139,24 +140,40 @@ func (h *tiposEAHandler) actualizar(w http.ResponseWriter, r *http.Request) {
 func (h *tiposEAHandler) desactivar(w http.ResponseWriter, r *http.Request) {
 	u := appmiddleware.UsuarioDesdeContexto(r.Context())
 	if u.Rol != "admin" {
-		responderError(w, http.StatusForbidden, "solo el administrador puede desactivar tipos")
+		responderError(w, http.StatusForbidden, "solo el administrador puede activar o desactivar tipos")
 		return
 	}
-
 	id := chi.URLParam(r, "tipoId")
 	var activo bool
 	err := h.db.QueryRow(r.Context(),
-		`UPDATE tipo_evento_adverso SET esta_activo = NOT esta_activo WHERE id = $1 RETURNING esta_activo`,
-		id,
+		`UPDATE tipo_evento_adverso SET esta_activo = NOT esta_activo WHERE id = $1 RETURNING esta_activo`, id,
 	).Scan(&activo)
 	if err != nil {
-		log.Printf("toggle tipo EA: %v", err)
-		responderError(w, http.StatusInternalServerError, "error al actualizar tipo")
+		responderError(w, http.StatusNotFound, "tipo no encontrado")
 		return
 	}
-
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]bool{"esta_activo": activo})
+}
+
+func (h *tiposEAHandler) eliminarTipo(w http.ResponseWriter, r *http.Request) {
+	u := appmiddleware.UsuarioDesdeContexto(r.Context())
+	if u.Rol != "admin" {
+		responderError(w, http.StatusForbidden, "solo el administrador puede eliminar tipos")
+		return
+	}
+	id := chi.URLParam(r, "tipoId")
+	tag, err := h.db.Exec(r.Context(), `DELETE FROM tipo_evento_adverso WHERE id=$1`, id)
+	if err != nil {
+		log.Printf("eliminar tipo EA: %v", err)
+		responderError(w, http.StatusInternalServerError, "error al eliminar tipo")
+		return
+	}
+	if tag.RowsAffected() == 0 {
+		responderError(w, http.StatusNotFound, "tipo no encontrado")
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // ── Reportes de eventos adversos ─────────────────────────────────────────────
@@ -169,6 +186,8 @@ func EventosAdversosRouter(db *pgxpool.Pool) chi.Router {
 	r.Post("/", h.crear)
 	r.Get("/{eventoId}", h.obtener)
 	r.Put("/{eventoId}/seguimiento", h.actualizarSeguimiento)
+	r.Patch("/{eventoId}/toggle", h.toggle)
+	r.Delete("/{eventoId}", h.eliminar)
 
 	return r
 }
@@ -333,6 +352,45 @@ func (h *eventosAdversosHandler) crear(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(e)
+}
+
+func (h *eventosAdversosHandler) toggle(w http.ResponseWriter, r *http.Request) {
+	u := appmiddleware.UsuarioDesdeContexto(r.Context())
+	if u.Rol != "admin" {
+		responderError(w, http.StatusForbidden, "solo el administrador puede activar o desactivar eventos")
+		return
+	}
+	id := chi.URLParam(r, "eventoId")
+	var activo bool
+	err := h.db.QueryRow(r.Context(),
+		`UPDATE evento_adverso SET esta_activo = NOT esta_activo WHERE id = $1 RETURNING esta_activo`, id,
+	).Scan(&activo)
+	if err != nil {
+		responderError(w, http.StatusNotFound, "evento no encontrado")
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]bool{"esta_activo": activo})
+}
+
+func (h *eventosAdversosHandler) eliminar(w http.ResponseWriter, r *http.Request) {
+	u := appmiddleware.UsuarioDesdeContexto(r.Context())
+	if u.Rol != "admin" {
+		responderError(w, http.StatusForbidden, "solo el administrador puede eliminar eventos")
+		return
+	}
+	id := chi.URLParam(r, "eventoId")
+	tag, err := h.db.Exec(r.Context(), `DELETE FROM evento_adverso WHERE id=$1`, id)
+	if err != nil {
+		log.Printf("eliminar evento adverso: %v", err)
+		responderError(w, http.StatusInternalServerError, "error al eliminar evento")
+		return
+	}
+	if tag.RowsAffected() == 0 {
+		responderError(w, http.StatusNotFound, "evento no encontrado")
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *eventosAdversosHandler) actualizarSeguimiento(w http.ResponseWriter, r *http.Request) {

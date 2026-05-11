@@ -25,7 +25,9 @@ func FacturasRouter(db *pgxpool.Pool) http.Handler {
 	r.Post("/", h.crear)
 	r.Route("/{facturaId}", func(r chi.Router) {
 		r.Get("/", h.obtener)
+		r.Put("/", h.actualizar)
 		r.Patch("/anular", h.anular)
+		r.Delete("/", h.eliminar)
 	})
 	return r
 }
@@ -211,6 +213,98 @@ func (h *FacturaHandler) crear(w http.ResponseWriter, r *http.Request) {
 	responderJSON(w, http.StatusCreated, f)
 }
 
+// PUT /facturas/{facturaId}  — reemplaza los ítems de una factura activa
+func (h *FacturaHandler) actualizar(w http.ResponseWriter, r *http.Request) {
+	facturaID := chi.URLParam(r, "facturaId")
+
+	var estadoActual string
+	var rowID string
+	err := h.db.QueryRow(r.Context(),
+		`SELECT id, estado FROM factura WHERE factura_id=$1 AND es_ultima_version=TRUE AND esta_activo=TRUE`,
+		facturaID,
+	).Scan(&rowID, &estadoActual)
+	if err != nil {
+		responderError(w, http.StatusNotFound, "factura no encontrada")
+		return
+	}
+	if estadoActual != "activa" {
+		responderError(w, http.StatusUnprocessableEntity, "solo se puede editar una factura activa")
+		return
+	}
+
+	var input struct {
+		Items []models.FacturaItemInput `json:"items"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		responderError(w, http.StatusBadRequest, "body inválido")
+		return
+	}
+	if len(input.Items) == 0 {
+		responderError(w, http.StatusBadRequest, "la factura debe tener al menos un item")
+		return
+	}
+
+	var subtotal float64
+	for _, item := range input.Items {
+		if item.Cantidad <= 0 || item.ValorUnitario < 0 {
+			responderError(w, http.StatusBadRequest, "cantidad y valor_unitario deben ser positivos")
+			return
+		}
+		subtotal += float64(item.Cantidad) * item.ValorUnitario
+	}
+
+	tx, err := h.db.Begin(r.Context())
+	if err != nil {
+		responderError(w, http.StatusInternalServerError, "error al iniciar transacción")
+		return
+	}
+	defer tx.Rollback(r.Context())
+
+	if _, err = tx.Exec(r.Context(), `DELETE FROM factura_item WHERE factura_id=$1`, rowID); err != nil {
+		log.Printf("eliminar items factura: %v", err)
+		responderError(w, http.StatusInternalServerError, "error al actualizar items")
+		return
+	}
+
+	for i, item := range input.Items {
+		itemSubtotal := float64(item.Cantidad) * item.ValorUnitario
+		if _, err = tx.Exec(r.Context(),
+			`INSERT INTO factura_item (factura_id, codigo_cups, descripcion, valor_unitario, cantidad, subtotal, orden)
+			 VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+			rowID, item.CodigoCups, item.Descripcion, item.ValorUnitario, item.Cantidad, itemSubtotal, i+1,
+		); err != nil {
+			log.Printf("insertar item factura: %v", err)
+			responderError(w, http.StatusInternalServerError, "error al guardar item")
+			return
+		}
+	}
+
+	if _, err = tx.Exec(r.Context(),
+		`UPDATE factura SET subtotal=$1, total=$1 WHERE id=$2`,
+		subtotal, rowID,
+	); err != nil {
+		responderError(w, http.StatusInternalServerError, "error al actualizar totales")
+		return
+	}
+
+	if err = tx.Commit(r.Context()); err != nil {
+		responderError(w, http.StatusInternalServerError, "error al confirmar transacción")
+		return
+	}
+
+	var f models.Factura
+	h.db.QueryRow(r.Context(), `
+		SELECT id, factura_id, numero_version, paciente_documento,
+		       estado, subtotal, total, fecha_creacion, creado_por
+		FROM factura WHERE id=$1`, rowID,
+	).Scan(&f.ID, &f.FacturaID, &f.NumeroVersion, &f.PacienteDocumento,
+		&f.Estado, &f.Subtotal, &f.Total, &f.FechaCreacion, &f.CreadoPor)
+	items, _ := obtenerItems(r.Context(), h.db, rowID)
+	f.Items = items
+
+	responderJSON(w, http.StatusOK, f)
+}
+
 // PATCH /facturas/{facturaId}/anular
 func (h *FacturaHandler) anular(w http.ResponseWriter, r *http.Request) {
 	facturaID := chi.URLParam(r, "facturaId")
@@ -252,6 +346,28 @@ func (h *FacturaHandler) anular(w http.ResponseWriter, r *http.Request) {
 	f.Items = items
 
 	responderJSON(w, http.StatusOK, f)
+}
+
+// DELETE /facturas/{facturaId} — elimina todas las versiones de la factura
+func (h *FacturaHandler) eliminar(w http.ResponseWriter, r *http.Request) {
+	u := appmiddleware.UsuarioDesdeContexto(r.Context())
+	if u.Rol != "admin" {
+		responderError(w, http.StatusForbidden, "solo el administrador puede eliminar facturas")
+		return
+	}
+	facturaID := chi.URLParam(r, "facturaId")
+	tag, err := h.db.Exec(r.Context(),
+		`DELETE FROM factura WHERE factura_id=$1`, facturaID)
+	if err != nil {
+		log.Printf("eliminar factura: %v", err)
+		responderError(w, http.StatusInternalServerError, "error al eliminar factura")
+		return
+	}
+	if tag.RowsAffected() == 0 {
+		responderError(w, http.StatusNotFound, "factura no encontrada")
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func obtenerItems(ctx context.Context, db *pgxpool.Pool, facturaRowID string) ([]models.FacturaItem, error) {

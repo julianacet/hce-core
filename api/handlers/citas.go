@@ -159,5 +159,19 @@ func CitasRouter(db *pgxpool.Pool) http.Handler {
 		json.NewEncoder(w).Encode(c)
 	})
 
+	r.Delete("/{id}", func(w http.ResponseWriter, r *http.Request) {
+		id := chi.URLParam(r, "id")
+		tag, err := db.Exec(r.Context(), `DELETE FROM cita WHERE id=$1`, id)
+		if err != nil {
+			http.Error(w, err.Error(), 500)
+			return
+		}
+		if tag.RowsAffected() == 0 {
+			http.Error(w, "cita no encontrada", 404)
+			return
+		}
+		w.WriteHeader(204)
+	})
+
 	return r
 }

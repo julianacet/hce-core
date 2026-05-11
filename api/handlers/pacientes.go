@@ -39,6 +39,7 @@ func PacientesRouter(db *pgxpool.Pool) http.Handler {
 	r.Route("/{documento}", func(r chi.Router) {
 		r.Get("/", h.obtener)
 		r.Put("/", h.actualizar)
+		r.Delete("/", h.eliminar)
 		r.Mount("/encuentros", EncuentrosRouter(db))
 		r.Mount("/antecedentes", AntecedentesRouter(db))
 	})
@@ -231,6 +232,28 @@ func (h *PacienteHandler) actualizar(w http.ResponseWriter, r *http.Request) {
 	}
 
 	responderJSON(w, http.StatusOK, p)
+}
+
+// DELETE /pacientes/{documento} — elimina todas las versiones del paciente
+func (h *PacienteHandler) eliminar(w http.ResponseWriter, r *http.Request) {
+	u := appmiddleware.UsuarioDesdeContexto(r.Context())
+	if u.Rol != "admin" {
+		responderError(w, http.StatusForbidden, "solo el administrador puede eliminar pacientes")
+		return
+	}
+	documento := chi.URLParam(r, "documento")
+	tag, err := h.db.Exec(r.Context(),
+		`DELETE FROM paciente WHERE numero_documento=$1`, documento)
+	if err != nil {
+		log.Printf("eliminar paciente: %v", err)
+		responderError(w, http.StatusInternalServerError, "error al eliminar paciente")
+		return
+	}
+	if tag.RowsAffected() == 0 {
+		responderError(w, http.StatusNotFound, "paciente no encontrado")
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // ── helpers ──────────────────────────────────────────────────────────────────

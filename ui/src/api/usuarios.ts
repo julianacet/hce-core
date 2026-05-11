@@ -45,7 +45,7 @@ export function useActualizarUsuario(id: string) {
 export function useDesactivarUsuario() {
   const qc = useQueryClient()
   return useMutation<void, Error, string>({
-    mutationFn: (id) => apiFetch(`/usuarios/${id}`, { method: 'DELETE' }),
+    mutationFn: (id) => apiFetch(`/usuarios/${id}/toggle`, { method: 'PATCH' }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['usuarios'] }),
   })
 }

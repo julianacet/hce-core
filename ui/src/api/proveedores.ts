@@ -66,7 +66,7 @@ export function useActualizarProveedor(id: string) {
 export function useToggleProveedor(id: string) {
   const qc = useQueryClient()
   return useMutation<{ esta_activo: boolean }, Error, void>({
-    mutationFn: () => apiFetch(`/proveedores/${id}`, { method: 'DELETE' }),
+    mutationFn: () => apiFetch(`/proveedores/${id}/toggle`, { method: 'PATCH' }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['proveedores'] }),
   })
 }

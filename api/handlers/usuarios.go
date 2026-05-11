@@ -20,7 +20,8 @@ func UsuariosRouter(db *pgxpool.Pool) chi.Router {
 	r.Get("/", h.listar)
 	r.Post("/", h.crear)
 	r.Put("/{usuarioId}", h.actualizar)
-	r.Delete("/{usuarioId}", h.desactivar)
+	r.Patch("/{usuarioId}/toggle", h.toggle)
+	r.Delete("/{usuarioId}", h.eliminar)
 
 	return r
 }
@@ -151,12 +152,28 @@ func (h *usuariosHandler) actualizar(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(u)
 }
 
-func (h *usuariosHandler) desactivar(w http.ResponseWriter, r *http.Request) {
+func (h *usuariosHandler) toggle(w http.ResponseWriter, r *http.Request) {
 	usuarioID := chi.URLParam(r, "usuarioId")
+	var activo bool
+	err := h.db.QueryRow(r.Context(),
+		`UPDATE usuario SET esta_activo = NOT esta_activo WHERE id=$1 RETURNING esta_activo`, usuarioID,
+	).Scan(&activo)
+	if err != nil {
+		http.Error(w, "usuario no encontrado", http.StatusNotFound)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]bool{"esta_activo": activo})
+}
 
-	ct, err := h.db.Exec(r.Context(),
-		`UPDATE usuario SET esta_activo=FALSE WHERE id=$1 AND esta_activo=TRUE`, usuarioID)
-	if err != nil || ct.RowsAffected() == 0 {
+func (h *usuariosHandler) eliminar(w http.ResponseWriter, r *http.Request) {
+	usuarioID := chi.URLParam(r, "usuarioId")
+	tag, err := h.db.Exec(r.Context(), `DELETE FROM usuario WHERE id=$1`, usuarioID)
+	if err != nil {
+		http.Error(w, "error al eliminar usuario", http.StatusInternalServerError)
+		return
+	}
+	if tag.RowsAffected() == 0 {
 		http.Error(w, "usuario no encontrado", http.StatusNotFound)
 		return
 	}

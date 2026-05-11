@@ -32,6 +32,7 @@ func PreguntasAntecedentesRouter(db *pgxpool.Pool) http.Handler {
 	r.Post("/", h.crearPregunta)
 	r.Put("/{id}", h.actualizarPregunta)
 	r.Patch("/{id}/toggle", h.togglePregunta)
+	r.Delete("/{id}", h.eliminarPregunta)
 	return r
 }
 
@@ -216,6 +217,22 @@ func (h *AntecedentesHandler) actualizarPregunta(w http.ResponseWriter, r *http.
 	}
 	p.Opciones = json.RawMessage(optsBytes)
 	responderJSON(w, http.StatusOK, p)
+}
+
+// DELETE /antecedentes/preguntas/{id}
+func (h *AntecedentesHandler) eliminarPregunta(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	tag, err := h.db.Exec(r.Context(),
+		`DELETE FROM antecedente_pregunta WHERE id=$1`, id)
+	if err != nil {
+		responderError(w, http.StatusInternalServerError, "error al eliminar pregunta")
+		return
+	}
+	if tag.RowsAffected() == 0 {
+		responderError(w, http.StatusNotFound, "pregunta no encontrada")
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // PATCH /antecedentes/preguntas/{id}/toggle

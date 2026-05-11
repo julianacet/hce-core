@@ -107,7 +107,7 @@ export function useToggleTipo(id: string) {
   const qc = useQueryClient()
   return useMutation<{ esta_activo: boolean }, Error, void>({
     mutationFn: () =>
-      apiFetch(`/tipos-evento-adverso/${id}`, { method: 'DELETE' }),
+      apiFetch(`/tipos-evento-adverso/${id}/toggle`, { method: 'PATCH' }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['tipos-ea'] }),
   })
 }

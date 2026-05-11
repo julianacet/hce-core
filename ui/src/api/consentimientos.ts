@@ -56,7 +56,7 @@ export function useDesactivarPlantilla() {
   const qc = useQueryClient()
   return useMutation<unknown, Error, string>({
     mutationFn: (id) =>
-      apiFetch(`/consentimientos/plantillas/${id}`, { method: 'DELETE' }),
+      apiFetch(`/consentimientos/plantillas/${id}/toggle`, { method: 'PATCH' }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['plantillas-consentimiento'] }),
   })
 }
