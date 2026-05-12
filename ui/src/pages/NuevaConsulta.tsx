@@ -318,6 +318,7 @@ export default function NuevaConsulta() {
         <EncuentroForm
           key={formKey}
           documento={paciente?.numero_documento ?? ''}
+          genero={paciente?.genero}
           onSubmit={handleSubmit}
           isPending={crear.isPending}
           submitLabel="Crear encuentro"

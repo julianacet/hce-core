@@ -211,6 +211,7 @@ export default function DetalleEncuentro() {
         e.estado === 'borrador' ? (
           <EncuentroForm
             documento={id ?? ''}
+            genero={paciente?.genero}
             initialValues={initialValuesBorrador}
             onSubmit={(data: EncuentroInput) => actualizar.mutateAsync(data).then(() => {})}
             onGuardarSeccion={(data) => actualizar.mutateAsync(data).then(() => {})}
