@@ -455,7 +455,11 @@ function UsuariosAdmin() {
 
   async function handleEliminar(u: Usuario) {
     if (!confirm(`¿Eliminar permanentemente al usuario "${u.nombre_completo}"? Esta acción no se puede deshacer.`)) return
-    await eliminar.mutateAsync(u.id)
+    try {
+      await eliminar.mutateAsync(u.id)
+    } catch (e: unknown) {
+      alert(e instanceof Error ? e.message : 'No se pudo eliminar el usuario.')
+    }
   }
 
   const activos = usuarios.filter((u) => u.esta_activo)

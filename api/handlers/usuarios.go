@@ -168,6 +168,44 @@ func (h *usuariosHandler) toggle(w http.ResponseWriter, r *http.Request) {
 
 func (h *usuariosHandler) eliminar(w http.ResponseWriter, r *http.Request) {
 	usuarioID := chi.URLParam(r, "usuarioId")
+
+	// Obtener nombre_usuario para buscar actividad clínica
+	var nombreUsuario string
+	err := h.db.QueryRow(r.Context(),
+		`SELECT nombre_usuario FROM usuario WHERE id=$1`, usuarioID,
+	).Scan(&nombreUsuario)
+	if err != nil {
+		http.Error(w, "usuario no encontrado", http.StatusNotFound)
+		return
+	}
+
+	// Contar registros clínicos asociados al usuario
+	var total int
+	err = h.db.QueryRow(r.Context(), `
+		SELECT (
+			SELECT COUNT(*) FROM encuentro_clinico WHERE creado_por=$1
+		) + (
+			SELECT COUNT(*) FROM factura        WHERE creado_por=$1
+		) + (
+			SELECT COUNT(*) FROM evento_adverso WHERE creado_por=$1
+		) + (
+			SELECT COUNT(*) FROM formula_medica WHERE creado_por=$1
+		)`, nombreUsuario,
+	).Scan(&total)
+	if err != nil {
+		http.Error(w, "error al verificar actividad del usuario", http.StatusInternalServerError)
+		return
+	}
+	if total > 0 {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusConflict)
+		json.NewEncoder(w).Encode(map[string]any{
+			"error": "Este usuario tiene registros clínicos y no puede eliminarse. Desactívalo en su lugar.",
+			"total": total,
+		})
+		return
+	}
+
 	tag, err := h.db.Exec(r.Context(), `DELETE FROM usuario WHERE id=$1`, usuarioID)
 	if err != nil {
 		http.Error(w, "error al eliminar usuario", http.StatusInternalServerError)
