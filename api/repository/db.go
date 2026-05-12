@@ -8,8 +8,18 @@ import (
 )
 
 // Connect crea el pool de conexiones a PostgreSQL y verifica que la BD esté disponible.
-func Connect(url string) (*pgxpool.Pool, error) {
-	pool, err := pgxpool.New(context.Background(), url)
+// Si timezone es no vacío, se aplica como parámetro de sesión para que todos los
+// casts ::date usen esa zona horaria automáticamente.
+func Connect(url, timezone string) (*pgxpool.Pool, error) {
+	config, err := pgxpool.ParseConfig(url)
+	if err != nil {
+		return nil, fmt.Errorf("error al parsear URL de conexión: %w", err)
+	}
+	if timezone != "" {
+		config.ConnConfig.RuntimeParams["TimeZone"] = timezone
+	}
+
+	pool, err := pgxpool.NewWithConfig(context.Background(), config)
 	if err != nil {
 		return nil, fmt.Errorf("error al crear pool de conexiones: %w", err)
 	}

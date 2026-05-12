@@ -1,5 +1,5 @@
 import { useNavigate, useParams } from 'react-router'
-import { FileText, Activity, Download, Printer, ClipboardList } from 'lucide-react'
+import { FileText, Activity, Download, Printer } from 'lucide-react'
 import { useState } from 'react'
 import { useTabParam } from '../../hooks/useTabParam'
 import { pdf, PDFDownloadLink } from '@react-pdf/renderer'

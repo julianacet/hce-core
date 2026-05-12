@@ -38,12 +38,58 @@ export type Paciente = {
   zona_residencia_nombre: string
   etnia_nombre: string
   discapacidad_nombre: string
+  ultima_atencion: string | null
 }
 
 export type PacienteInput = Omit<Paciente,
   'id' | 'numero_version' | 'es_ultima_version' | 'esta_activo' | 'fecha_creacion' | 'creado_por' | 'edad' |
-  'genero_nombre' | 'estado_civil_nombre' | 'tipo_usuario_nombre' | 'zona_residencia_nombre' | 'etnia_nombre' | 'discapacidad_nombre'
+  'genero_nombre' | 'estado_civil_nombre' | 'tipo_usuario_nombre' | 'zona_residencia_nombre' | 'etnia_nombre' | 'discapacidad_nombre' |
+  'ultima_atencion'
 >
+
+export type PacientesPaginados = {
+  pacientes: Paciente[]
+  total: number
+}
+
+type PaginadosParams = {
+  q: string
+  page: number
+  limit: number
+  orden: string
+  dir: 'asc' | 'desc'
+  tipo_usuario: string
+  genero: string
+  zona_residencia: string
+  eps: string
+  telefono: string
+  min_atencion: string
+  max_atencion: string
+}
+
+export function usePacientesPaginados(params: PaginadosParams) {
+  return useQuery({
+    queryKey: ['pacientes-paginados', params],
+    queryFn: () => {
+      const p = new URLSearchParams({
+        page: String(params.page),
+        limit: String(params.limit),
+        orden: params.orden,
+        dir: params.dir,
+      })
+      if (params.q) p.set('q', params.q)
+      if (params.tipo_usuario) p.set('tipo_usuario', params.tipo_usuario)
+      if (params.genero) p.set('genero', params.genero)
+      if (params.zona_residencia) p.set('zona_residencia', params.zona_residencia)
+      if (params.eps) p.set('eps', params.eps)
+      if (params.telefono) p.set('telefono', params.telefono)
+      if (params.min_atencion) p.set('min_atencion', params.min_atencion)
+      if (params.max_atencion) p.set('max_atencion', params.max_atencion)
+      return apiFetch<PacientesPaginados>(`/pacientes?${p}`)
+    },
+    placeholderData: (prev) => prev,
+  })
+}
 
 export function usePacientes(q?: string) {
   return useQuery({

@@ -44,7 +44,7 @@ func main() {
 		log.Fatal("PORT no está definida")
 	}
 
-	db, err := repository.Connect(dbURL)
+	db, err := repository.Connect(dbURL, os.Getenv("APP_TZ"))
 	if err != nil {
 		log.Fatalf("BD: %v", err)
 	}

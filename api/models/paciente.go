@@ -41,6 +41,7 @@ type Paciente struct {
 	ZonaResidenciaNombre string  `json:"zona_residencia_nombre"`
 	EtniaNombre          string  `json:"etnia_nombre"`
 	DiscapacidadNombre   string  `json:"discapacidad_nombre"`
+	UltimaAtencion       *time.Time `json:"ultima_atencion"`
 }
 
 // PacienteInput es lo que llega en el body al crear o actualizar un paciente.

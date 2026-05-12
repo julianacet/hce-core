@@ -28,6 +28,7 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       PORT: ${DOCKER_API_PORT}
       ALLOWED_ORIGIN: ${DOCKER_ALLOWED_ORIGIN}
+      APP_TZ: ${APP_TZ:-America/Bogota}
     ports:
       - "${DOCKER_API_PORT}:${DOCKER_API_PORT}"
 

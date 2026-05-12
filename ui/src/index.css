@@ -217,27 +217,29 @@ body {
 /* ═══════════════════════════════════════════════════════════════════════════
    FORMULARIOS
    ═══════════════════════════════════════════════════════════════════════════ */
-.input-hce {
-  width: 100%;
-  border: 1px solid var(--hce-border);
-  border-radius: var(--hce-radius);
-  padding: 0.5rem 0.75rem;
-  font-size: var(--hce-font-sm);
-  background-color: var(--hce-card);
-  color: var(--hce-text);
-  outline: none;
-  transition: box-shadow 0.15s;
+@layer components {
+  .input-hce {
+    width: 100%;
+    border: 1px solid var(--hce-border);
+    border-radius: var(--hce-radius);
+    padding: 0.5rem 0.75rem;
+    font-size: var(--hce-font-sm);
+    background-color: var(--hce-card);
+    color: var(--hce-text);
+    outline: none;
+    transition: box-shadow 0.15s;
+  }
+  .input-hce:focus {
+    box-shadow: 0 0 0 2px var(--hce-primary);
+    border-color: var(--hce-primary);
+  }
+  .input-hce:disabled {
+    background-color: var(--hce-bg);
+    color: var(--hce-text-muted);
+    cursor: not-allowed;
+  }
+  .input-hce::placeholder { color: var(--hce-text-muted); opacity: 0.6; }
 }
-.input-hce:focus {
-  box-shadow: 0 0 0 2px var(--hce-primary);
-  border-color: var(--hce-primary);
-}
-.input-hce:disabled {
-  background-color: var(--hce-bg);
-  color: var(--hce-text-muted);
-  cursor: not-allowed;
-}
-.input-hce::placeholder { color: var(--hce-text-muted); opacity: 0.6; }
 
 .label-hce {
   display: block;
