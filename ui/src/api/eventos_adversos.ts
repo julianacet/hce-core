@@ -117,6 +117,14 @@ export function useToggleTipo(id: string) {
   })
 }
 
+export function useEliminarTipo() {
+  const qc = useQueryClient()
+  return useMutation<void, Error, string>({
+    mutationFn: (id) => apiFetch(`/tipos-evento-adverso/${id}`, { method: 'DELETE' }),
+    onSuccess: (_, id) => patchTipos(qc, (old) => old.filter((t) => t.id !== id)),
+  })
+}
+
 // ── Eventos ───────────────────────────────────────────────────────────────────
 
 export function useEventosAdversos(filters?: { estado?: string; tipo_id?: string }) {

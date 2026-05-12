@@ -26,6 +26,7 @@ import {
   useCrearTipo,
   useActualizarTipo,
   useToggleTipo,
+  useEliminarTipo,
   type TipoEventoAdverso,
   type TipoInput,
 } from '../../api/eventos_adversos'
@@ -209,7 +210,8 @@ function TiposEventoAdversoAdmin() {
 
 function TipoRow({ tipo, onEditar }: { tipo: TipoEventoAdverso; onEditar: () => void }) {
   const toggle = useToggleTipo(tipo.id)
-  const loading = toggle.isPending
+  const eliminar = useEliminarTipo()
+  const loading = toggle.isPending || eliminar.isPending
   return (
     <div className={`flex items-center gap-3 px-4 py-3 ${!tipo.esta_activo ? 'opacity-60' : ''}`}>
       <AlertTriangle className={`w-4 h-4 shrink-0 ${tipo.esta_activo ? 'text-orange-400' : 'text-slate-300'}`} />
@@ -235,6 +237,15 @@ function TipoRow({ tipo, onEditar }: { tipo: TipoEventoAdverso; onEditar: () => 
           label: tipo.esta_activo ? 'Desactivar' : 'Activar',
           icon: tipo.esta_activo ? <PowerOff size={14} /> : <Power size={14} />,
           onClick: () => toggle.mutate(),
+        },
+        {
+          label: 'Eliminar permanentemente',
+          icon: <Trash2 size={14} />,
+          danger: true,
+          onClick: () => {
+            if (confirm(`¿Eliminar el tipo "${tipo.nombre}"? Esta acción no se puede deshacer.`))
+              eliminar.mutate(tipo.id)
+          },
         },
       ]} />
     </div>
@@ -533,7 +544,7 @@ function UsuariosAdmin() {
       )}
 
       {/* Lista activos */}
-      <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100 overflow-hidden">
+      <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100">
         {activos.length === 0 && (
           <p className="px-5 py-6 text-sm text-slate-400 text-center">Sin usuarios activos.</p>
         )}
@@ -563,7 +574,7 @@ function UsuariosAdmin() {
       {inactivos.length > 0 && (
         <div>
           <p className="text-xs text-slate-400 mb-2">Usuarios desactivados</p>
-          <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100 overflow-hidden">
+          <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100">
             {inactivos.map((u) => (
               <div key={u.id} className="px-5 py-3 flex items-center gap-4 opacity-60">
                 <Users size={16} className="text-slate-300 shrink-0" />
