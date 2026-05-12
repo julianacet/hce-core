@@ -24,12 +24,16 @@ export function useUsuarios() {
   })
 }
 
+const USUARIOS_KEY = ['usuarios']
+
 export function useCrearUsuario() {
   const qc = useQueryClient()
   return useMutation<Usuario, Error, UsuarioInput>({
     mutationFn: (input) =>
       apiFetch('/usuarios', { method: 'POST', body: JSON.stringify(input) }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['usuarios'], refetchType: 'all' }),
+    onSuccess: (nuevo) => {
+      qc.setQueryData<Usuario[]>(USUARIOS_KEY, (old) => [...(old ?? []), nuevo])
+    },
   })
 }
 
@@ -38,7 +42,11 @@ export function useActualizarUsuario(id: string) {
   return useMutation<Usuario, Error, UsuarioInput>({
     mutationFn: (input) =>
       apiFetch(`/usuarios/${id}`, { method: 'PUT', body: JSON.stringify(input) }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['usuarios'], refetchType: 'all' }),
+    onSuccess: (actualizado) => {
+      qc.setQueryData<Usuario[]>(USUARIOS_KEY, (old) =>
+        old?.map((u) => (u.id === id ? actualizado : u)) ?? []
+      )
+    },
   })
 }
 
@@ -46,7 +54,11 @@ export function useDesactivarUsuario() {
   const qc = useQueryClient()
   return useMutation<{ esta_activo: boolean }, Error, string>({
     mutationFn: (id) => apiFetch(`/usuarios/${id}/toggle`, { method: 'PATCH' }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['usuarios'], refetchType: 'all' }),
+    onSuccess: ({ esta_activo }, id) => {
+      qc.setQueryData<Usuario[]>(USUARIOS_KEY, (old) =>
+        old?.map((u) => (u.id === id ? { ...u, esta_activo } : u)) ?? []
+      )
+    },
   })
 }
 
@@ -54,6 +66,8 @@ export function useEliminarUsuario() {
   const qc = useQueryClient()
   return useMutation<void, Error, string>({
     mutationFn: (id) => apiFetch(`/usuarios/${id}`, { method: 'DELETE' }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['usuarios'], refetchType: 'all' }),
+    onSuccess: (_, id) => {
+      qc.setQueryData<Usuario[]>(USUARIOS_KEY, (old) => old?.filter((u) => u.id !== id) ?? [])
+    },
   })
 }

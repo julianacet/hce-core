@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { ClipboardList, BarChart2, CheckCircle2 } from 'lucide-react'
+import { useTabParam } from '../hooks/useTabParam'
 import { useEncuestas, useEncuestaResumen, useCrearEncuesta } from '../api/encuestas'
 import type { EncuestaInput } from '../api/encuestas'
 
@@ -322,7 +323,7 @@ function TabResultados() {
 }
 
 export default function Encuestas() {
-  const [tab, setTab] = useState<Tab>('registrar')
+  const [tab, setTab] = useTabParam('tab', 'registrar' as Tab, ['registrar', 'resultados'] as const)
 
   return (
     <div className="page-hce space-y-6">

@@ -1,6 +1,7 @@
 import { useNavigate, useParams } from 'react-router'
 import { FileText, Activity, Download, Printer, ClipboardList } from 'lucide-react'
 import { useState } from 'react'
+import { useTabParam } from '../../hooks/useTabParam'
 import { pdf, PDFDownloadLink } from '@react-pdf/renderer'
 import { useEncuentro, useActualizarEncuentro, useFinalizarEncuentro, type ValorNormalNotas, type EncuentroInput } from '../../api/encuentros'
 import { useAuditoriaEncuentro } from '../../api/auditoria'
@@ -41,7 +42,7 @@ export default function DetalleEncuentro() {
   const { id, encId } = useParams()
   const navigate = useNavigate()
   const { medico } = useMedico()
-  const [tab, setTab] = useState<Tab>('consulta')
+  const [tab, setTab] = useTabParam('tab', 'consulta' as Tab, ['consulta', 'antecedentes', 'formula', 'consentimiento'] as const)
   const [plantillaSeleccionada, setPlantillaSeleccionada] = useState('')
   const [imprimiendo, setImprimiendo] = useState(false)
   const [imprimiendoFormulaId, setImprimiendoFormulaId] = useState<string | null>(null)

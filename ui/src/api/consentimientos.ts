@@ -34,12 +34,16 @@ export function usePlantillas() {
   })
 }
 
+const PLANTILLAS_KEY = ['plantillas-consentimiento']
+
 export function useCrearPlantilla() {
   const qc = useQueryClient()
   return useMutation<PlantillaConsentimiento, Error, PlantillaInput>({
     mutationFn: (input) =>
       apiFetch('/consentimientos/plantillas', { method: 'POST', body: JSON.stringify(input) }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['plantillas-consentimiento'] }),
+    onSuccess: (nueva) => {
+      qc.setQueryData<PlantillaConsentimiento[]>(PLANTILLAS_KEY, (old) => [...(old ?? []), nueva])
+    },
   })
 }
 
@@ -48,16 +52,24 @@ export function useActualizarPlantilla(id: string) {
   return useMutation<PlantillaConsentimiento, Error, PlantillaInput>({
     mutationFn: (input) =>
       apiFetch(`/consentimientos/plantillas/${id}`, { method: 'PUT', body: JSON.stringify(input) }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['plantillas-consentimiento'] }),
+    onSuccess: (actualizada) => {
+      qc.setQueryData<PlantillaConsentimiento[]>(PLANTILLAS_KEY, (old) =>
+        old?.map((p) => (p.id === id ? actualizada : p)) ?? []
+      )
+    },
   })
 }
 
 export function useDesactivarPlantilla() {
   const qc = useQueryClient()
-  return useMutation<unknown, Error, string>({
+  return useMutation<{ esta_activo: boolean }, Error, string>({
     mutationFn: (id) =>
       apiFetch(`/consentimientos/plantillas/${id}/toggle`, { method: 'PATCH' }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['plantillas-consentimiento'] }),
+    onSuccess: ({ esta_activo }, id) => {
+      qc.setQueryData<PlantillaConsentimiento[]>(PLANTILLAS_KEY, (old) =>
+        old?.map((p) => (p.id === id ? { ...p, esta_activo } : p)) ?? []
+      )
+    },
   })
 }
 
@@ -65,7 +77,9 @@ export function useEliminarPlantilla() {
   const qc = useQueryClient()
   return useMutation<void, Error, string>({
     mutationFn: (id) => apiFetch(`/consentimientos/plantillas/${id}`, { method: 'DELETE' }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['plantillas-consentimiento'] }),
+    onSuccess: (_, id) => {
+      qc.setQueryData<PlantillaConsentimiento[]>(PLANTILLAS_KEY, (old) => old?.filter((p) => p.id !== id) ?? [])
+    },
   })
 }
 

@@ -60,12 +60,16 @@ export function usePreguntas() {
   })
 }
 
+const KEY = ['antecedentes-preguntas']
+
 export function useCrearPregunta() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (data: Omit<AntecedentePregunta, 'id' | 'esta_activo'>) =>
       apiFetch<AntecedentePregunta>('/antecedentes/preguntas', { method: 'POST', body: JSON.stringify(data) }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['antecedentes-preguntas'] }),
+    onSuccess: (nueva) => {
+      qc.setQueryData<AntecedentePregunta[]>(KEY, (old) => [...(old ?? []), nueva])
+    },
   })
 }
 
@@ -74,15 +78,23 @@ export function useActualizarPregunta(id: string) {
   return useMutation({
     mutationFn: (data: Omit<AntecedentePregunta, 'id' | 'esta_activo'>) =>
       apiFetch<AntecedentePregunta>(`/antecedentes/preguntas/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['antecedentes-preguntas'] }),
+    onSuccess: (actualizada) => {
+      qc.setQueryData<AntecedentePregunta[]>(KEY, (old) =>
+        old?.map((p) => (p.id === id ? actualizada : p)) ?? []
+      )
+    },
   })
 }
 
 export function useTogglePregunta(id: string) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: () => apiFetch(`/antecedentes/preguntas/${id}/toggle`, { method: 'PATCH' }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['antecedentes-preguntas'] }),
+    mutationFn: () => apiFetch<{ esta_activo: boolean }>(`/antecedentes/preguntas/${id}/toggle`, { method: 'PATCH' }),
+    onSuccess: ({ esta_activo }) => {
+      qc.setQueryData<AntecedentePregunta[]>(KEY, (old) =>
+        old?.map((p) => (p.id === id ? { ...p, esta_activo } : p)) ?? []
+      )
+    },
   })
 }
 
@@ -90,6 +102,8 @@ export function useEliminarPregunta() {
   const qc = useQueryClient()
   return useMutation<void, Error, string>({
     mutationFn: (id) => apiFetch(`/antecedentes/preguntas/${id}`, { method: 'DELETE' }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['antecedentes-preguntas'] }),
+    onSuccess: (_, id) => {
+      qc.setQueryData<AntecedentePregunta[]>(KEY, (old) => old?.filter((p) => p.id !== id) ?? [])
+    },
   })
 }

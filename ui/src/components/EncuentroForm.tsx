@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { CheckCircle, ChevronDown, Pencil } from 'lucide-react'
+import { NavigationGuard } from './NavigationGuard'
 import { useEncuentros, type DiagnosticoItem, type ValorNormalNotas, type EncuentroInput } from '../api/encuentros'
 import { useCamposClinicosActivos } from '../api/campos_clinicos'
 import DiagnosticoSearch from './DiagnosticoSearch'
@@ -143,11 +144,16 @@ export default function EncuentroForm({
   const { data: encuentrosPrevios = [] } = useEncuentros(documento)
 
   const esBorrador = !!initialValues
+  const DRAFT_KEY = `enc-draft-${documento}`
 
-  const [form, setForm] = useState<FormState>({ ...FORM_INICIAL, ...initialValues })
-  const [signos, setSignos] = useState<Record<string, string>>(initialValues?.signos_vitales ?? {})
-  const [examen, setExamen] = useState<Record<string, string | ValorNormalNotas>>(initialValues?.examen_fisico ?? {})
-  const [diagnosticos, setDiagnosticos] = useState<DiagnosticoItem[]>(initialValues?.diagnosticos ?? [])
+  const draft = !esBorrador ? (() => {
+    try { return JSON.parse(sessionStorage.getItem(DRAFT_KEY) ?? 'null') } catch { return null }
+  })() : null
+
+  const [form, setForm] = useState<FormState>({ ...FORM_INICIAL, ...(draft?.form ?? initialValues) })
+  const [signos, setSignos] = useState<Record<string, string>>(initialValues?.signos_vitales ?? draft?.signos ?? {})
+  const [examen, setExamen] = useState<Record<string, string | ValorNormalNotas>>(initialValues?.examen_fisico ?? draft?.examen ?? {})
+  const [diagnosticos, setDiagnosticos] = useState<DiagnosticoItem[]>(initialValues?.diagnosticos ?? draft?.diagnosticos ?? [])
   const [error, setError] = useState<string | null>(null)
 
   // En borrador: todas las secciones empiezan colapsadas y bloqueadas
@@ -168,6 +174,11 @@ export default function EncuentroForm({
     setExamen(initialValues.examen_fisico ?? {})
     setDiagnosticos(initialValues.diagnosticos ?? [])
   }, [initialValues?.motivo_consulta])
+
+  useEffect(() => {
+    if (esBorrador) return
+    try { sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ form, signos, examen, diagnosticos })) } catch {}
+  }, [form, signos, examen, diagnosticos, esBorrador, DRAFT_KEY])
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }))
@@ -196,6 +207,7 @@ export default function EncuentroForm({
     setError(null)
     try {
       await onSubmit(buildInput())
+      try { sessionStorage.removeItem(DRAFT_KEY) } catch {}
     } catch (err) {
       setError((err as Error)?.message ?? 'Error al guardar el encuentro.')
     }
@@ -285,7 +297,13 @@ export default function EncuentroForm({
   const examenLocked = lockedSections.has('examen')
   const diagLocked = lockedSections.has('diagnosticos')
 
+  const isDirty = esBorrador
+    ? lockedSections.size < 5
+    : form.motivo_consulta.trim() !== '' || diagnosticos.length > 0 || Object.values(signos).some(v => v.trim() !== '')
+
   return (
+    <>
+    <NavigationGuard when={isDirty} />
     <form onSubmit={handleSubmit} className="space-y-3">
 
       <CollapsibleSection
@@ -460,5 +478,6 @@ export default function EncuentroForm({
         )}
       </div>
     </form>
+    </>
   )
 }

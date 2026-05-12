@@ -85,12 +85,16 @@ export function useTiposEventoAdverso(todos = false) {
   })
 }
 
+function patchTipos(qc: ReturnType<typeof useQueryClient>, updater: (old: TipoEventoAdverso[]) => TipoEventoAdverso[]) {
+  qc.setQueriesData<TipoEventoAdverso[]>({ queryKey: ['tipos-ea'] }, (old) => old ? updater(old) : old)
+}
+
 export function useCrearTipo() {
   const qc = useQueryClient()
   return useMutation<TipoEventoAdverso, Error, TipoInput>({
     mutationFn: (input) =>
       apiFetch('/tipos-evento-adverso', { method: 'POST', body: JSON.stringify(input) }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['tipos-ea'] }),
+    onSuccess: (nuevo) => patchTipos(qc, (old) => [...old, nuevo]),
   })
 }
 
@@ -99,7 +103,7 @@ export function useActualizarTipo(id: string) {
   return useMutation<TipoEventoAdverso, Error, TipoInput>({
     mutationFn: (input) =>
       apiFetch(`/tipos-evento-adverso/${id}`, { method: 'PUT', body: JSON.stringify(input) }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['tipos-ea'] }),
+    onSuccess: (actualizado) => patchTipos(qc, (old) => old.map((t) => (t.id === id ? actualizado : t))),
   })
 }
 
@@ -108,7 +112,8 @@ export function useToggleTipo(id: string) {
   return useMutation<{ esta_activo: boolean }, Error, void>({
     mutationFn: () =>
       apiFetch(`/tipos-evento-adverso/${id}/toggle`, { method: 'PATCH' }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['tipos-ea'] }),
+    onSuccess: ({ esta_activo }) =>
+      patchTipos(qc, (old) => old.map((t) => (t.id === id ? { ...t, esta_activo } : t))),
   })
 }
 
@@ -133,12 +138,16 @@ export function useEventoAdverso(id: string) {
   })
 }
 
+function patchEventos(qc: ReturnType<typeof useQueryClient>, updater: (old: EventoAdverso[]) => EventoAdverso[]) {
+  qc.setQueriesData<EventoAdverso[]>({ queryKey: ['eventos-adversos'] }, (old) => old ? updater(old) : old)
+}
+
 export function useCrearEventoAdverso() {
   const qc = useQueryClient()
   return useMutation<EventoAdverso, Error, EventoAdversoInput>({
     mutationFn: (input) =>
       apiFetch('/eventos-adversos', { method: 'POST', body: JSON.stringify(input) }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['eventos-adversos'] }),
+    onSuccess: (nuevo) => patchEventos(qc, (old) => [nuevo, ...old]),
   })
 }
 
@@ -147,10 +156,7 @@ export function useActualizarEventoAdverso(id: string) {
   return useMutation<EventoAdverso, Error, EventoAdversoInput>({
     mutationFn: (input) =>
       apiFetch(`/eventos-adversos/${id}`, { method: 'PUT', body: JSON.stringify(input) }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['eventos-adversos'] })
-      qc.invalidateQueries({ queryKey: ['eventos-adversos', id] })
-    },
+    onSuccess: (actualizado) => patchEventos(qc, (old) => old.map((e) => (e.id === id ? actualizado : e))),
   })
 }
 
@@ -158,7 +164,7 @@ export function useEliminarEventoAdverso() {
   const qc = useQueryClient()
   return useMutation<void, Error, string>({
     mutationFn: (id) => apiFetch(`/eventos-adversos/${id}`, { method: 'DELETE' }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['eventos-adversos'] }),
+    onSuccess: (_, id) => patchEventos(qc, (old) => old.filter((e) => e.id !== id)),
   })
 }
 
@@ -167,9 +173,6 @@ export function useActualizarSeguimiento(id: string) {
   return useMutation<EventoAdverso, Error, SeguimientoInput>({
     mutationFn: (input) =>
       apiFetch(`/eventos-adversos/${id}/seguimiento`, { method: 'PUT', body: JSON.stringify(input) }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['eventos-adversos'] })
-      qc.invalidateQueries({ queryKey: ['eventos-adversos', id] })
-    },
+    onSuccess: (actualizado) => patchEventos(qc, (old) => old.map((e) => (e.id === id ? actualizado : e))),
   })
 }

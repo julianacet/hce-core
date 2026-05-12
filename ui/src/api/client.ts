@@ -32,5 +32,9 @@ export async function apiFetch<T>(path: string, opciones: OpcionesFetch = {}): P
     throw new Error(body.error ?? `Error ${res.status}`)
   }
 
+  if (res.status === 204 || res.headers.get('content-length') === '0') {
+    return null as T
+  }
+
   return res.json()
 }

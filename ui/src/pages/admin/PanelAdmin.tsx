@@ -1,7 +1,9 @@
 import { useState, useRef } from 'react'
+import { useTabParam } from '../../hooks/useTabParam'
 import { useTema, DEFAULTS, type Tema } from '../../context/TemaContext'
 import { Upload, Trash2, CheckCircle, RotateCcw, Plus, Pencil, X, ShieldCheck, Stethoscope, Users, AlertTriangle, ExternalLink, ClipboardList, Activity, Info, PowerOff, Power } from 'lucide-react'
 import { RowMenu } from '../../components/RowMenu'
+import { NavigationGuard } from '../../components/NavigationGuard'
 import {
   usePlantillas,
   useCrearPlantilla,
@@ -1141,7 +1143,11 @@ export default function PanelAdmin() {
   const { tema, guardarTema } = useTema()
   const [form, setForm] = useState<Tema>(tema)
   const [guardado, setGuardado] = useState(false)
-  const [tab, setTab] = useState<'apariencia' | 'consentimientos' | 'usuarios' | 'eventos' | 'antecedentes' | 'campos'>('apariencia')
+  const [tab, setTab] = useTabParam(
+    'tab',
+    'apariencia' as const,
+    ['apariencia', 'consentimientos', 'usuarios', 'eventos', 'antecedentes', 'campos'] as const,
+  )
   const inputLogo = useRef<HTMLInputElement>(null)
 
   function set<K extends keyof Tema>(key: K, value: Tema[K]) {
@@ -1176,7 +1182,11 @@ export default function PanelAdmin() {
     setTimeout(() => setGuardado(false), 2500)
   }
 
+  const aparienciaDirty = tab === 'apariencia' && JSON.stringify(form) !== JSON.stringify(tema)
+
   return (
+    <>
+    <NavigationGuard when={aparienciaDirty} />
     <div className="page-hce">
       <div className="page-header">
         <h2 className="page-title">Panel de administración</h2>
@@ -1360,5 +1370,6 @@ export default function PanelAdmin() {
         </div>
       </form>}
     </div>
+    </>
   )
 }

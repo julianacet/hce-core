@@ -1,6 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useTabParam } from '../hooks/useTabParam'
 import { AlertTriangle, Plus, ChevronRight, X, CheckCircle, Clock, AlertCircle, Pencil, Trash2, ClipboardList } from 'lucide-react'
 import { RowMenu } from '../components/RowMenu'
+import { NavigationGuard } from '../components/NavigationGuard'
 import {
   useTiposEventoAdverso,
   useEventosAdversos,
@@ -78,34 +80,54 @@ function FormEvento({
   onExito: () => void
   onCancelar?: () => void
 }) {
+  const EA_DRAFT_KEY = 'ea-nuevo-draft'
   const { data: tipos = [] } = useTiposEventoAdverso()
   const crear = useCrearEventoAdverso()
   const actualizar = useActualizarEventoAdverso(eventoInicial?.id ?? '')
   const isPending = crear.isPending || actualizar.isPending
 
-  const [tipoId, setTipoId] = useState(eventoInicial?.tipo_id ?? '')
+  const draft = !eventoInicial ? (() => {
+    try { return JSON.parse(sessionStorage.getItem(EA_DRAFT_KEY) ?? 'null') } catch { return null }
+  })() : null
+
+  const [tipoId, setTipoId] = useState(eventoInicial?.tipo_id ?? draft?.tipoId ?? '')
   const [fechaEvento, setFechaEvento] = useState(
-    eventoInicial ? fechaParaInput(eventoInicial.fecha_evento) : hoy()
+    eventoInicial ? fechaParaInput(eventoInicial.fecha_evento) : (draft?.fechaEvento ?? hoy())
   )
-  const [pacienteDoc, setPacienteDoc] = useState(eventoInicial?.paciente_documento ?? '')
-  const [diagnostico, setDiagnostico] = useState(eventoInicial?.diagnostico_activo ?? '')
-  const [clasificacion, setClasificacion] = useState(eventoInicial?.clasificacion ?? '')
-  const [categoriaDanio, setCategoriaDanio] = useState(eventoInicial?.categoria_danio ?? '')
+  const [pacienteDoc, setPacienteDoc] = useState(eventoInicial?.paciente_documento ?? draft?.pacienteDoc ?? '')
+  const [diagnostico, setDiagnostico] = useState(eventoInicial?.diagnostico_activo ?? draft?.diagnostico ?? '')
+  const [clasificacion, setClasificacion] = useState(eventoInicial?.clasificacion ?? draft?.clasificacion ?? '')
+  const [categoriaDanio, setCategoriaDanio] = useState(eventoInicial?.categoria_danio ?? draft?.categoriaDanio ?? '')
   const [seInformoPaciente, setSeInformoPaciente] = useState<boolean | null>(
-    eventoInicial?.se_informo_paciente ?? null
+    eventoInicial?.se_informo_paciente ?? draft?.seInformoPaciente ?? null
   )
-  const [descripcion, setDescripcion] = useState(eventoInicial?.descripcion ?? '')
-  const [comoDetecto, setComoDetecto] = useState(eventoInicial?.como_se_detecto ?? '')
+  const [descripcion, setDescripcion] = useState(eventoInicial?.descripcion ?? draft?.descripcion ?? '')
+  const [comoDetecto, setComoDetecto] = useState(eventoInicial?.como_se_detecto ?? draft?.comoDetecto ?? '')
   const [factores, setFactores] = useState<FactoresContribuyentes>(
-    eventoInicial?.factores_contribuyentes ?? FACTORES_VACIOS
+    eventoInicial?.factores_contribuyentes ?? draft?.factores ?? FACTORES_VACIOS
   )
   const [accionesInmediatas, setAccionesInmediatas] = useState(
-    eventoInicial?.acciones_inmediatas ?? ''
+    eventoInicial?.acciones_inmediatas ?? draft?.accionesInmediatas ?? ''
   )
   const [requiereCausaRaiz, setRequiereCausaRaiz] = useState(
-    eventoInicial?.requiere_causa_raiz ?? false
+    eventoInicial?.requiere_causa_raiz ?? draft?.requiereCausaRaiz ?? false
   )
   const [error, setError] = useState('')
+
+  useEffect(() => {
+    if (eventoInicial) return
+    try {
+      sessionStorage.setItem(EA_DRAFT_KEY, JSON.stringify({
+        tipoId, fechaEvento, pacienteDoc, diagnostico, clasificacion, categoriaDanio,
+        seInformoPaciente, descripcion, comoDetecto, factores, accionesInmediatas, requiereCausaRaiz,
+      }))
+    } catch {}
+  }, [tipoId, fechaEvento, pacienteDoc, diagnostico, clasificacion, categoriaDanio,
+      seInformoPaciente, descripcion, comoDetecto, factores, accionesInmediatas, requiereCausaRaiz, eventoInicial])
+
+  const isDirty = eventoInicial
+    ? descripcion !== (eventoInicial.descripcion ?? '') || clasificacion !== (eventoInicial.clasificacion ?? '')
+    : descripcion.trim() !== '' || clasificacion !== ''
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -133,6 +155,7 @@ function FormEvento({
         await actualizar.mutateAsync(payload)
       } else {
         await crear.mutateAsync(payload)
+        try { sessionStorage.removeItem(EA_DRAFT_KEY) } catch {}
       }
       onExito()
     } catch {
@@ -141,6 +164,8 @@ function FormEvento({
   }
 
   return (
+    <>
+    <NavigationGuard when={isDirty} />
     <form onSubmit={handleSubmit} className="space-y-5">
 
       {/* Tipo y fecha */}
@@ -294,6 +319,7 @@ function FormEvento({
         </button>
       </div>
     </form>
+    </>
   )
 }
 
@@ -481,7 +507,7 @@ function ModalSeguimiento({ evento, onCerrar }: { evento: EventoAdverso; onCerra
 // ── Página principal ──────────────────────────────────────────────────────────
 
 export default function EventosAdversos() {
-  const [tab, setTab] = useState<'registros' | 'nuevo'>('registros')
+  const [tab, setTab] = useTabParam('tab', 'registros' as const, ['registros', 'nuevo'] as const)
   const [filtroEstado, setFiltroEstado] = useState('')
   const [eventoSeguimiento, setEventoSeguimiento] = useState<EventoAdverso | null>(null)
   const [eventoEditando, setEventoEditando] = useState<EventoAdverso | null>(null)

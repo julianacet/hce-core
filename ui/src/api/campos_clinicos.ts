@@ -32,12 +32,16 @@ export function useTodosCamposClinicos() {
   })
 }
 
+const CC_KEY = ['campos-clinicos']
+
 export function useCrearCampoClinico() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (data: CampoClinicoInput) =>
       apiFetch<CampoClinico>('/campos-clinicos', { method: 'POST', body: JSON.stringify(data) }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['campos-clinicos'] }),
+    onSuccess: (nuevo) => {
+      qc.setQueryData<CampoClinico[]>(CC_KEY, (old) => [...(old ?? []), nuevo])
+    },
   })
 }
 
@@ -46,7 +50,11 @@ export function useActualizarCampoClinico(id: string) {
   return useMutation({
     mutationFn: (data: Partial<CampoClinicoInput>) =>
       apiFetch<CampoClinico>(`/campos-clinicos/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['campos-clinicos'] }),
+    onSuccess: (actualizado) => {
+      qc.setQueryData<CampoClinico[]>(CC_KEY, (old) =>
+        old?.map((c) => (c.id === id ? actualizado : c)) ?? []
+      )
+    },
   })
 }
 
@@ -55,7 +63,11 @@ export function useToggleCampoClinico(id: string) {
   return useMutation({
     mutationFn: () =>
       apiFetch<CampoClinico>(`/campos-clinicos/${id}/toggle`, { method: 'PATCH' }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['campos-clinicos'] }),
+    onSuccess: (actualizado) => {
+      qc.setQueryData<CampoClinico[]>(CC_KEY, (old) =>
+        old?.map((c) => (c.id === id ? actualizado : c)) ?? []
+      )
+    },
   })
 }
 
@@ -63,6 +75,8 @@ export function useEliminarCampoClinico() {
   const qc = useQueryClient()
   return useMutation<void, Error, string>({
     mutationFn: (id) => apiFetch(`/campos-clinicos/${id}`, { method: 'DELETE' }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['campos-clinicos'] }),
+    onSuccess: (_, id) => {
+      qc.setQueryData<CampoClinico[]>(CC_KEY, (old) => old?.filter((c) => c.id !== id) ?? [])
+    },
   })
 }

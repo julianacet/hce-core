@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router'
+import { useTabParam } from '../../hooks/useTabParam'
 import { PDFViewer, pdf } from '@react-pdf/renderer'
 import { Plus, Trash2, Download, Printer, ChevronLeft, Eye, EyeOff } from 'lucide-react'
 import { useMedico } from '../../context/MedicoContext'
@@ -195,7 +196,7 @@ export default function NuevaFormula() {
   const crearFormulaPos = useCrearFormula(id ?? '', encId ?? '')
   const crearFormulaNoPos = useCrearFormula(id ?? '', encId ?? '')
 
-  const [tab, setTab] = useState<'pos' | 'no_pos'>('pos')
+  const [tab, setTab] = useTabParam('tab', 'pos' as const, ['pos', 'no_pos'] as const)
   const [medsPos, setMedsPos] = useState<Medicamento[]>([{ ...medVacio }])
   const [medsNoPos, setMedsNoPos] = useState<Medicamento[]>([{ ...medVacio }])
   const [guardadaIdPos, setGuardadaIdPos] = useState<string | null>(null)
