@@ -2,10 +2,10 @@ import { useState } from 'react'
 import { Link } from 'react-router'
 import {
   Clock, User, Phone, ChevronLeft, ChevronRight,
-  Plus, X, Check, XCircle, AlertCircle, CheckCheck,
+  Plus, X, Check, XCircle, AlertCircle, CheckCheck, Trash2,
 } from 'lucide-react'
 import {
-  useCitas, useCitasMes, useCrearCita, useActualizarCita, useCambiarEstadoCita,
+  useCitas, useCitasMes, useCrearCita, useActualizarCita, useCambiarEstadoCita, useEliminarCita,
 } from '../api/citas'
 import type { Cita, CitaInput } from '../api/citas'
 
@@ -331,8 +331,19 @@ function ModalNuevaCita({
 function ModalDetalleCita({ cita, onCerrar }: { cita: Cita; onCerrar: () => void }) {
   const actualizar = useActualizarCita(cita.id)
   const cambiarEstado = useCambiarEstadoCita(cita.id)
+  const eliminar = useEliminarCita()
   const [editando, setEditando] = useState(false)
   const [error, setError] = useState('')
+
+  async function handleEliminar() {
+    if (!confirm(`¿Eliminar la cita de ${cita.paciente_nombre}? Esta acción no se puede deshacer.`)) return
+    try {
+      await eliminar.mutateAsync(cita.id)
+      onCerrar()
+    } catch {
+      setError('Error al eliminar la cita.')
+    }
+  }
 
   const cerrado = cita.estado === 'cancelada' || cita.estado === 'completada'
 
@@ -461,6 +472,17 @@ function ModalDetalleCita({ cita, onCerrar }: { cita: Cita; onCerrar: () => void
                   </button>
                 </div>
               )}
+
+              <div className="pt-2 flex justify-end">
+                <button
+                  onClick={handleEliminar}
+                  disabled={eliminar.isPending}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded text-red-600 hover:bg-red-50 transition-colors disabled:opacity-40"
+                >
+                  <Trash2 className="w-3 h-3" />
+                  {eliminar.isPending ? 'Eliminando...' : 'Eliminar cita'}
+                </button>
+              </div>
 
               {error && <p className="text-sm text-red-600">{error}</p>}
             </>
