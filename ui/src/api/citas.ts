@@ -65,3 +65,14 @@ export function useCambiarEstadoCita(id: string) {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['citas'] }),
   })
 }
+
+export function useEliminarCita() {
+  const qc = useQueryClient()
+  return useMutation<void, Error, string>({
+    mutationFn: (id) => apiFetch(`/citas/${id}`, { method: 'DELETE' }),
+    onSuccess: (_, id) => {
+      qc.setQueriesData<Cita[]>({ queryKey: ['citas'] }, (old) => old?.filter(c => c.id !== id) ?? [])
+      qc.setQueriesData<Cita[]>({ queryKey: ['citas-mes'] }, (old) => old?.filter(c => c.id !== id) ?? [])
+    },
+  })
+}

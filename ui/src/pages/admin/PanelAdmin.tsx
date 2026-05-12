@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react'
 import { useTabParam } from '../../hooks/useTabParam'
 import { useTema, DEFAULTS, type Tema } from '../../context/TemaContext'
-import { Upload, Trash2, CheckCircle, RotateCcw, Plus, Pencil, X, ShieldCheck, Stethoscope, Users, AlertTriangle, ExternalLink, ClipboardList, Activity, Info, PowerOff, Power } from 'lucide-react'
+import { Upload, Trash2, CheckCircle, RotateCcw, Plus, Pencil, X, ShieldCheck, Stethoscope, Users, AlertTriangle, ExternalLink, ClipboardList, Activity, Info, PowerOff, Power, Pill } from 'lucide-react'
 import { RowMenu } from '../../components/RowMenu'
 import { NavigationGuard } from '../../components/NavigationGuard'
 import {
@@ -47,6 +47,15 @@ import {
   type CampoClinico,
   type CampoClinicoInput,
 } from '../../api/campos_clinicos'
+import {
+  useMedicamentosAdmin,
+  useCrearMedicamento,
+  useActualizarMedicamento,
+  useToggleMedicamento,
+  useEliminarMedicamento,
+  type MedicamentoPredefinido,
+  type MedicamentoInput,
+} from '../../api/medicamentos_predefinidos'
 
 const PALETAS = [
   {
@@ -1154,6 +1163,197 @@ function CampoRow({ campo, onEditar }: { campo: CampoClinico; onEditar: () => vo
   )
 }
 
+// ── Gestión de medicamentos predefinidos ──────────────────────────────────────
+
+function MedRow({ med, onEditar }: { med: MedicamentoPredefinido; onEditar: () => void }) {
+  const toggle = useToggleMedicamento(med.id)
+  const eliminar = useEliminarMedicamento()
+  const loading = toggle.isPending || eliminar.isPending
+  return (
+    <div className={`flex items-center gap-3 px-4 py-3 ${!med.esta_activo ? 'opacity-60' : ''}`}>
+      <Pill className={`w-4 h-4 shrink-0 ${med.esta_activo ? 'text-teal-400' : 'text-slate-300'}`} />
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="card-title">{med.nombre}</span>
+          <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${med.tipo === 'pos' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}`}>
+            {med.tipo === 'pos' ? 'POS' : 'No POS'}
+          </span>
+          {!med.esta_activo && (
+            <span className="px-1.5 py-0.5 rounded text-xs bg-slate-100 text-slate-500">Inactivo</span>
+          )}
+        </div>
+        {(med.concentracion || med.forma_farmaceutica || med.codigo) && (
+          <p className="text-xs mt-0.5" style={{ color: 'var(--hce-text-muted)' }}>
+            {[med.concentracion, med.forma_farmaceutica, med.codigo ? `Cód. ${med.codigo}` : null]
+              .filter(Boolean)
+              .join(' · ')}
+          </p>
+        )}
+      </div>
+      <RowMenu loading={loading} items={[
+        { label: 'Editar', icon: <Pencil size={14} />, onClick: onEditar },
+        {
+          label: med.esta_activo ? 'Desactivar' : 'Activar',
+          icon: med.esta_activo ? <PowerOff size={14} /> : <Power size={14} />,
+          onClick: () => toggle.mutate(),
+        },
+        {
+          label: 'Eliminar permanentemente',
+          icon: <Trash2 size={14} />,
+          danger: true,
+          onClick: () => {
+            if (confirm(`¿Eliminar "${med.nombre}"? Esta acción no se puede deshacer.`))
+              eliminar.mutate(med.id)
+          },
+        },
+      ]} />
+    </div>
+  )
+}
+
+function MedicamentosAdmin() {
+  const [q, setQ] = useState('')
+  const [tipoFiltro, setTipoFiltro] = useState<'pos' | 'no_pos' | ''>('')
+  const { data: meds = [], isFetching } = useMedicamentosAdmin(tipoFiltro, q)
+  const crear = useCrearMedicamento()
+  const [editando, setEditando] = useState<MedicamentoPredefinido | null>(null)
+  const actualizar = useActualizarMedicamento(editando?.id ?? '')
+  const emptyForm: MedicamentoInput = { codigo: null, nombre: '', concentracion: null, forma_farmaceutica: null, tipo: 'pos' }
+  const [form, setForm] = useState<MedicamentoInput>(emptyForm)
+  const [mostrarForm, setMostrarForm] = useState(false)
+  const [error, setError] = useState('')
+
+  function abrirNuevo() {
+    setEditando(null)
+    setForm(emptyForm)
+    setMostrarForm(true)
+    setError('')
+  }
+
+  function abrirEditar(m: MedicamentoPredefinido) {
+    setEditando(m)
+    setForm({ codigo: m.codigo, nombre: m.nombre, concentracion: m.concentracion, forma_farmaceutica: m.forma_farmaceutica, tipo: m.tipo })
+    setMostrarForm(true)
+    setError('')
+  }
+
+  function cerrar() {
+    setMostrarForm(false)
+    setEditando(null)
+    setError('')
+  }
+
+  async function guardar() {
+    if (!form.nombre.trim()) { setError('El nombre es obligatorio.'); return }
+    setError('')
+    try {
+      if (editando) await actualizar.mutateAsync(form)
+      else await crear.mutateAsync(form)
+      cerrar()
+    } catch {
+      setError('Error al guardar.')
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-start justify-between gap-4">
+        <p className="text-sm" style={{ color: 'var(--hce-text-muted)' }}>
+          Catálogo de medicamentos disponibles para formular. Muestra hasta 80 resultados; usa el buscador para encontrar uno específico.
+        </p>
+        <button onClick={abrirNuevo} className="btn-primary shrink-0">
+          <Plus className="w-4 h-4" /> Nuevo
+        </button>
+      </div>
+
+      {/* Filtros */}
+      <div className="flex gap-2">
+        <input
+          className="input-hce flex-1"
+          placeholder="Buscar por nombre..."
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+        />
+        <select
+          className="input-hce w-36"
+          value={tipoFiltro}
+          onChange={(e) => setTipoFiltro(e.target.value as 'pos' | 'no_pos' | '')}
+        >
+          <option value="">Todos</option>
+          <option value="pos">POS</option>
+          <option value="no_pos">No POS</option>
+        </select>
+      </div>
+
+      {/* Formulario */}
+      {mostrarForm && (
+        <div className="card-hce p-4 space-y-3 border-2" style={{ borderColor: 'var(--hce-primary)' }}>
+          <div className="flex items-center justify-between">
+            <h4 className="card-title">{editando ? 'Editar medicamento' : 'Nuevo medicamento'}</h4>
+            <button onClick={cerrar}><X className="w-4 h-4 text-slate-400" /></button>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="col-span-2">
+              <label className="label-hce">Nombre *</label>
+              <input className="input-hce" value={form.nombre}
+                onChange={(e) => setForm((f) => ({ ...f, nombre: e.target.value }))}
+                placeholder="Ej: Amoxicilina" />
+            </div>
+            <div>
+              <label className="label-hce">Tipo *</label>
+              <select className="input-hce" value={form.tipo}
+                onChange={(e) => setForm((f) => ({ ...f, tipo: e.target.value as 'pos' | 'no_pos' }))}>
+                <option value="pos">POS</option>
+                <option value="no_pos">No POS</option>
+              </select>
+            </div>
+            <div>
+              <label className="label-hce">Código</label>
+              <input className="input-hce" value={form.codigo ?? ''}
+                onChange={(e) => setForm((f) => ({ ...f, codigo: e.target.value || null }))}
+                placeholder="Opcional" />
+            </div>
+            <div>
+              <label className="label-hce">Concentración</label>
+              <input className="input-hce" value={form.concentracion ?? ''}
+                onChange={(e) => setForm((f) => ({ ...f, concentracion: e.target.value || null }))}
+                placeholder="Ej: 500 mg" />
+            </div>
+            <div>
+              <label className="label-hce">Forma farmacéutica</label>
+              <input className="input-hce" value={form.forma_farmaceutica ?? ''}
+                onChange={(e) => setForm((f) => ({ ...f, forma_farmaceutica: e.target.value || null }))}
+                placeholder="Ej: Tableta" />
+            </div>
+          </div>
+          {error && <p className="text-xs text-red-600">{error}</p>}
+          <div className="flex justify-end gap-2">
+            <button onClick={cerrar} className="btn-secondary">Cancelar</button>
+            <button onClick={guardar} disabled={crear.isPending || actualizar.isPending} className="btn-primary">
+              Guardar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Lista */}
+      <div className="card-hce divide-y" style={{ borderColor: 'var(--hce-border)' }}>
+        {isFetching && meds.length === 0 && (
+          <p className="text-sm text-center py-6" style={{ color: 'var(--hce-text-muted)' }}>Cargando...</p>
+        )}
+        {!isFetching && meds.length === 0 && (
+          <p className="text-sm text-center py-6" style={{ color: 'var(--hce-text-muted)' }}>
+            No se encontraron medicamentos.
+          </p>
+        )}
+        {meds.map((m) => (
+          <MedRow key={m.id} med={m} onEditar={() => abrirEditar(m)} />
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export default function PanelAdmin() {
   const { tema, guardarTema } = useTema()
   const [form, setForm] = useState<Tema>(tema)
@@ -1161,7 +1361,7 @@ export default function PanelAdmin() {
   const [tab, setTab] = useTabParam(
     'tab',
     'apariencia' as const,
-    ['apariencia', 'consentimientos', 'usuarios', 'eventos', 'antecedentes', 'campos'] as const,
+    ['apariencia', 'consentimientos', 'usuarios', 'eventos', 'antecedentes', 'campos', 'medicamentos'] as const,
   )
   const inputLogo = useRef<HTMLInputElement>(null)
 
@@ -1216,6 +1416,7 @@ export default function PanelAdmin() {
           { id: 'campos',          label: 'Campos clínicos' },
           { id: 'usuarios',        label: 'Usuarios' },
           { id: 'eventos',         label: 'Eventos adversos' },
+          { id: 'medicamentos',    label: 'Medicamentos' },
         ] as const).map(({ id, label }) => (
           <button
             key={id}
@@ -1232,6 +1433,7 @@ export default function PanelAdmin() {
       {tab === 'eventos' && <TiposEventoAdversoAdmin />}
       {tab === 'antecedentes' && <AntecedentesAdmin />}
       {tab === 'campos' && <CamposClinicosAdmin />}
+      {tab === 'medicamentos' && <MedicamentosAdmin />}
 
       {tab === 'apariencia' && <form onSubmit={guardar} className="space-y-6">
 
