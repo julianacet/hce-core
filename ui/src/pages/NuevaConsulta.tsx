@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router'
+import { useNavigate, useLocation } from 'react-router'
 import { Search, Filter, Trash2, Check, UserRound, ChevronRight } from 'lucide-react'
 import { usePacientesPaginados, type Paciente } from '../api/pacientes'
 import { useCrearEncuentro, type EncuentroInput } from '../api/encuentros'
@@ -23,6 +23,8 @@ function nombreCompleto(p: Paciente) {
 
 export default function NuevaConsulta() {
   const navigate = useNavigate()
+  const location = useLocation()
+  const pacientePreseleccionado: Paciente | null = (location.state as { paciente?: Paciente })?.paciente ?? null
 
   // ── Búsqueda ─────────────────────────────────────────────────────────────
   const [q, setQ] = useState('')
@@ -80,7 +82,7 @@ export default function NuevaConsulta() {
   const total = data?.total ?? 0
 
   // ── Paciente seleccionado ─────────────────────────────────────────────────
-  const [paciente, setPaciente] = useState<Paciente | null>(null)
+  const [paciente, setPaciente] = useState<Paciente | null>(pacientePreseleccionado)
   const [formKey, setFormKey] = useState(0)
   const [pendingPaciente, setPendingPaciente] = useState<Paciente | null>(null)
   const [showCambiarModal, setShowCambiarModal] = useState(false)

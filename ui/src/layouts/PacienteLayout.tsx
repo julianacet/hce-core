@@ -40,7 +40,7 @@ export default function PacienteLayout() {
             </p>
           </div>
           <button
-            onClick={() => navigate(`/pacientes/${id}/encuentros/nuevo`)}
+            onClick={() => navigate('/nueva-consulta/nuevo', { state: { paciente } })}
             className="btn-primary"
           >
             <PlusCircle size={15} />

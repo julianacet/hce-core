@@ -126,3 +126,54 @@ export function useActualizarEncuentro(documento: string, encuentroId: string) {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['encuentros', documento] }),
   })
 }
+
+// ── Listado global de encuentros ─────────────────────────────────────────────
+
+export type EncuentroResumen = {
+  encuentro_id: string
+  fecha_atencion: string
+  estado: 'borrador' | 'finalizado'
+  finalidad_consulta: string
+  finalidad_consulta_nombre: string
+  motivo_consulta: string
+  paciente_documento: string
+  tipo_documento: string
+  paciente_nombre: string
+  codigo_diagnostico_principal: string
+  descripcion_diagnostico?: string
+}
+
+export type EncuentrosPaginados = {
+  encuentros: EncuentroResumen[]
+  total: number
+}
+
+type EncuentrosPaginadosParams = {
+  q: string
+  page: number
+  limit: number
+  desde: string
+  hasta: string
+  finalidad: string
+  estado: string
+}
+
+export function useEncuentrosPaginados(params: EncuentrosPaginadosParams) {
+  return useQuery({
+    queryKey: ['encuentros-global', params],
+    queryFn: () => {
+      const p = new URLSearchParams({
+        page: String(params.page),
+        limit: String(params.limit),
+      })
+      if (params.q) p.set('q', params.q)
+      if (params.desde) p.set('desde', params.desde)
+      if (params.hasta) p.set('hasta', params.hasta)
+      if (params.finalidad) p.set('finalidad', params.finalidad)
+      if (params.estado) p.set('estado', params.estado)
+      return apiFetch<EncuentrosPaginados>(`/encuentros?${p}`)
+    },
+    placeholderData: (prev) => prev,
+    staleTime: 1000 * 30,
+  })
+}

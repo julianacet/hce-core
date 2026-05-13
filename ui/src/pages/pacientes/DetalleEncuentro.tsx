@@ -1,29 +1,31 @@
-import { useNavigate, useParams } from 'react-router'
-import { FileText, Activity, Download, Printer } from 'lucide-react'
+import { useParams } from 'react-router'
+import { Activity, Printer, Clock, CheckCircle } from 'lucide-react'
 import { useState } from 'react'
 import { useTabParam } from '../../hooks/useTabParam'
-import { pdf, PDFDownloadLink } from '@react-pdf/renderer'
-import { useEncuentro, useActualizarEncuentro, useFinalizarEncuentro, type ValorNormalNotas, type EncuentroInput } from '../../api/encuentros'
+import { pdf } from '@react-pdf/renderer'
+import { useEncuentro, useFinalizarEncuentro, type ValorNormalNotas } from '../../api/encuentros'
 import { useAuditoriaEncuentro } from '../../api/auditoria'
 import { usePaciente } from '../../api/pacientes'
-import { usePlantillas, useConsentimientoEncuentro, useRegistrarConsentimiento } from '../../api/consentimientos'
 import { useMedico } from '../../context/MedicoContext'
-import ConsentimientoPDF from '../../components/pdf/ConsentimientoPDF'
 import FormulaPDF, { type Medicamento } from '../../components/pdf/FormulaPDF'
 import { useCamposClinicosActivos } from '../../api/campos_clinicos'
 import { useFormulas, type FormulaGuardada } from '../../api/formulas'
 import { useNotasEncuentro, useCrearNotaEncuentro } from '../../api/notas_encuentro'
-import EncuentroForm from '../../components/EncuentroForm'
 import AntecedentesTab from '../../components/AntecedentesTab'
 
-type Tab = 'consulta' | 'antecedentes' | 'formula' | 'consentimiento'
+type Tab = 'motivo' | 'signos' | 'revision' | 'examen' | 'diagnosticos' | 'antecedentes' | 'formula'
 
 const TABS: { key: Tab; label: string }[] = [
-  { key: 'consulta', label: 'Consulta' },
+  { key: 'motivo',       label: 'Motivo' },
   { key: 'antecedentes', label: 'Antecedentes' },
-  { key: 'formula', label: 'Fórmula' },
-  { key: 'consentimiento', label: 'Consentimiento' },
+  { key: 'signos',       label: 'Signos vitales' },
+  { key: 'revision',     label: 'Rev. por sistemas' },
+  { key: 'examen',       label: 'Examen físico' },
+  { key: 'diagnosticos', label: 'Diagnósticos' },
+  { key: 'formula',      label: 'Fórmula' },
 ]
+
+const ALL_TAB_KEYS = TABS.map(t => t.key) as readonly Tab[]
 
 const colorAccion: Record<string, string> = {
   INSERT: 'bg-green-100 text-green-700',
@@ -31,20 +33,10 @@ const colorAccion: Record<string, string> = {
   DELETE: 'bg-red-100 text-red-700',
 }
 
-function renderContenido(contenido: string, vars: Record<string, string>) {
-  return Object.entries(vars).reduce(
-    (text, [key, val]) => text.replaceAll(`{{${key}}}`, val),
-    contenido,
-  )
-}
-
 export default function DetalleEncuentro() {
   const { id, encId } = useParams()
-  const navigate = useNavigate()
   const { medico } = useMedico()
-  const [tab, setTab] = useTabParam('tab', 'consulta' as Tab, ['consulta', 'antecedentes', 'formula', 'consentimiento'] as const)
-  const [plantillaSeleccionada, setPlantillaSeleccionada] = useState('')
-  const [imprimiendo, setImprimiendo] = useState(false)
+  const [tab, setTab] = useTabParam('tab', 'motivo' as Tab, ALL_TAB_KEYS)
   const [imprimiendoFormulaId, setImprimiendoFormulaId] = useState<string | null>(null)
   const [notaAbierta, setNotaAbierta] = useState(false)
   const [notaTexto, setNotaTexto] = useState('')
@@ -52,75 +44,20 @@ export default function DetalleEncuentro() {
   const { data: e, isLoading, isError } = useEncuentro(id ?? '', encId ?? '')
   const { data: logs = [] } = useAuditoriaEncuentro(encId ?? '')
   const { data: paciente } = usePaciente(id ?? '')
-  const actualizar = useActualizarEncuentro(id ?? '', encId ?? '')
   const finalizar = useFinalizarEncuentro(id ?? '', encId ?? '')
-  const { data: plantillas = [] } = usePlantillas()
-  const { data: consentimientoPrevio } = useConsentimientoEncuentro(id ?? '', encId ?? '', tab === 'consentimiento')
-  const registrar = useRegistrarConsentimiento(id ?? '', encId ?? '')
   const { data: campos = [] } = useCamposClinicosActivos()
   const { data: formulas = [] } = useFormulas(id ?? '', encId ?? '')
   const { data: notas = [] } = useNotasEncuentro(id ?? '', encId ?? '')
   const crearNota = useCrearNotaEncuentro(id ?? '', encId ?? '')
 
-  if (isLoading) {
-    return <div className="p-6 text-sm text-slate-400">Cargando encuentro...</div>
-  }
-  if (isError || !e) {
-    return <div className="p-6 text-sm text-red-500">Error al cargar el encuentro.</div>
-  }
+  if (isLoading) return <div className="p-6 text-sm text-slate-400">Cargando encuentro...</div>
+  if (isError || !e) return <div className="p-6 text-sm text-red-500">Error al cargar el encuentro.</div>
 
   const diagnostico = [e.codigo_diagnostico_principal, e.descripcion_diagnostico].filter(Boolean).join(' - ')
-
   const pacienteNombre = paciente
     ? [paciente.nombre_primero, paciente.nombre_segundo, paciente.apellido_primero, paciente.apellido_segundo]
         .filter(Boolean).join(' ')
     : id ?? ''
-
-  const plantillaActiva = plantillas.find((p) => p.id === plantillaSeleccionada)
-  const fecha = new Date(e.fecha_atencion).toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' })
-
-  const vars: Record<string, string> = {
-    paciente_nombre: pacienteNombre,
-    paciente_documento: paciente?.numero_documento ?? id ?? '',
-    tipo_documento: paciente?.tipo_documento ?? '',
-    medico_nombre: medico.nombre,
-    consultorio: medico.nombreConsultorio,
-    ciudad: medico.ciudad,
-    fecha,
-  }
-
-  const contenidoRenderizado = plantillaActiva ? renderContenido(plantillaActiva.contenido, vars) : ''
-
-  const docPDF = contenidoRenderizado ? (
-    <ConsentimientoPDF
-      medico={medico}
-      pacienteNombre={pacienteNombre}
-      pacienteDocumento={paciente?.numero_documento ?? id ?? ''}
-      tipoDocumento={paciente?.tipo_documento ?? ''}
-      contenidoRenderizado={contenidoRenderizado}
-      fecha={fecha}
-    />
-  ) : null
-
-  async function handleImprimir() {
-    if (!docPDF) return
-    setImprimiendo(true)
-    try {
-      const blob = await pdf(docPDF).toBlob()
-      const url = URL.createObjectURL(blob)
-      const ventana = window.open(url)
-      if (ventana) {
-        ventana.addEventListener('load', () => {
-          ventana.focus()
-          ventana.print()
-          ventana.addEventListener('afterprint', () => URL.revokeObjectURL(url))
-        })
-      }
-      await registrar.mutateAsync({ plantilla_id: plantillaSeleccionada, contenido_renderizado: contenidoRenderizado })
-    } finally {
-      setImprimiendo(false)
-    }
-  }
 
   async function handleReimprimirFormula(formula: FormulaGuardada) {
     setImprimiendoFormulaId(formula.id)
@@ -175,381 +112,324 @@ export default function DetalleEncuentro() {
     setNotaAbierta(false)
   }
 
-  const initialValuesBorrador = e.estado === 'borrador' ? {
-    motivo_consulta: e.motivo_consulta ?? '',
-    plan_manejo: e.plan_manejo ?? '',
-    finalidad_consulta: e.finalidad_consulta,
-    causa_externa: e.causa_externa,
-    via_ingreso: e.via_ingreso,
-    encuentro_padre_id: e.encuentro_padre_id ?? '',
-    descripcion_ingreso: e.descripcion_ingreso ?? '',
-    signos_vitales: (e.signos_vitales as Record<string, string>) ?? {},
-    revision_sistemas: (e.revision_sistemas as Record<string, ValorNormalNotas>) ?? {},
-    examen_fisico: (e.examen_fisico as Record<string, string | ValorNormalNotas>) ?? {},
-    diagnosticos: e.diagnosticos ?? [],
-  } : undefined
-
   return (
     <div className="space-y-4">
-      {/* Tab bar */}
-      <div className="flex gap-1 bg-slate-100 p-1 rounded-lg w-fit">
-        {TABS.map(({ key, label }) => (
-          <button
-            key={key}
-            type="button"
-            onClick={() => setTab(key)}
-            className={`px-4 py-1.5 text-sm rounded-md transition-colors ${
-              tab === key ? 'bg-white shadow-sm font-medium' : 'text-slate-500 hover:text-slate-700'
-            }`}
-            style={tab === key ? { color: 'var(--hce-primary)' } : {}}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
 
-      {/* Consulta */}
-      {tab === 'consulta' && (
-        e.estado === 'borrador' ? (
-          <EncuentroForm
-            documento={id ?? ''}
-            genero={paciente?.genero}
-            initialValues={initialValuesBorrador}
-            onSubmit={(data: EncuentroInput) => actualizar.mutateAsync(data).then(() => {})}
-            onGuardarSeccion={(data) => actualizar.mutateAsync(data).then(() => {})}
-            isPending={actualizar.isPending}
-            submitLabel="Guardar cambios"
-            onFinalizar={() => finalizar.mutateAsync().then(() => {})}
-            isFinalizing={finalizar.isPending}
-          />
-        ) : (
-          <div className="space-y-4">
-            {/* Detalle del encuentro */}
-            <div className="card-hce p-6 space-y-5">
-              <div className="flex items-center justify-between">
-                <h3 className="card-title">Detalle del encuentro clínico</h3>
-                <span className="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">v{e.numero_version}</span>
-              </div>
-
-              <div className="grid grid-cols-3 gap-4 text-sm">
-                {[
-                  ['Fecha', new Date(e.fecha_atencion).toLocaleString('es-CO')],
-                  ['Finalidad', e.finalidad_consulta_nombre],
-                  ['Causa externa', e.causa_externa_nombre],
-                  ['Vía de ingreso', e.via_ingreso_nombre],
-                  ['Registrado por', e.creado_por],
-                ].map(([label, value]) => (
-                  <div key={label}>
-                    <p className="text-xs text-slate-400 mb-0.5">{label}</p>
-                    <p className="text-slate-800">{value}</p>
-                  </div>
-                ))}
-              </div>
-
-              <div className="border-t border-slate-100 pt-4 space-y-4">
-                {e.motivo_consulta && (
-                  <div>
-                    <p className="text-xs text-slate-400 mb-1">Motivo de consulta</p>
-                    <p className="text-sm text-slate-800 leading-relaxed">{e.motivo_consulta}</p>
-                  </div>
-                )}
-
-                {e.descripcion_ingreso && (
-                  <div>
-                    <p className="text-xs text-slate-400 mb-1">Descripción general del paciente</p>
-                    <p className="text-sm text-slate-800 leading-relaxed">{e.descripcion_ingreso}</p>
-                  </div>
-                )}
-
-                {e.signos_vitales && Object.keys(e.signos_vitales).length > 0 && (() => {
-                  const sv = e.signos_vitales!
-                  const camposSignos = campos.filter(c => c.seccion === 'signos_vitales')
-                  const rendered = new Set<string>()
-                  const chips: React.ReactNode[] = []
-
-                  for (const c of camposSignos) {
-                    if (rendered.has(c.clave) || !sv[c.clave]) continue
-                    rendered.add(c.clave)
-
-                    if (c.clave === 'ta_sistolica' && sv['ta_diastolica']) {
-                      rendered.add('ta_diastolica')
-                      chips.push(
-                        <div key="ta" className="bg-slate-50 rounded-lg p-2 text-center">
-                          <p className="text-sm font-semibold text-slate-800">{sv['ta_sistolica']}/{sv['ta_diastolica']}</p>
-                          <p className="text-xs text-slate-400">TA mmHg</p>
-                        </div>
-                      )
-                      continue
-                    }
-
-                    chips.push(
-                      <div key={c.clave} className="bg-slate-50 rounded-lg p-2 text-center">
-                        <p className="text-sm font-semibold text-slate-800">
-                          {sv[c.clave]}{c.unidad ? ` ${c.unidad}` : ''}
-                        </p>
-                        <p className="text-xs text-slate-400">{c.nombre}</p>
-                      </div>
-                    )
-                  }
-
-                  if (sv['peso'] && sv['talla']) {
-                    const p = parseFloat(sv['peso']), t = parseFloat(sv['talla'])
-                    if (p && t) chips.push(
-                      <div key="imc" className="bg-slate-50 rounded-lg p-2 text-center">
-                        <p className="text-sm font-semibold text-slate-800">{(p / Math.pow(t / 100, 2)).toFixed(1)}</p>
-                        <p className="text-xs text-slate-400">IMC kg/m²</p>
-                      </div>
-                    )
-                  }
-
-                  if (chips.length === 0) return null
-                  return (
-                    <div>
-                      <p className="text-xs text-slate-400 mb-2">Signos vitales</p>
-                      <div className="grid grid-cols-4 gap-3">{chips}</div>
-                    </div>
-                  )
-                })()}
-
-                {e.revision_sistemas && Object.keys(e.revision_sistemas).length > 0 && (() => {
-                  const rs = e.revision_sistemas!
-                  const camposRevision = campos.filter(c => c.seccion === 'revision_sistemas')
-                  const filas: React.ReactNode[] = []
-
-                  for (const c of camposRevision) {
-                    const v = rs[c.clave] as ValorNormalNotas | undefined
-                    if (!v) continue
-                    const notas = v.notas?.trim()
-                    filas.push(
-                      <div key={c.clave} className="flex gap-2 text-sm">
-                        <span className="text-slate-400 shrink-0 w-48">{c.nombre}</span>
-                        {v.normal
-                          ? <span className="text-green-700 text-xs">Niega</span>
-                          : <span className="text-amber-700 text-xs font-medium">Refiere{notas ? `: ${notas}` : ''}</span>
-                        }
-                      </div>
-                    )
-                  }
-
-                  if (filas.length === 0) return null
-                  return (
-                    <div>
-                      <p className="text-xs text-slate-400 mb-2">Revisión por sistemas</p>
-                      <div className="space-y-1">{filas}</div>
-                    </div>
-                  )
-                })()}
-
-                {e.examen_fisico && Object.keys(e.examen_fisico).length > 0 && (() => {
-                  const ef = e.examen_fisico!
-                  const camposExamen = campos.filter(c => c.seccion === 'examen_fisico')
-                  const filas: React.ReactNode[] = []
-
-                  for (const c of camposExamen) {
-                    const val = ef[c.clave]
-                    if (val === undefined || val === null) continue
-                    if (c.tipo === 'texto') {
-                      if (typeof val === 'string' && val.trim()) {
-                        filas.push(
-                          <div key={c.clave} className="flex gap-2 text-sm">
-                            <span className="text-slate-400 shrink-0 w-40">{c.nombre}</span>
-                            <span className="text-slate-800">{val}</span>
-                          </div>
-                        )
-                      }
-                    } else {
-                      const v = val as ValorNormalNotas
-                      const notas = v.notas?.trim()
-                      filas.push(
-                        <div key={c.clave} className="flex gap-2 text-sm">
-                          <span className="text-slate-400 shrink-0 w-40">{c.nombre}</span>
-                          <span className={`text-xs font-medium shrink-0 ${v.normal ? 'text-green-700' : 'text-amber-700'}`}>
-                            {v.normal ? 'Normal' : 'Anormal'}
-                          </span>
-                          {notas && <span className="text-slate-700">{notas}</span>}
-                        </div>
-                      )
-                    }
-                  }
-
-                  if (filas.length === 0) return null
-                  return (
-                    <div>
-                      <p className="text-xs text-slate-400 mb-2">Examen físico</p>
-                      <div className="space-y-1">{filas}</div>
-                    </div>
-                  )
-                })()}
-
-                {(e.diagnosticos && e.diagnosticos.length > 0) ? (
-                  <div>
-                    <p className="text-xs text-slate-400 mb-2">Diagnósticos</p>
-                    <div className="space-y-1.5">
-                      {e.diagnosticos.map((d) => (
-                        <div key={d.id} className="flex items-baseline gap-2 text-sm">
-                          <span className={`text-xs px-2 py-0.5 rounded-full shrink-0 ${
-                            d.tipo === 'principal' ? 'bg-blue-100 text-blue-700'
-                            : d.tipo === 'secundario' ? 'bg-slate-100 text-slate-600'
-                            : 'bg-amber-100 text-amber-700'
-                          }`}>
-                            {d.tipo === 'principal' ? 'Principal' : d.tipo === 'secundario' ? 'Secundario' : 'Nota'}
-                          </span>
-                          {d.codigo && <span className="font-mono text-xs text-slate-500">{d.codigo}</span>}
-                          <span className="text-slate-800">{d.descripcion}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ) : diagnostico ? (
-                  <div>
-                    <p className="text-xs text-slate-400 mb-1">Diagnóstico principal</p>
-                    <p className="text-sm text-slate-800 leading-relaxed">{diagnostico}</p>
-                  </div>
-                ) : null}
-
-                {e.plan_manejo && (
-                  <div>
-                    <p className="text-xs text-slate-400 mb-1">Plan de manejo</p>
-                    <p className="text-sm text-slate-800 leading-relaxed">{e.plan_manejo}</p>
-                  </div>
-                )}
-              </div>
-
-              <div className="border-t border-slate-100 pt-4 flex items-center justify-between">
-                <p className="text-xs text-slate-400">Este registro es inmutable. Use las notas de corrección para aclaraciones.</p>
-                {e.es_primer_control && (
-                  <span className="text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-1 rounded-full">
-                    Control sin cargo
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {/* Notas de corrección */}
-            <div className="card-hce p-5 space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <h3 className="card-title">Notas de corrección</h3>
-                  {notas.length > 0 && <span className="text-xs text-slate-400">({notas.length})</span>}
-                </div>
-                {!notaAbierta && (
-                  <button
-                    onClick={() => setNotaAbierta(true)}
-                    className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors"
-                  >
-                    + Agregar nota
-                  </button>
-                )}
-              </div>
-
-              {notas.length === 0 && !notaAbierta && (
-                <p className="text-xs text-slate-400">Sin notas registradas.</p>
-              )}
-
-              {notas.length > 0 && (
-                <div className="space-y-3">
-                  {notas.map((n) => (
-                    <div key={n.id} className="border-l-2 border-slate-200 pl-3 space-y-0.5">
-                      <p className="text-sm text-slate-800 leading-relaxed">{n.texto}</p>
-                      <p className="text-xs text-slate-400">
-                        {n.creado_por} · {new Date(n.fecha_creacion).toLocaleString('es-CO')}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {notaAbierta && (
-                <form onSubmit={handleGuardarNota} className="space-y-2">
-                  <textarea
-                    rows={3}
-                    value={notaTexto}
-                    onChange={(ev) => setNotaTexto(ev.target.value)}
-                    placeholder="Escribí la corrección o aclaración…"
-                    className="input-hce resize-none w-full"
-                    autoFocus
-                  />
-                  <div className="flex gap-2 justify-end">
-                    <button
-                      type="button"
-                      onClick={() => { setNotaAbierta(false); setNotaTexto('') }}
-                      className="btn-secondary text-xs"
-                    >
-                      Cancelar
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={!notaTexto.trim() || crearNota.isPending}
-                      className="btn-primary text-xs disabled:opacity-50"
-                    >
-                      {crearNota.isPending ? 'Guardando...' : 'Guardar nota'}
-                    </button>
-                  </div>
-                </form>
-              )}
-            </div>
-
-            {/* Historial de cambios */}
-            <div className="card-hce overflow-hidden">
-              <div className="flex items-center gap-2 px-5 py-4 border-b border-slate-100">
-                <Activity size={16} className="text-slate-400" />
-                <h3 className="card-title">Historial de cambios</h3>
-              </div>
-              <div className="divide-y divide-slate-100">
-                {logs.length === 0 && (
-                  <div className="px-5 py-6 text-center text-sm text-slate-400">Sin registros de cambios.</div>
-                )}
-                {logs.map((log) => (
-                  <div key={log.id} className="px-5 py-3 flex items-start gap-4 text-sm">
-                    <span className={`mt-0.5 text-xs font-medium px-2 py-0.5 rounded-full shrink-0 ${colorAccion[log.accion] ?? 'bg-slate-100 text-slate-600'}`}>
-                      {log.accion}
-                    </span>
-                    <div className="flex-1 min-w-0 text-xs text-slate-400 truncate">
-                      {log.datos_nuevos ?? log.datos_anteriores ?? '—'}
-                    </div>
-                    <div className="text-right shrink-0">
-                      <p className="text-xs text-slate-400">{log.usuario_id ?? '—'}</p>
-                      <p className="text-xs text-slate-400">{new Date(log.fecha_cambio).toLocaleString('es-CO')}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+      {/* Borrador banner */}
+      {e.estado === 'borrador' && (
+        <div
+          className="card-hce px-5 py-3 flex items-center justify-between border-l-4"
+          style={{ borderLeftColor: 'var(--hce-primary)' }}
+        >
+          <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--hce-text)' }}>
+            <Clock size={15} style={{ color: 'var(--hce-primary)' }} />
+            <span>Este encuentro está en <strong>borrador</strong> — aún no ha sido finalizado.</span>
           </div>
-        )
-      )}
-
-      {/* Antecedentes */}
-      {tab === 'antecedentes' && (
-        <div className="card-hce p-6">
-          <h3 className="card-title mb-4">Antecedentes del paciente</h3>
-          <AntecedentesTab documento={id ?? ''} genero={paciente?.genero} />
+          <button
+            onClick={() => finalizar.mutateAsync()}
+            disabled={finalizar.isPending}
+            className="btn-primary text-sm disabled:opacity-50 flex items-center gap-1.5"
+          >
+            <CheckCircle size={14} />
+            {finalizar.isPending ? 'Finalizando…' : 'Finalizar consulta'}
+          </button>
         </div>
       )}
 
-      {/* Fórmula */}
-      {tab === 'formula' && (
-        <div className="space-y-4">
-          <div className="flex justify-end">
-            <button
-              onClick={() => navigate(`/pacientes/${id}/encuentros/${encId}/formula`)}
-              className="btn-primary flex items-center gap-2"
-            >
-              <FileText size={15} />
-              Nueva fórmula
-            </button>
-          </div>
-
-          {formulas.length > 0 ? (
-            <div className="card-hce p-5 space-y-4">
-              <div className="flex items-center gap-2">
-                <h3 className="card-title">Fórmulas emitidas</h3>
-                <span className="ml-auto text-xs text-slate-400">
-                  {formulas.length} {formulas.length === 1 ? 'fórmula' : 'fórmulas'}
-                </span>
+      {/* Metadata del encuentro */}
+      <div className="card-hce px-5 py-4">
+        <div className="flex items-start justify-between gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-3 text-sm flex-1">
+            {([
+              ['Fecha', new Date(e.fecha_atencion).toLocaleString('es-CO')],
+              ['Finalidad', e.finalidad_consulta_nombre],
+              ['Vía de ingreso', e.via_ingreso_nombre],
+              ['Registrado por', e.creado_por],
+            ] as [string, string][]).map(([label, value]) => (
+              <div key={label}>
+                <p className="text-xs text-slate-400 mb-0.5">{label}</p>
+                <p style={{ color: 'var(--hce-text)' }}>{value}</p>
               </div>
+            ))}
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            {e.es_primer_control && (
+              <span className="text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full">
+                Control sin cargo
+              </span>
+            )}
+            <span className="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">
+              v{e.numero_version}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Notas médicas */}
+      <div className="card-hce p-5 space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <h3 className="card-title">Notas médicas</h3>
+            {notas.length > 0 && <span className="text-xs text-slate-400">({notas.length})</span>}
+          </div>
+          {!notaAbierta && (
+            <button onClick={() => setNotaAbierta(true)} className="btn-primary text-xs">
+              + Agregar nota
+            </button>
+          )}
+        </div>
+
+        {notaAbierta && (
+          <form onSubmit={handleGuardarNota} className="space-y-2">
+            <textarea
+              rows={3}
+              value={notaTexto}
+              onChange={ev => setNotaTexto(ev.target.value)}
+              placeholder="Escribí la corrección o aclaración…"
+              className="input-hce resize-none w-full"
+              autoFocus
+            />
+            <div className="flex gap-2 justify-end">
+              <button
+                type="button"
+                onClick={() => { setNotaAbierta(false); setNotaTexto('') }}
+                className="btn-secondary text-xs"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                disabled={!notaTexto.trim() || crearNota.isPending}
+                className="btn-primary text-xs disabled:opacity-50"
+              >
+                {crearNota.isPending ? 'Guardando...' : 'Guardar nota'}
+              </button>
+            </div>
+          </form>
+        )}
+
+        {notas.length === 0 && !notaAbierta && (
+          <p className="text-xs text-slate-400">
+            Sin notas. Usá esta sección para aclaraciones o correcciones sobre el encuentro.
+          </p>
+        )}
+
+        {notas.length > 0 && (
+          <div className="space-y-3">
+            {notas.map(n => (
+              <div key={n.id} className="border-l-2 border-slate-200 pl-3 space-y-0.5">
+                <p className="text-sm leading-relaxed" style={{ color: 'var(--hce-text)' }}>{n.texto}</p>
+                <p className="text-xs text-slate-400">
+                  {n.creado_por} · {new Date(n.fecha_creacion).toLocaleString('es-CO')}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Tab bar único */}
+      <div className="card-hce overflow-hidden">
+        <div className="flex overflow-x-auto border-b" style={{ borderColor: 'var(--hce-border)' }}>
+          {TABS.map(({ key, label }) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setTab(key)}
+              className={`px-4 py-2.5 text-sm whitespace-nowrap transition-colors border-b-2 -mb-px ${
+                tab === key ? 'font-medium' : 'border-transparent hover:text-slate-700'
+              }`}
+              style={
+                tab === key
+                  ? { color: 'var(--hce-primary)', borderColor: 'var(--hce-primary)' }
+                  : { color: 'var(--hce-text-muted)' }
+              }
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        <div className="p-5 min-h-36">
+
+          {/* Motivo */}
+          {tab === 'motivo' && (
+            <div className="space-y-4">
+              {e.motivo_consulta ? (
+                <div>
+                  <p className="text-xs text-slate-400 mb-1">Motivo de consulta</p>
+                  <p className="text-sm leading-relaxed" style={{ color: 'var(--hce-text)' }}>{e.motivo_consulta}</p>
+                </div>
+              ) : null}
+              {e.descripcion_ingreso ? (
+                <div>
+                  <p className="text-xs text-slate-400 mb-1">Descripción general del paciente</p>
+                  <p className="text-sm leading-relaxed" style={{ color: 'var(--hce-text)' }}>{e.descripcion_ingreso}</p>
+                </div>
+              ) : null}
+              {!e.motivo_consulta && !e.descripcion_ingreso && (
+                <p className="text-sm text-slate-400">Sin información registrada.</p>
+              )}
+            </div>
+          )}
+
+          {/* Signos vitales */}
+          {tab === 'signos' && (() => {
+            const sv = e.signos_vitales
+            if (!sv || Object.keys(sv).length === 0)
+              return <p className="text-sm text-slate-400">Sin signos vitales registrados.</p>
+
+            const camposSignos = campos.filter(c => c.seccion === 'signos_vitales')
+            const rendered = new Set<string>()
+            const chips: React.ReactNode[] = []
+
+            for (const c of camposSignos) {
+              if (rendered.has(c.clave) || !sv[c.clave]) continue
+              rendered.add(c.clave)
+              if (c.clave === 'ta_sistolica' && sv['ta_diastolica']) {
+                rendered.add('ta_diastolica')
+                chips.push(
+                  <div key="ta" className="bg-slate-50 rounded-lg p-3 text-center">
+                    <p className="text-base font-semibold text-slate-800">{sv['ta_sistolica']}/{sv['ta_diastolica']}</p>
+                    <p className="text-xs text-slate-400 mt-0.5">TA mmHg</p>
+                  </div>
+                )
+                continue
+              }
+              chips.push(
+                <div key={c.clave} className="bg-slate-50 rounded-lg p-3 text-center">
+                  <p className="text-base font-semibold text-slate-800">{sv[c.clave]}{c.unidad ? ` ${c.unidad}` : ''}</p>
+                  <p className="text-xs text-slate-400 mt-0.5">{c.nombre}</p>
+                </div>
+              )
+            }
+            if (sv['peso'] && sv['talla']) {
+              const p = parseFloat(sv['peso']), t = parseFloat(sv['talla'])
+              if (p && t) chips.push(
+                <div key="imc" className="bg-slate-50 rounded-lg p-3 text-center">
+                  <p className="text-base font-semibold text-slate-800">{(p / Math.pow(t / 100, 2)).toFixed(1)}</p>
+                  <p className="text-xs text-slate-400 mt-0.5">IMC kg/m²</p>
+                </div>
+              )
+            }
+            if (chips.length === 0) return <p className="text-sm text-slate-400">Sin signos vitales registrados.</p>
+            return <div className="grid grid-cols-4 gap-3">{chips}</div>
+          })()}
+
+          {/* Revisión por sistemas */}
+          {tab === 'revision' && (() => {
+            const rs = e.revision_sistemas
+            if (!rs || Object.keys(rs).length === 0)
+              return <p className="text-sm text-slate-400">Sin revisión por sistemas registrada.</p>
+
+            const camposRevision = campos.filter(c => c.seccion === 'revision_sistemas')
+            const filas: React.ReactNode[] = []
+            for (const c of camposRevision) {
+              const v = rs[c.clave] as ValorNormalNotas | undefined
+              if (!v) continue
+              const detalle = v.notas?.trim()
+              filas.push(
+                <div key={c.clave} className="flex items-center gap-3 py-2 border-b border-slate-100 last:border-0">
+                  <span className="text-sm flex-1" style={{ color: 'var(--hce-text)' }}>{c.nombre}</span>
+                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full shrink-0 ${
+                    v.normal ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
+                  }`}>
+                    {v.normal ? 'Niega' : 'Refiere'}
+                  </span>
+                  {detalle && <span className="text-xs text-slate-500 max-w-xs">{detalle}</span>}
+                </div>
+              )
+            }
+            if (filas.length === 0) return <p className="text-sm text-slate-400">Sin revisión por sistemas registrada.</p>
+            return <div>{filas}</div>
+          })()}
+
+          {/* Examen físico */}
+          {tab === 'examen' && (() => {
+            const ef = e.examen_fisico
+            if (!ef || Object.keys(ef).length === 0)
+              return <p className="text-sm text-slate-400">Sin examen físico registrado.</p>
+
+            const camposExamen = campos.filter(c => c.seccion === 'examen_fisico')
+            const filas: React.ReactNode[] = []
+            for (const c of camposExamen) {
+              const val = ef[c.clave]
+              if (val === undefined || val === null) continue
+              if (c.tipo === 'texto') {
+                if (typeof val === 'string' && val.trim()) {
+                  filas.push(
+                    <div key={c.clave} className="flex items-center gap-3 py-2 border-b border-slate-100 last:border-0">
+                      <span className="text-sm flex-1" style={{ color: 'var(--hce-text)' }}>{c.nombre}</span>
+                      <span className="text-sm text-slate-700">{val}</span>
+                    </div>
+                  )
+                }
+              } else {
+                const v = val as ValorNormalNotas
+                const detalle = v.notas?.trim()
+                filas.push(
+                  <div key={c.clave} className="flex items-center gap-3 py-2 border-b border-slate-100 last:border-0">
+                    <span className="text-sm flex-1" style={{ color: 'var(--hce-text)' }}>{c.nombre}</span>
+                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full shrink-0 ${
+                      v.normal ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
+                    }`}>
+                      {v.normal ? 'Normal' : 'Anormal'}
+                    </span>
+                    {detalle && <span className="text-xs text-slate-500 max-w-xs">{detalle}</span>}
+                  </div>
+                )
+              }
+            }
+            if (filas.length === 0) return <p className="text-sm text-slate-400">Sin examen físico registrado.</p>
+            return <div>{filas}</div>
+          })()}
+
+          {/* Diagnósticos */}
+          {tab === 'diagnosticos' && (
+            <div className="space-y-4">
+              {e.diagnosticos && e.diagnosticos.length > 0 ? (
+                <div className="space-y-2">
+                  {e.diagnosticos.map(d => (
+                    <div key={d.id} className="flex items-baseline gap-2 text-sm">
+                      <span className={`text-xs px-2 py-0.5 rounded-full shrink-0 ${
+                        d.tipo === 'principal' ? 'bg-blue-100 text-blue-700'
+                        : d.tipo === 'secundario' ? 'bg-slate-100 text-slate-600'
+                        : 'bg-amber-100 text-amber-700'
+                      }`}>
+                        {d.tipo === 'principal' ? 'Principal' : d.tipo === 'secundario' ? 'Secundario' : 'Nota'}
+                      </span>
+                      {d.codigo && <span className="font-mono text-xs text-slate-500">{d.codigo}</span>}
+                      <span style={{ color: 'var(--hce-text)' }}>{d.descripcion}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : diagnostico ? (
+                <div>
+                  <p className="text-xs text-slate-400 mb-1">Diagnóstico principal</p>
+                  <p className="text-sm" style={{ color: 'var(--hce-text)' }}>{diagnostico}</p>
+                </div>
+              ) : (
+                <p className="text-sm text-slate-400">Sin diagnósticos registrados.</p>
+              )}
+              {e.plan_manejo && (
+                <div>
+                  <p className="text-xs text-slate-400 mb-1">Plan de manejo</p>
+                  <p className="text-sm leading-relaxed" style={{ color: 'var(--hce-text)' }}>{e.plan_manejo}</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Antecedentes */}
+          {tab === 'antecedentes' && (
+            <AntecedentesTab documento={id ?? ''} genero={paciente?.genero} readOnly />
+          )}
+
+          {/* Fórmula */}
+          {tab === 'formula' && (
+            formulas.length > 0 ? (
               <div className="space-y-3">
-                {formulas.map((f) => (
+                {formulas.map(f => (
                   <div key={f.id} className="border border-slate-100 rounded-lg p-4 space-y-2">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2 text-xs text-slate-400">
@@ -566,84 +446,53 @@ export default function DetalleEncuentro() {
                       </button>
                     </div>
                     <div className="space-y-1">
-                      {f.medicamentos.map((m) => (
+                      {f.medicamentos.map(m => (
                         <div key={m.id} className="text-sm text-slate-700">
                           <span className="font-medium">{m.nombre_medicamento}</span>
                           {m.concentracion && <span className="text-slate-400"> {m.concentracion}</span>}
                           <span className="text-slate-400"> — {m.dosis}, {m.frecuencia}</span>
-                          {m.duracion_tratamiento && (
-                            <span className="text-slate-400"> × {m.duracion_tratamiento}</span>
-                          )}
+                          {m.duracion_tratamiento && <span className="text-slate-400"> × {m.duracion_tratamiento}</span>}
                         </div>
                       ))}
                     </div>
                   </div>
                 ))}
               </div>
-            </div>
-          ) : (
-            <div className="card-hce p-10 text-center text-sm text-slate-400">
-              Sin fórmulas emitidas para este encuentro.
-            </div>
+            ) : (
+              <p className="text-sm text-slate-400">Sin fórmulas emitidas para este encuentro.</p>
+            )
           )}
-        </div>
-      )}
 
-      {/* Consentimiento */}
-      {tab === 'consentimiento' && (
-        <div className="card-hce p-5 space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="card-title">Consentimiento informado</h3>
-            {consentimientoPrevio && (
-              <span className="text-xs text-slate-400">
-                Generado el {new Date(consentimientoPrevio.fecha_generacion).toLocaleDateString('es-CO')}
+        </div>
+      </div>
+
+      {/* Historial de cambios */}
+      <div className="card-hce overflow-hidden">
+        <div className="flex items-center gap-2 px-5 py-4 border-b border-slate-100">
+          <Activity size={16} className="text-slate-400" />
+          <h3 className="card-title">Historial de cambios</h3>
+        </div>
+        <div className="divide-y divide-slate-100">
+          {logs.length === 0 && (
+            <div className="px-5 py-6 text-center text-sm text-slate-400">Sin registros de cambios.</div>
+          )}
+          {logs.map(log => (
+            <div key={log.id} className="px-5 py-3 flex items-start gap-4 text-sm">
+              <span className={`mt-0.5 text-xs font-medium px-2 py-0.5 rounded-full shrink-0 ${colorAccion[log.accion] ?? 'bg-slate-100 text-slate-600'}`}>
+                {log.accion}
               </span>
-            )}
-          </div>
-
-          <div className="flex items-end gap-3">
-            <div className="flex-1">
-              <label className="label-hce">Plantilla</label>
-              <select
-                value={plantillaSeleccionada}
-                onChange={(ev) => setPlantillaSeleccionada(ev.target.value)}
-                className="input-hce"
-              >
-                <option value="">Seleccioná una plantilla…</option>
-                {plantillas.filter((p) => p.esta_activo).map((p) => (
-                  <option key={p.id} value={p.id}>{p.nombre}</option>
-                ))}
-              </select>
+              <div className="flex-1 min-w-0 text-xs text-slate-400 truncate">
+                {log.datos_nuevos ?? log.datos_anteriores ?? '—'}
+              </div>
+              <div className="text-right shrink-0">
+                <p className="text-xs text-slate-400">{log.usuario_id ?? '—'}</p>
+                <p className="text-xs text-slate-400">{new Date(log.fecha_cambio).toLocaleString('es-CO')}</p>
+              </div>
             </div>
-
-            <button
-              onClick={handleImprimir}
-              disabled={!plantillaSeleccionada || imprimiendo}
-              className="flex items-center gap-2 text-sm px-4 py-2 rounded-md border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors disabled:opacity-40"
-            >
-              <Printer size={14} />
-              {imprimiendo ? 'Preparando...' : 'Imprimir'}
-            </button>
-
-            {docPDF && (
-              <PDFDownloadLink
-                document={docPDF}
-                fileName={`consentimiento_${paciente?.numero_documento ?? id}_${Date.now()}.pdf`}
-              >
-                {({ loading }) => (
-                  <button
-                    disabled={loading || !plantillaSeleccionada}
-                    className="flex items-center gap-2 text-sm px-4 py-2 rounded-md border border-blue-700 text-blue-700 hover:bg-blue-50 transition-colors disabled:opacity-40"
-                  >
-                    <Download size={14} />
-                    {loading ? 'Generando...' : 'Descargar PDF'}
-                  </button>
-                )}
-              </PDFDownloadLink>
-            )}
-          </div>
+          ))}
         </div>
-      )}
+      </div>
+
     </div>
   )
 }

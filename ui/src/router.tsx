@@ -5,12 +5,12 @@ import PacienteLayout from './layouts/PacienteLayout'
 import Login from './pages/Login'
 import Inicio from './pages/Inicio'
 import NuevaConsulta from './pages/NuevaConsulta'
+import EncuentrosGlobal from './pages/EncuentrosGlobal'
 import ListaPacientes from './pages/ListaPacientes'
 import Configuracion from './pages/Configuracion'
 import PanelAdmin from './pages/admin/PanelAdmin'
 import FichaPaciente from './pages/pacientes/FichaPaciente'
 import HistorialEncuentros from './pages/pacientes/HistorialEncuentros'
-import NuevoEncuentro from './pages/pacientes/NuevoEncuentro'
 import DetalleEncuentro from './pages/pacientes/DetalleEncuentro'
 import AuditoriaPaciente from './pages/pacientes/AuditoriaPaciente'
 import NuevaFormula from './pages/pacientes/NuevaFormula'
@@ -37,7 +37,8 @@ const router = createBrowserRouter([
         element: <RootLayout />,
         children: [
           { index: true, element: <Inicio /> },
-          { path: 'nueva-consulta', element: <NuevaConsulta /> },
+          { path: 'nueva-consulta', element: <EncuentrosGlobal /> },
+          { path: 'nueva-consulta/nuevo', element: <NuevaConsulta /> },
           { path: 'pacientes', element: <ListaPacientes /> },
           { path: 'pacientes/nuevo', element: <NuevoPaciente /> },
           { path: 'configuracion', element: <Configuracion /> },
@@ -66,7 +67,6 @@ const router = createBrowserRouter([
             children: [
               { index: true, element: <FichaPaciente /> },
               { path: 'encuentros', element: <HistorialEncuentros /> },
-              { path: 'encuentros/nuevo', element: <NuevoEncuentro /> },
               { path: 'encuentros/:encId', element: <DetalleEncuentro /> },
               { path: 'encuentros/:encId/formula', element: <NuevaFormula /> },
               { path: 'auditoria', element: <AuditoriaPaciente /> },

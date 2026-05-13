@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Plus, X, CheckCircle } from 'lucide-react'
 import {
   useAntecedentes,
@@ -16,6 +16,10 @@ const ESTADOS_BOOLEANO = [
   { value: 'no_sabe',   label: 'No sabe' },
   { value: 'no_aplica', label: 'No aplica' },
 ]
+
+const LABELS_BOOLEANO: Record<string, string> = {
+  si: 'Sí', no: 'No', no_sabe: 'No sabe', no_aplica: 'No aplica',
+}
 
 function normalizarBooleano(v: string): string {
   if (v === 'true') return 'si'
@@ -42,6 +46,44 @@ function Seccion({ titulo, children }: { titulo: string; children: React.ReactNo
   )
 }
 
+// ── Read-only display ─────────────────────────────────────────────────────────
+
+function PreguntaReadOnly({ pregunta, answer }: { pregunta: PreguntaConRespuesta; answer: AnswerState }) {
+  const { tipo_respuesta, opciones } = pregunta
+  if (!answer.valor) return null
+
+  if (tipo_respuesta === 'lista') {
+    let items: Record<string, string>[] = []
+    try { items = JSON.parse(answer.valor) } catch { return null }
+    if (!items.length) return null
+    const campos = opciones as ListaCampo[]
+    return (
+      <div className="space-y-1.5 border-b border-slate-100 pb-3 last:border-0 last:pb-0">
+        <p className="text-sm text-slate-500">{pregunta.texto}</p>
+        <div className="flex flex-wrap gap-1.5">
+          {items.map((item, i) => (
+            <span key={i} className="bg-slate-100 rounded-full px-3 py-1 text-sm text-slate-700">
+              {campos.map(c => item[c.campo]).filter(Boolean).join(' · ')}
+            </span>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  const display = tipo_respuesta === 'booleano' ? (LABELS_BOOLEANO[answer.valor] ?? answer.valor) : answer.valor
+
+  return (
+    <div className="flex gap-4 items-start border-b border-slate-100 pb-3 last:border-0 last:pb-0">
+      <span className="text-sm text-slate-500 flex-1">{pregunta.texto}</span>
+      <div className="text-right shrink-0">
+        <span className="text-sm text-slate-800">{display}</span>
+        {answer.detalle && <p className="text-xs text-slate-400 mt-0.5">{answer.detalle}</p>}
+      </div>
+    </div>
+  )
+}
+
 // ── Lista type field ──────────────────────────────────────────────────────────
 
 function ListaField({ campos, valor, onChange }: {
@@ -49,17 +91,16 @@ function ListaField({ campos, valor, onChange }: {
   valor: string
   onChange: (v: string) => void
 }) {
-  const items: Record<string, string>[] = useMemo(() => {
+  const items: Record<string, string>[] = (() => {
     try { return JSON.parse(valor || '[]') } catch { return [] }
-  }, [valor])
+  })()
 
   const [draft, setDraft] = useState<Record<string, string>>({})
 
   function agregar() {
     const requeridos = campos.filter(c => c.requerido)
     if (requeridos.some(c => !draft[c.campo]?.trim())) return
-    const updated = [...items, draft]
-    onChange(JSON.stringify(updated))
+    onChange(JSON.stringify([...items, draft]))
     setDraft({})
   }
 
@@ -177,7 +218,15 @@ function PreguntaField({ pregunta, answer, onValor, onDetalle }: {
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export default function AntecedentesTab({ documento, genero }: { documento: string; genero?: string }) {
+export default function AntecedentesTab({
+  documento,
+  genero,
+  readOnly = false,
+}: {
+  documento: string
+  genero?: string
+  readOnly?: boolean
+}) {
   const { data, isLoading } = useAntecedentes(documento)
   const guardar = useGuardarAntecedentes(documento)
   const [answers, setAnswers] = useState<Record<string, AnswerState>>({})
@@ -222,40 +271,59 @@ export default function AntecedentesTab({ documento, genero }: { documento: stri
   const esGineco = genero === 'F' || genero === 'X'
   const cats = CATEGORIAS.filter(c => c.key !== 'gineco' || esGineco)
 
+  const categoriasVisibles = cats
+    .map(({ key, label }) => {
+      const preguntas = (data?.[key] ?? []).filter(p =>
+        readOnly ? !!answers[p.id]?.valor : true
+      )
+      return { key, label, preguntas }
+    })
+    .filter(c => c.preguntas.length > 0)
+
+  if (readOnly && categoriasVisibles.length === 0) {
+    return <p className="text-sm text-slate-400">Sin antecedentes registrados para este paciente.</p>
+  }
+
   return (
     <div className="space-y-4">
-      <p className="text-xs text-slate-400">
-        Esta información pertenece al paciente y queda disponible en todas las consultas.
-      </p>
+      {!readOnly && (
+        <p className="text-xs text-slate-400">
+          Esta información pertenece al paciente y queda disponible en todas las consultas.
+        </p>
+      )}
 
-      {cats.map(({ key, label }) => {
-        const preguntas = data?.[key] ?? []
-        if (preguntas.length === 0) return null
-        return (
-          <Seccion key={key} titulo={label}>
-            {preguntas.map(p => (
-              <PreguntaField
-                key={p.id}
-                pregunta={p}
-                answer={answers[p.id] ?? { valor: '', detalle: '' }}
-                onValor={v => setValor(p.id, v)}
-                onDetalle={d => setDetalle(p.id, d)}
-              />
-            ))}
-          </Seccion>
-        )
-      })}
+      {categoriasVisibles.map(({ key, label, preguntas }) => (
+        <Seccion key={key} titulo={label}>
+          {preguntas.map(p => readOnly ? (
+            <PreguntaReadOnly
+              key={p.id}
+              pregunta={p}
+              answer={answers[p.id] ?? { valor: '', detalle: '' }}
+            />
+          ) : (
+            <PreguntaField
+              key={p.id}
+              pregunta={p}
+              answer={answers[p.id] ?? { valor: '', detalle: '' }}
+              onValor={v => setValor(p.id, v)}
+              onDetalle={d => setDetalle(p.id, d)}
+            />
+          ))}
+        </Seccion>
+      ))}
 
-      <div className="flex justify-end items-center gap-3 pt-2">
-        {guardado && (
-          <span className="flex items-center gap-1.5 text-sm text-green-600">
-            <CheckCircle size={15} /> Guardado
-          </span>
-        )}
-        <button type="button" className="btn-primary" onClick={handleGuardar} disabled={guardar.isPending}>
-          {guardar.isPending ? 'Guardando...' : 'Guardar antecedentes'}
-        </button>
-      </div>
+      {!readOnly && (
+        <div className="flex justify-end items-center gap-3 pt-2">
+          {guardado && (
+            <span className="flex items-center gap-1.5 text-sm text-green-600">
+              <CheckCircle size={15} /> Guardado
+            </span>
+          )}
+          <button type="button" className="btn-primary" onClick={handleGuardar} disabled={guardar.isPending}>
+            {guardar.isPending ? 'Guardando...' : 'Guardar antecedentes'}
+          </button>
+        </div>
+      )}
     </div>
   )
 }

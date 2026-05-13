@@ -1,16 +1,50 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router'
-import { ChevronRight, Search, X } from 'lucide-react'
-import { useEncuentros, type FiltrosEncuentro } from '../../api/encuentros'
+import { Search, X, ClipboardList, CheckCircle, Clock, ChevronRight } from 'lucide-react'
+import { useEncuentros, type FiltrosEncuentro, type Encuentro } from '../../api/encuentros'
+
+const FINALIDADES = [
+  { value: '', label: 'Todas' },
+  { value: '10', label: 'Primera vez' },
+  { value: '11', label: 'Control' },
+  { value: '12', label: 'Urgencias' },
+]
+
+function formatFecha(iso: string) {
+  return new Date(iso).toLocaleDateString('es-CO', {
+    day: '2-digit', month: 'short', year: 'numeric',
+  })
+}
+
+function BadgeEstado({ estado }: { estado: Encuentro['estado'] }) {
+  if (estado === 'finalizado') {
+    return (
+      <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-green-100 text-green-700">
+        <CheckCircle size={10} /> Finalizado
+      </span>
+    )
+  }
+  return (
+    <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
+      <Clock size={10} /> Borrador
+    </span>
+  )
+}
 
 export default function HistorialEncuentros() {
   const { id } = useParams()
   const navigate = useNavigate()
 
+  const [form, setForm] = useState({ desde: '', hasta: '', diagnostico: '', finalidad: '' })
   const [filtros, setFiltros] = useState<FiltrosEncuentro>({})
-  const [form, setForm] = useState({ desde: '', hasta: '', diagnostico: '' })
+  const [filtrosDebounced, setFiltrosDebounced] = useState<FiltrosEncuentro>({})
 
-  const { data: encuentros = [], isLoading, isError } = useEncuentros(id ?? '', filtros)
+  useEffect(() => {
+    const t = setTimeout(() => setFiltrosDebounced(filtros), 350)
+    return () => clearTimeout(t)
+  }, [filtros])
+
+  const { data: encuentros = [], isLoading, isError } = useEncuentros(id ?? '', filtrosDebounced)
 
   function aplicar() {
     setFiltros({
@@ -21,83 +55,165 @@ export default function HistorialEncuentros() {
   }
 
   function limpiar() {
-    setForm({ desde: '', hasta: '', diagnostico: '' })
+    setForm({ desde: '', hasta: '', diagnostico: '', finalidad: '' })
     setFiltros({})
+    setFiltrosDebounced({})
   }
 
   const hayFiltros = !!(filtros.desde || filtros.hasta || filtros.diagnostico)
 
+  // Filtrar por finalidad en cliente (el endpoint no lo soporta actualmente)
+  const visibles = form.finalidad
+    ? encuentros.filter(e => e.finalidad_consulta === form.finalidad)
+    : encuentros
+
   return (
     <div className="space-y-4">
-      <p className="text-sm text-slate-500">
-        {isLoading ? 'Cargando...' : `${encuentros.length} encuentro(s)${hayFiltros ? ' (filtrado)' : ''}`}
-      </p>
-
       {/* Filtros */}
-      <div className="bg-white rounded-xl border border-slate-200 px-5 py-4 flex flex-wrap gap-3 items-end">
-        <div>
-          <label className="block text-xs text-slate-400 mb-1">Desde</label>
-          <input type="date" value={form.desde} onChange={(e) => setForm((p) => ({ ...p, desde: e.target.value }))}
-            className="border border-slate-200 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-        </div>
-        <div>
-          <label className="block text-xs text-slate-400 mb-1">Hasta</label>
-          <input type="date" value={form.hasta} onChange={(e) => setForm((p) => ({ ...p, hasta: e.target.value }))}
-            className="border border-slate-200 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-        </div>
-        <div className="flex-1 min-w-40">
-          <label className="block text-xs text-slate-400 mb-1">Diagnóstico</label>
-          <input type="text" value={form.diagnostico} placeholder="Código CIE-10 o descripción"
-            onChange={(e) => setForm((p) => ({ ...p, diagnostico: e.target.value }))}
-            onKeyDown={(e) => e.key === 'Enter' && aplicar()}
-            className="input-hce" />
-        </div>
-        <div className="flex gap-2">
-          <button onClick={aplicar}
-            className="btn-primary">
-            <Search size={13} /> Filtrar
-          </button>
-          {hayFiltros && (
-            <button onClick={limpiar}
-              className="btn-secondary">
-              <X size={13} /> Limpiar
+      <div className="card-hce px-5 py-4 space-y-3">
+        <div className="flex flex-wrap gap-3 items-end">
+          <div>
+            <label className="label-hce">Desde</label>
+            <input
+              type="date"
+              value={form.desde}
+              onChange={e => setForm(p => ({ ...p, desde: e.target.value }))}
+              className="input-hce"
+            />
+          </div>
+          <div>
+            <label className="label-hce">Hasta</label>
+            <input
+              type="date"
+              value={form.hasta}
+              onChange={e => setForm(p => ({ ...p, hasta: e.target.value }))}
+              className="input-hce"
+            />
+          </div>
+          <div>
+            <label className="label-hce">Finalidad</label>
+            <select
+              className="input-hce"
+              value={form.finalidad}
+              onChange={e => setForm(p => ({ ...p, finalidad: e.target.value }))}
+            >
+              {FINALIDADES.map(f => (
+                <option key={f.value} value={f.value}>{f.label}</option>
+              ))}
+            </select>
+          </div>
+          <div className="flex-1 min-w-48">
+            <label className="label-hce">Diagnóstico</label>
+            <input
+              type="text"
+              value={form.diagnostico}
+              placeholder="Código CIE-10 o descripción"
+              onChange={e => setForm(p => ({ ...p, diagnostico: e.target.value }))}
+              onKeyDown={e => e.key === 'Enter' && aplicar()}
+              className="input-hce"
+            />
+          </div>
+          <div className="flex gap-2 pb-0.5">
+            <button onClick={aplicar} className="btn-primary">
+              <Search size={13} /> Filtrar
             </button>
-          )}
+            {(hayFiltros || form.finalidad) && (
+              <button onClick={limpiar} className="btn-secondary">
+                <X size={13} /> Limpiar
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
-      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-        <div className="divide-y divide-slate-100">
-          {isError && (
-            <div className="px-5 py-8 text-center text-sm text-red-500">
-              Error al cargar encuentros. Intenta de nuevo.
-            </div>
-          )}
+      {/* Tabla */}
+      <div className="card-hce overflow-hidden">
+        <div
+          className="px-5 py-2 text-xs border-b"
+          style={{ background: 'var(--hce-bg)', borderColor: 'var(--hce-border)', color: 'var(--hce-text-muted)' }}
+        >
+          {isLoading
+            ? 'Cargando…'
+            : `${visibles.length} encuentro${visibles.length !== 1 ? 's' : ''}${hayFiltros || form.finalidad ? ' (filtrado)' : ''}`}
+        </div>
 
-          {!isLoading && !isError && encuentros.length === 0 && (
-            <div className="px-5 py-8 text-center text-sm text-slate-400">
-              No hay encuentros registrados para este paciente.
-            </div>
-          )}
-
-          {encuentros.map((e) => (
-            <button
-              key={e.encuentro_id}
-              onClick={() => navigate(`/pacientes/${id}/encuentros/${e.encuentro_id}`)}
-              className="w-full px-5 py-4 flex items-center justify-between hover:bg-slate-50 transition-colors text-left"
-            >
-              <div>
-                <p className="text-sm font-medium text-slate-800">
-                  {e.codigo_diagnostico_principal}
-                  {e.descripcion_diagnostico ? ` - ${e.descripcion_diagnostico}` : ''}
-                </p>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  {e.motivo_consulta} · {new Date(e.fecha_atencion).toLocaleString('es-CO')} · v{e.numero_version}
-                </p>
-              </div>
-              <ChevronRight size={16} className="text-slate-400" />
-            </button>
-          ))}
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr
+                className="text-left text-xs font-medium border-b"
+                style={{
+                  background: 'var(--hce-bg)',
+                  borderColor: 'var(--hce-border)',
+                  color: 'var(--hce-text-muted)',
+                }}
+              >
+                <th className="px-5 py-2.5">Fecha</th>
+                <th className="px-4 py-2.5">Finalidad</th>
+                <th className="px-4 py-2.5">Diagnóstico</th>
+                <th className="px-4 py-2.5">Estado</th>
+                <th className="px-4 py-2.5" />
+              </tr>
+            </thead>
+            <tbody className="divide-y" style={{ borderColor: 'var(--hce-border)' }}>
+              {isError && (
+                <tr>
+                  <td colSpan={5} className="px-5 py-8 text-center text-sm text-red-500">
+                    Error al cargar. Intenta de nuevo.
+                  </td>
+                </tr>
+              )}
+              {!isLoading && !isError && visibles.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="px-5 py-12 text-center">
+                    <ClipboardList size={28} className="mx-auto mb-2 text-slate-300" />
+                    <p className="text-sm" style={{ color: 'var(--hce-text-muted)' }}>
+                      {hayFiltros || form.finalidad
+                        ? 'Sin encuentros para esos filtros.'
+                        : 'Este paciente no tiene encuentros registrados.'}
+                    </p>
+                  </td>
+                </tr>
+              )}
+              {visibles.map(e => (
+                <tr
+                  key={e.encuentro_id}
+                  className="cursor-pointer transition-colors"
+                  style={{ color: 'var(--hce-text)' }}
+                  onClick={() => navigate(`/pacientes/${id}/encuentros/${e.encuentro_id}`)}
+                  onMouseEnter={el => (el.currentTarget.style.background = 'var(--hce-bg)')}
+                  onMouseLeave={el => (el.currentTarget.style.background = '')}
+                >
+                  <td className="px-5 py-3 whitespace-nowrap" style={{ color: 'var(--hce-text-muted)' }}>
+                    {formatFecha(e.fecha_atencion)}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-xs" style={{ color: 'var(--hce-text-muted)' }}>
+                    {e.finalidad_consulta_nombre}
+                  </td>
+                  <td className="px-4 py-3 max-w-xs">
+                    {e.descripcion_diagnostico ? (
+                      <p className="truncate text-xs" style={{ color: 'var(--hce-text-muted)' }}>
+                        {e.codigo_diagnostico_principal && (
+                          <span className="font-mono mr-1.5">{e.codigo_diagnostico_principal}</span>
+                        )}
+                        {e.descripcion_diagnostico}
+                      </p>
+                    ) : (
+                      <span className="text-xs" style={{ color: 'var(--hce-text)' }}>
+                        {e.motivo_consulta.slice(0, 60)}{e.motivo_consulta.length > 60 ? '…' : ''}
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    <BadgeEstado estado={e.estado} />
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <ChevronRight size={15} className="text-slate-300 inline" />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>

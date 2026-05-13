@@ -495,6 +495,150 @@ func actualizarBorradorEncuentro(ctx context.Context, db *pgxpool.Pool, rowID st
 	return e, nil
 }
 
+// ── Listado global de encuentros ─────────────────────────────────────────────
+
+// EncuentrosGlobalRouter expone GET /encuentros (listado global, no por paciente).
+func EncuentrosGlobalRouter(db *pgxpool.Pool) http.Handler {
+	h := &EncuentroHandler{db: db}
+	r := chi.NewRouter()
+	r.Get("/", h.listarGlobal)
+	return r
+}
+
+type EncuentroResumen struct {
+	EncuentroID                string    `json:"encuentro_id"`
+	FechaAtencion              time.Time `json:"fecha_atencion"`
+	Estado                     string    `json:"estado"`
+	FinalidadConsulta          string    `json:"finalidad_consulta"`
+	FinalidadConsultaNombre    string    `json:"finalidad_consulta_nombre"`
+	MotivoConsulta             string    `json:"motivo_consulta"`
+	PacienteDocumento          string    `json:"paciente_documento"`
+	TipoDocumento              string    `json:"tipo_documento"`
+	PacienteNombre             string    `json:"paciente_nombre"`
+	CodigoDiagnosticoPrincipal string    `json:"codigo_diagnostico_principal"`
+	DescripcionDiagnostico     *string   `json:"descripcion_diagnostico"`
+}
+
+type EncuentrosGlobalResp struct {
+	Encuentros []EncuentroResumen `json:"encuentros"`
+	Total      int                `json:"total"`
+}
+
+// GET /encuentros?q=&desde=&hasta=&finalidad=&estado=&page=&limit=
+func (h *EncuentroHandler) listarGlobal(w http.ResponseWriter, r *http.Request) {
+	q := strings.TrimSpace(r.URL.Query().Get("q"))
+	desde := strings.TrimSpace(r.URL.Query().Get("desde"))
+	hasta := strings.TrimSpace(r.URL.Query().Get("hasta"))
+	finalidad := strings.TrimSpace(r.URL.Query().Get("finalidad"))
+	estado := strings.TrimSpace(r.URL.Query().Get("estado"))
+
+	page := 1
+	limit := 30
+	if v := r.URL.Query().Get("page"); v != "" {
+		if n, err := fmt.Sscanf(v, "%d", &page); n == 0 || err != nil || page < 1 {
+			page = 1
+		}
+	}
+	if v := r.URL.Query().Get("limit"); v != "" {
+		if n, err := fmt.Sscanf(v, "%d", &limit); n == 0 || err != nil || limit < 1 || limit > 100 {
+			limit = 30
+		}
+	}
+	offset := (page - 1) * limit
+
+	where := `ec.es_ultima_version = TRUE AND ec.esta_activo = TRUE`
+	args := []any{}
+
+	if q != "" {
+		args = append(args, "%"+strings.ToLower(q)+"%")
+		idx := fmt.Sprintf("%d", len(args))
+		where += ` AND (
+			LOWER(ec.paciente_documento) LIKE $` + idx + `
+			OR LOWER(p.nombre_primero || ' ' || COALESCE(p.nombre_segundo,'') || ' ' || p.apellido_primero || ' ' || COALESCE(p.apellido_segundo,'')) LIKE $` + idx + `
+			OR LOWER(p.apellido_primero || ' ' || COALESCE(p.apellido_segundo,'')) LIKE $` + idx + `
+		)`
+	}
+	if desde != "" {
+		args = append(args, desde)
+		where += ` AND ec.fecha_atencion >= $` + fmt.Sprintf("%d", len(args))
+	}
+	if hasta != "" {
+		args = append(args, hasta+" 23:59:59")
+		where += ` AND ec.fecha_atencion <= $` + fmt.Sprintf("%d", len(args))
+	}
+	if finalidad != "" {
+		args = append(args, finalidad)
+		where += ` AND ec.finalidad_consulta = $` + fmt.Sprintf("%d", len(args))
+	}
+	if estado != "" {
+		args = append(args, estado)
+		where += ` AND ec.estado = $` + fmt.Sprintf("%d", len(args))
+	}
+
+	argsCount := append(args, limit, offset)
+	idxLimit := fmt.Sprintf("%d", len(argsCount)-1)
+	idxOffset := fmt.Sprintf("%d", len(argsCount))
+
+	query := `
+		SELECT
+			ec.encuentro_id,
+			ec.fecha_atencion,
+			ec.estado,
+			ec.finalidad_consulta,
+			CASE ec.finalidad_consulta
+				WHEN '10' THEN 'Primera vez'
+				WHEN '11' THEN 'Control'
+				WHEN '12' THEN 'Urgencias'
+				ELSE ec.finalidad_consulta
+			END,
+			ec.motivo_consulta,
+			ec.paciente_documento,
+			p.tipo_documento,
+			TRIM(p.nombre_primero || ' ' || COALESCE(p.nombre_segundo || ' ','') || p.apellido_primero || COALESCE(' ' || p.apellido_segundo,'')),
+			COALESCE(ec.codigo_diagnostico_principal,''),
+			ec.descripcion_diagnostico,
+			COUNT(*) OVER() AS total
+		FROM encuentro_clinico ec
+		JOIN paciente p ON p.numero_documento = ec.paciente_documento
+			AND p.es_ultima_version = TRUE AND p.esta_activo = TRUE
+		WHERE ` + where + `
+		ORDER BY ec.fecha_atencion DESC
+		LIMIT $` + idxLimit + ` OFFSET $` + idxOffset
+
+	rows, err := h.db.Query(r.Context(), query, argsCount...)
+	if err != nil {
+		log.Printf("listarGlobal encuentros: %v", err)
+		responderError(w, http.StatusInternalServerError, "error al consultar encuentros")
+		return
+	}
+	defer rows.Close()
+
+	lista := make([]EncuentroResumen, 0)
+	var total int
+	for rows.Next() {
+		var e EncuentroResumen
+		if err := rows.Scan(
+			&e.EncuentroID, &e.FechaAtencion, &e.Estado,
+			&e.FinalidadConsulta, &e.FinalidadConsultaNombre,
+			&e.MotivoConsulta,
+			&e.PacienteDocumento, &e.TipoDocumento, &e.PacienteNombre,
+			&e.CodigoDiagnosticoPrincipal, &e.DescripcionDiagnostico,
+			&total,
+		); err != nil {
+			log.Printf("escanear encuentro global: %v", err)
+			responderError(w, http.StatusInternalServerError, "error al leer encuentros")
+			return
+		}
+		lista = append(lista, e)
+	}
+	if rows.Err() != nil {
+		responderError(w, http.StatusInternalServerError, "error al iterar encuentros")
+		return
+	}
+
+	responderJSON(w, http.StatusOK, EncuentrosGlobalResp{Encuentros: lista, Total: total})
+}
+
 func tieneDiagnosticoPrincipal(diags []models.DiagnosticoInput) bool {
 	for _, d := range diags {
 		if d.Tipo == "principal" {

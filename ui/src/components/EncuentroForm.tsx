@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import { CheckCircle, ChevronLeft, ChevronRight } from 'lucide-react'
-import { NavigationGuard } from './NavigationGuard'
 import { useEncuentros, type DiagnosticoItem, type ValorNormalNotas, type EncuentroInput } from '../api/encuentros'
 import { useCamposClinicosActivos } from '../api/campos_clinicos'
 import DiagnosticoSearch from './DiagnosticoSearch'
@@ -185,14 +184,7 @@ export default function EncuentroForm({
 
   const signosLimpios = Object.fromEntries(Object.entries(signos).filter(([, v]) => v.trim() !== ''))
 
-  const isDirty = form.motivo_consulta.trim() !== ''
-    || diagnosticos.length > 0
-    || Object.values(signos).some(v => v.trim() !== '')
-    || Object.keys(revision).length > 0
-
   return (
-    <>
-    <NavigationGuard when={isDirty} />
     <form onSubmit={handleSubmit} className="space-y-4">
 
       {/* Tab bar */}
@@ -460,6 +452,5 @@ export default function EncuentroForm({
         )}
       </div>
     </form>
-    </>
   )
 }

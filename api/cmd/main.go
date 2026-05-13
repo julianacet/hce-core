@@ -85,6 +85,7 @@ func main() {
 		r.Use(appmiddleware.RequiereAuth(jwtSecreto))
 
 		// Accesibles por cualquier usuario autenticado (admin, medico, auxiliar)
+		r.Mount("/encuentros", handlers.EncuentrosGlobalRouter(db))
 		r.Mount("/pacientes", handlers.PacientesRouter(db))
 		r.Mount("/facturas", handlers.FacturasRouter(db))
 		r.Mount("/campos-clinicos", handlers.CamposClinicosRouter(db))
