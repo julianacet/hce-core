@@ -19,8 +19,10 @@ type Encuentro struct {
 	FinalidadConsulta          string          `json:"finalidad_consulta"`
 	ViaIngreso                 string          `json:"via_ingreso"`
 	MotivoConsulta             string          `json:"motivo_consulta"`
+	DescripcionIngreso         *string         `json:"descripcion_ingreso"`
 	SignosVitales              json.RawMessage `json:"signos_vitales"`
 	ExamenFisico               json.RawMessage `json:"examen_fisico"`
+	RevisionSistemas           json.RawMessage `json:"revision_sistemas"`
 	// Kept for RIPS compatibility and list-view display.
 	CodigoDiagnosticoPrincipal string          `json:"codigo_diagnostico_principal"`
 	DescripcionDiagnostico     *string         `json:"descripcion_diagnostico"`
@@ -46,7 +48,9 @@ type EncuentroInput struct {
 	FinalidadConsulta string             `json:"finalidad_consulta"`
 	ViaIngreso        string             `json:"via_ingreso"`
 	MotivoConsulta    string             `json:"motivo_consulta"`
+	DescripcionIngreso *string           `json:"descripcion_ingreso"`
 	SignosVitales     json.RawMessage    `json:"signos_vitales"`
+	RevisionSistemas  json.RawMessage    `json:"revision_sistemas"`
 	ExamenFisico      json.RawMessage    `json:"examen_fisico"`
 	Diagnosticos      []DiagnosticoInput `json:"diagnosticos"`
 	PlanManejo        *string            `json:"plan_manejo"`

@@ -60,8 +60,8 @@ const columnasEncuentro = `
 	id, encuentro_id, numero_version, es_ultima_version, esta_activo, estado,
 	paciente_documento, encuentro_padre_id,
 	fecha_atencion, causa_externa, finalidad_consulta, via_ingreso,
-	motivo_consulta,
-	signos_vitales, examen_fisico,
+	motivo_consulta, descripcion_ingreso,
+	signos_vitales, examen_fisico, revision_sistemas,
 	COALESCE(codigo_diagnostico_principal, ''), descripcion_diagnostico, plan_manejo,
 	hash_integridad, fecha_creacion, creado_por, id_sistema_anterior,
 	CASE finalidad_consulta WHEN '10' THEN 'Consulta de primera vez' WHEN '11' THEN 'Consulta de control o seguimiento' WHEN '12' THEN 'Urgencias' ELSE finalidad_consulta END AS finalidad_consulta_nombre,
@@ -294,13 +294,13 @@ func (h *EncuentroHandler) eliminar(w http.ResponseWriter, r *http.Request) {
 
 func escanearEncuentro(row scanner) (models.Encuentro, error) {
 	var e models.Encuentro
-	var svRaw, efRaw []byte
+	var svRaw, efRaw, rsRaw []byte
 	err := row.Scan(
 		&e.ID, &e.EncuentroID, &e.NumeroVersion, &e.EsUltimaVersion, &e.EstaActivo, &e.Estado,
 		&e.PacienteDocumento, &e.EncuentroPadreID,
 		&e.FechaAtencion, &e.CausaExterna, &e.FinalidadConsulta, &e.ViaIngreso,
-		&e.MotivoConsulta,
-		&svRaw, &efRaw,
+		&e.MotivoConsulta, &e.DescripcionIngreso,
+		&svRaw, &efRaw, &rsRaw,
 		&e.CodigoDiagnosticoPrincipal, &e.DescripcionDiagnostico, &e.PlanManejo,
 		&e.HashIntegridad, &e.FechaCreacion, &e.CreadoPor, &e.IDSistemaAnterior,
 		&e.FinalidadConsultaNombre, &e.CausaExternaNombre, &e.ViaIngresoNombre,
@@ -310,6 +310,7 @@ func escanearEncuentro(row scanner) (models.Encuentro, error) {
 	}
 	e.SignosVitales = json.RawMessage(svRaw)
 	e.ExamenFisico = json.RawMessage(efRaw)
+	e.RevisionSistemas = json.RawMessage(rsRaw)
 	return e, nil
 }
 
@@ -338,24 +339,24 @@ func insertarEncuentro(ctx context.Context, db encuentroQuerier, encuentroID str
 			encuentro_id, numero_version, es_ultima_version, esta_activo,
 			paciente_documento, encuentro_padre_id,
 			fecha_atencion, causa_externa, finalidad_consulta, via_ingreso,
-			motivo_consulta,
-			signos_vitales, examen_fisico,
+			motivo_consulta, descripcion_ingreso,
+			signos_vitales, examen_fisico, revision_sistemas,
 			codigo_diagnostico_principal, descripcion_diagnostico, plan_manejo,
 			creado_por
 		) VALUES (
 			$1, $2, TRUE, TRUE,
 			$3, $4,
 			$5, $6, $7, $8,
-			$9,
-			$10, $11,
-			$12, $13, $14,
-			$15
+			$9, $10,
+			$11, $12, $13,
+			$14, $15, $16,
+			$17
 		) RETURNING `+columnasEncuentro,
 		encuentroID, version,
 		documento, input.EncuentroPadreID,
 		fechaAtencion, input.CausaExterna, input.FinalidadConsulta, input.ViaIngreso,
-		input.MotivoConsulta,
-		asJSON(input.SignosVitales), asJSON(input.ExamenFisico),
+		input.MotivoConsulta, input.DescripcionIngreso,
+		asJSON(input.SignosVitales), asJSON(input.ExamenFisico), asJSON(input.RevisionSistemas),
 		codigoPrincipal, descPrincipal, input.PlanManejo,
 		creadoPor,
 	)
@@ -446,15 +447,18 @@ func actualizarBorradorEncuentro(ctx context.Context, db *pgxpool.Pool, rowID st
 			finalidad_consulta           = $4,
 			via_ingreso                  = $5,
 			motivo_consulta              = $6,
-			signos_vitales               = $7,
-			examen_fisico                = $8,
-			codigo_diagnostico_principal = $9,
-			descripcion_diagnostico      = $10,
-			plan_manejo                  = $11
-		WHERE id = $12
+			descripcion_ingreso          = $7,
+			signos_vitales               = $8,
+			examen_fisico                = $9,
+			revision_sistemas            = $10,
+			codigo_diagnostico_principal = $11,
+			descripcion_diagnostico      = $12,
+			plan_manejo                  = $13
+		WHERE id = $14
 		RETURNING `+columnasEncuentro,
 		input.EncuentroPadreID, fechaAtencion, input.CausaExterna, input.FinalidadConsulta, input.ViaIngreso,
-		input.MotivoConsulta, asJSON(input.SignosVitales), asJSON(input.ExamenFisico),
+		input.MotivoConsulta, input.DescripcionIngreso,
+		asJSON(input.SignosVitales), asJSON(input.ExamenFisico), asJSON(input.RevisionSistemas),
 		codigoPrincipal, descPrincipal, input.PlanManejo,
 		rowID,
 	)

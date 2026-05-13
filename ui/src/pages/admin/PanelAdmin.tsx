@@ -261,6 +261,16 @@ function TipoRow({ tipo, onEditar }: { tipo: TipoEventoAdverso; onEditar: () => 
   )
 }
 
+const VARIABLES_CONSENTIMIENTO = [
+  { clave: 'paciente_nombre',    etiqueta: 'Nombre del paciente' },
+  { clave: 'paciente_documento', etiqueta: 'Documento del paciente' },
+  { clave: 'tipo_documento',     etiqueta: 'Tipo de documento' },
+  { clave: 'medico_nombre',      etiqueta: 'Nombre del médico' },
+  { clave: 'consultorio',        etiqueta: 'Nombre del consultorio' },
+  { clave: 'ciudad',             etiqueta: 'Ciudad' },
+  { clave: 'fecha',              etiqueta: 'Fecha' },
+]
+
 function PlantillasAdmin() {
   const { data: plantillas = [] } = usePlantillas()
   const crear = useCrearPlantilla()
@@ -270,6 +280,7 @@ function PlantillasAdmin() {
   const [nueva, setNueva] = useState(false)
   const [formP, setFormP] = useState({ nombre: '', contenido: '' })
   const actualizar = useActualizarPlantilla(editando?.id ?? '')
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   function abrirNueva() {
     setEditando(null)
@@ -289,6 +300,25 @@ function PlantillasAdmin() {
     setFormP({ nombre: '', contenido: '' })
   }
 
+  function insertarVariable(clave: string) {
+    const ta = textareaRef.current
+    const token = `{{${clave}}}`
+    if (!ta) {
+      setFormP((f) => ({ ...f, contenido: f.contenido + token }))
+      return
+    }
+    const inicio = ta.selectionStart
+    const fin = ta.selectionEnd
+    const nuevo = formP.contenido.slice(0, inicio) + token + formP.contenido.slice(fin)
+    setFormP((f) => ({ ...f, contenido: nuevo }))
+    // Restaurar foco y posición del cursor tras el render
+    setTimeout(() => {
+      ta.focus()
+      ta.selectionStart = inicio + token.length
+      ta.selectionEnd = inicio + token.length
+    }, 0)
+  }
+
   async function guardarPlantilla() {
     if (!formP.nombre.trim() || !formP.contenido.trim()) return
     if (editando) {
@@ -301,17 +331,7 @@ function PlantillasAdmin() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-xs text-slate-500">
-            Variables disponibles: <code className="bg-slate-100 px-1 rounded">{'{{paciente_nombre}}'}</code>{' '}
-            <code className="bg-slate-100 px-1 rounded">{'{{paciente_documento}}'}</code>{' '}
-            <code className="bg-slate-100 px-1 rounded">{'{{tipo_documento}}'}</code>{' '}
-            <code className="bg-slate-100 px-1 rounded">{'{{medico_nombre}}'}</code>{' '}
-            <code className="bg-slate-100 px-1 rounded">{'{{consultorio}}'}</code>{' '}
-            <code className="bg-slate-100 px-1 rounded">{'{{fecha}}'}</code>
-          </p>
-        </div>
+      <div className="flex items-center justify-end">
         <button onClick={abrirNueva} className="btn-primary">
           <Plus size={14} /> Nueva plantilla
         </button>
@@ -362,22 +382,62 @@ function PlantillasAdmin() {
               <X size={16} />
             </button>
           </div>
+
           <div>
-            <label className="label-hce">Nombre</label>
+            <label className="label-hce">Nombre de la plantilla</label>
             <input value={formP.nombre} onChange={(e) => setFormP((f) => ({ ...f, nombre: e.target.value }))}
               placeholder="Ej: Consentimiento informado general"
               className="input-hce" />
           </div>
+
           <div>
-            <label className="label-hce">Contenido</label>
+            <div className="flex items-center justify-between mb-2">
+              <label className="label-hce mb-0">Contenido</label>
+            </div>
+
+            {/* Chips de variables */}
+            <div className="border border-slate-200 rounded-t-lg bg-slate-50 px-3 py-2.5">
+              <p className="text-xs text-slate-500 mb-2">
+                Haz clic en un dato para insertarlo en el texto donde esté el cursor:
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {VARIABLES_CONSENTIMIENTO.map((v) => (
+                  <button
+                    key={v.clave}
+                    type="button"
+                    onClick={() => insertarVariable(v.clave)}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border transition-colors"
+                    style={{
+                      borderColor: 'var(--hce-primary)',
+                      color: 'var(--hce-primary)',
+                      backgroundColor: 'white',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = 'var(--hce-primary)'
+                      e.currentTarget.style.color = 'white'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'white'
+                      e.currentTarget.style.color = 'var(--hce-primary)'
+                    }}
+                  >
+                    <Plus size={10} />
+                    {v.etiqueta}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <textarea
+              ref={textareaRef}
               value={formP.contenido}
               onChange={(e) => setFormP((f) => ({ ...f, contenido: e.target.value }))}
-              rows={12}
-              className="input-hce font-mono text-xs resize-y"
-              placeholder="Por medio del presente documento, yo, {{paciente_nombre}}..."
+              rows={14}
+              className="input-hce rounded-t-none border-t-0 resize-y text-sm leading-relaxed"
+              placeholder="Por medio del presente documento, yo…  (usa los botones de arriba para insertar datos del paciente o del médico)"
             />
           </div>
+
           <div className="flex justify-end gap-2">
             <button onClick={cerrar} className="btn-secondary">Cancelar</button>
             <button onClick={guardarPlantilla} className="btn-primary"
@@ -909,8 +969,9 @@ function slugify(text: string): string {
 }
 
 const SECCION_LABELS: Record<string, string> = {
-  signos_vitales: 'Signos vitales',
-  examen_fisico:  'Examen físico',
+  signos_vitales:    'Signos vitales',
+  examen_fisico:     'Examen físico',
+  revision_sistemas: 'Revisión por sistemas',
 }
 const TIPO_CAMPO_LABELS: Record<string, string> = {
   numero:       'Número',
@@ -938,7 +999,7 @@ function CamposClinicosAdmin() {
   const [mostrarForm, setMostrarForm] = useState(false)
   const [error, setError] = useState('')
 
-  const porSeccion = ['signos_vitales', 'examen_fisico'].map(sec => ({
+  const porSeccion = ['signos_vitales', 'examen_fisico', 'revision_sistemas'].map(sec => ({
     sec,
     items: campos.filter(c => c.seccion === sec),
   }))
@@ -1009,6 +1070,7 @@ function CamposClinicosAdmin() {
                 onChange={e => setForm(f => ({ ...f, seccion: e.target.value as CampoClinicoInput['seccion'] }))}>
                 <option value="signos_vitales">Signos vitales</option>
                 <option value="examen_fisico">Examen físico</option>
+                <option value="revision_sistemas">Revisión por sistemas</option>
               </select>
             </div>
             <div>

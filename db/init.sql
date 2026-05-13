@@ -120,11 +120,13 @@ CREATE TABLE encuentro_clinico (
     via_ingreso            VARCHAR(2)  NOT NULL DEFAULT '02',
 
     -- Contenido clínico (Res. 866/2021)
-    motivo_consulta TEXT NOT NULL,
+    motivo_consulta    TEXT NOT NULL,
+    descripcion_ingreso TEXT,           -- descripción general del paciente al ingreso
 
-    -- Signos vitales y examen físico parametrizables (ver tabla campo_clinico)
-    signos_vitales JSONB,
-    examen_fisico  JSONB,
+    -- Signos vitales, revisión por sistemas y examen físico parametrizables (ver tabla campo_clinico)
+    signos_vitales    JSONB,
+    revision_sistemas JSONB,
+    examen_fisico     JSONB,
 
     -- Diagnóstico principal (mantenido para compat. RIPS; derivado de encuentro_diagnostico)
     codigo_diagnostico_principal VARCHAR(8),  -- CIE-10
@@ -903,7 +905,7 @@ ON CONFLICT DO NOTHING;
 
 CREATE TABLE IF NOT EXISTS campo_clinico (
     id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-    seccion     VARCHAR(20) NOT NULL CHECK (seccion IN ('signos_vitales', 'examen_fisico')),
+    seccion     VARCHAR(20) NOT NULL CHECK (seccion IN ('signos_vitales', 'examen_fisico', 'revision_sistemas')),
     nombre      TEXT        NOT NULL,
     tipo        VARCHAR(20) NOT NULL CHECK (tipo IN ('numero', 'normal_notas', 'texto', 'opciones')),
     unidad      TEXT,
@@ -937,7 +939,23 @@ INSERT INTO campo_clinico (seccion, nombre, tipo, unidad, clave, orden) VALUES
   ('examen_fisico',  'Extremidades',                'normal_notas', NULL, 'extremidades',       10),
   ('examen_fisico',  'Neurológico',                 'normal_notas', NULL, 'neurologico',        11),
   ('examen_fisico',  'Musculoesquelético',          'normal_notas', NULL, 'musculoesqueletico', 12),
-  ('examen_fisico',  'Genitourinario',              'normal_notas', NULL, 'genitourinario',     13)
+  ('examen_fisico',  'Genitourinario',              'normal_notas', NULL, 'genitourinario',     13),
+  -- Revisión por sistemas (15 preguntas estándar)
+  ('revision_sistemas', 'Fiebre o escalofríos',               'normal_notas', NULL, 'rs_fiebre',         1),
+  ('revision_sistemas', 'Cefalea',                            'normal_notas', NULL, 'rs_cefalea',         2),
+  ('revision_sistemas', 'Mareo o vértigo',                    'normal_notas', NULL, 'rs_mareo',           3),
+  ('revision_sistemas', 'Alteraciones visuales',              'normal_notas', NULL, 'rs_vision',          4),
+  ('revision_sistemas', 'Tos',                                'normal_notas', NULL, 'rs_tos',             5),
+  ('revision_sistemas', 'Dificultad respiratoria',            'normal_notas', NULL, 'rs_disnea',          6),
+  ('revision_sistemas', 'Dolor torácico o palpitaciones',     'normal_notas', NULL, 'rs_dolor_toracico',  7),
+  ('revision_sistemas', 'Náuseas o vómito',                   'normal_notas', NULL, 'rs_nauseas',         8),
+  ('revision_sistemas', 'Dolor abdominal',                    'normal_notas', NULL, 'rs_dolor_abdominal', 9),
+  ('revision_sistemas', 'Diarrea o estreñimiento',            'normal_notas', NULL, 'rs_diarrea',        10),
+  ('revision_sistemas', 'Cambios en orina (disuria/poliuria)','normal_notas', NULL, 'rs_orina',          11),
+  ('revision_sistemas', 'Dolor articular o muscular',         'normal_notas', NULL, 'rs_articular',      12),
+  ('revision_sistemas', 'Edema en extremidades',              'normal_notas', NULL, 'rs_edema',          13),
+  ('revision_sistemas', 'Cambios en piel o mucosas',          'normal_notas', NULL, 'rs_piel_rs',        14),
+  ('revision_sistemas', 'Alteraciones del sueño o ánimo',    'normal_notas', NULL, 'rs_suenio',         15)
 ON CONFLICT DO NOTHING;
 
 -- ============================================================

@@ -3,7 +3,7 @@ import { apiFetch } from './client'
 
 export type CampoClinico = {
   id: string
-  seccion: 'signos_vitales' | 'examen_fisico'
+  seccion: 'signos_vitales' | 'examen_fisico' | 'revision_sistemas'
   nombre: string
   tipo: 'numero' | 'normal_notas' | 'texto' | 'opciones'
   unidad?: string

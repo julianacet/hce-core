@@ -4,11 +4,12 @@ import { NavigationGuard } from './NavigationGuard'
 import { useEncuentros, type DiagnosticoItem, type ValorNormalNotas, type EncuentroInput } from '../api/encuentros'
 import { useCamposClinicosActivos } from '../api/campos_clinicos'
 import DiagnosticoSearch from './DiagnosticoSearch'
-import { SignosVitalesForm, ExamenFisicoForm } from './CampoClinicoForm'
+import { SignosVitalesForm, ExamenFisicoForm, RevisionSistemasForm } from './CampoClinicoForm'
 import AntecedentesTab from './AntecedentesTab'
 
 type FormState = {
   motivo_consulta: string
+  descripcion_ingreso: string
   plan_manejo: string
   finalidad_consulta: string
   causa_externa: string
@@ -18,6 +19,7 @@ type FormState = {
 
 export type EncuentroFormInitial = Partial<FormState & {
   signos_vitales: Record<string, string>
+  revision_sistemas: Record<string, ValorNormalNotas>
   examen_fisico: Record<string, string | ValorNormalNotas>
   diagnosticos: DiagnosticoItem[]
 }>
@@ -35,10 +37,11 @@ type Props = {
   onCancelar?: () => void
 }
 
-type TabKey = 'motivo' | 'antecedentes' | 'signos' | 'examen' | 'diagnosticos'
+type TabKey = 'motivo' | 'antecedentes' | 'signos' | 'revision' | 'examen' | 'diagnosticos'
 
 const FORM_INICIAL: FormState = {
   motivo_consulta: '',
+  descripcion_ingreso: '',
   plan_manejo: '',
   finalidad_consulta: '10',
   causa_externa: '13',
@@ -50,6 +53,7 @@ const TAB_LABELS: Record<TabKey, string> = {
   motivo: 'Motivo',
   antecedentes: 'Antecedentes',
   signos: 'Signos vitales',
+  revision: 'Rev. por sistemas',
   examen: 'Examen físico',
   diagnosticos: 'Diagnósticos',
 }
@@ -78,6 +82,7 @@ export default function EncuentroForm({
 
   const [form, setForm] = useState<FormState>({ ...FORM_INICIAL, ...(draft?.form ?? initialValues) })
   const [signos, setSignos] = useState<Record<string, string>>(initialValues?.signos_vitales ?? draft?.signos ?? {})
+  const [revision, setRevision] = useState<Record<string, ValorNormalNotas>>(initialValues?.revision_sistemas ?? draft?.revision ?? {})
   const [examen, setExamen] = useState<Record<string, string | ValorNormalNotas>>(initialValues?.examen_fisico ?? draft?.examen ?? {})
   const [diagnosticos, setDiagnosticos] = useState<DiagnosticoItem[]>(initialValues?.diagnosticos ?? draft?.diagnosticos ?? [])
   const [error, setError] = useState<string | null>(null)
@@ -85,6 +90,7 @@ export default function EncuentroForm({
   const [activeTab, setActiveTab] = useState<TabKey>('motivo')
 
   const camposSignos = campos.filter(c => c.seccion === 'signos_vitales')
+  const camposRevision = campos.filter(c => c.seccion === 'revision_sistemas')
   const camposExamen = campos.filter(c => c.seccion === 'examen_fisico')
   const consultasPrevias = encuentrosPrevios.filter(e => e.finalidad_consulta !== '11')
   const faltaDiagnostico = !diagnosticos.some(d => d.tipo === 'principal')
@@ -93,6 +99,7 @@ export default function EncuentroForm({
     'motivo',
     'antecedentes',
     ...(camposSignos.length > 0 ? ['signos' as TabKey] : []),
+    ...(camposRevision.length > 0 ? ['revision' as TabKey] : []),
     ...(camposExamen.length > 0 ? ['examen' as TabKey] : []),
     'diagnosticos',
   ]
@@ -101,14 +108,15 @@ export default function EncuentroForm({
     if (!initialValues) return
     setForm({ ...FORM_INICIAL, ...initialValues })
     setSignos(initialValues.signos_vitales ?? {})
+    setRevision(initialValues.revision_sistemas ?? {})
     setExamen(initialValues.examen_fisico ?? {})
     setDiagnosticos(initialValues.diagnosticos ?? [])
   }, [initialValues?.motivo_consulta])
 
   useEffect(() => {
     if (esBorrador) return
-    try { sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ form, signos, examen, diagnosticos })) } catch {}
-  }, [form, signos, examen, diagnosticos, esBorrador, DRAFT_KEY])
+    try { sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ form, signos, revision, examen, diagnosticos })) } catch {}
+  }, [form, signos, revision, examen, diagnosticos, esBorrador, DRAFT_KEY])
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }))
@@ -120,7 +128,9 @@ export default function EncuentroForm({
     )
     return {
       motivo_consulta: form.motivo_consulta,
+      descripcion_ingreso: form.descripcion_ingreso || undefined,
       signos_vitales: Object.keys(signosLimpios).length > 0 ? signosLimpios : undefined,
+      revision_sistemas: Object.keys(revision).length > 0 ? revision : undefined,
       examen_fisico: Object.keys(examen).length > 0 ? examen : undefined,
       diagnosticos,
       plan_manejo: form.plan_manejo || undefined,
@@ -178,6 +188,7 @@ export default function EncuentroForm({
   const isDirty = form.motivo_consulta.trim() !== ''
     || diagnosticos.length > 0
     || Object.values(signos).some(v => v.trim() !== '')
+    || Object.keys(revision).length > 0
 
   return (
     <>
@@ -253,16 +264,31 @@ export default function EncuentroForm({
               )}
             </div>
 
-            <div className="border-t border-slate-100 pt-4">
-              <label className="label-hce">Motivo de consulta</label>
-              <textarea
-                name="motivo_consulta"
-                value={form.motivo_consulta}
-                onChange={handleChange}
-                rows={5}
-                className="input-hce resize-none"
-                placeholder="Describa el motivo de consulta…"
-              />
+            <div className="border-t border-slate-100 pt-4 space-y-4">
+              <div>
+                <label className="label-hce">Motivo de consulta</label>
+                <textarea
+                  name="motivo_consulta"
+                  value={form.motivo_consulta}
+                  onChange={handleChange}
+                  rows={4}
+                  className="input-hce resize-none"
+                  placeholder="Describa el motivo de consulta…"
+                />
+              </div>
+              <div>
+                <label className="label-hce">
+                  Descripción general del paciente <span className="text-slate-400 font-normal">(opcional)</span>
+                </label>
+                <textarea
+                  name="descripcion_ingreso"
+                  value={form.descripcion_ingreso}
+                  onChange={handleChange}
+                  rows={3}
+                  className="input-hce resize-none"
+                  placeholder="Ej: Paciente llega por sus propios medios, consciente, orientado en tiempo y espacio…"
+                />
+              </div>
             </div>
 
             {esBorrador && onGuardarSeccion && (
@@ -271,6 +297,7 @@ export default function EncuentroForm({
                   type="button"
                   onClick={() => guardarTabSeccion('motivo', {
                     motivo_consulta: form.motivo_consulta,
+                    descripcion_ingreso: form.descripcion_ingreso || undefined,
                     finalidad_consulta: form.finalidad_consulta,
                     causa_externa: form.causa_externa,
                     via_ingreso: form.via_ingreso,
@@ -305,6 +332,26 @@ export default function EncuentroForm({
                   className="btn-secondary text-sm disabled:opacity-50"
                 >
                   {savingTab === 'signos' ? 'Guardando...' : 'Guardar sección'}
+                </button>
+              </div>
+            )}
+          </>
+        )}
+
+        {activeTab === 'revision' && (
+          <>
+            <RevisionSistemasForm campos={camposRevision} values={revision} onChange={setRevision} />
+            {esBorrador && onGuardarSeccion && (
+              <div className="flex justify-end pt-1">
+                <button
+                  type="button"
+                  onClick={() => guardarTabSeccion('revision', {
+                    revision_sistemas: Object.keys(revision).length > 0 ? revision : undefined,
+                  })}
+                  disabled={savingTab === 'revision'}
+                  className="btn-secondary text-sm disabled:opacity-50"
+                >
+                  {savingTab === 'revision' ? 'Guardando...' : 'Guardar sección'}
                 </button>
               </div>
             )}

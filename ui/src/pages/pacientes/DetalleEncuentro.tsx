@@ -182,7 +182,9 @@ export default function DetalleEncuentro() {
     causa_externa: e.causa_externa,
     via_ingreso: e.via_ingreso,
     encuentro_padre_id: e.encuentro_padre_id ?? '',
+    descripcion_ingreso: e.descripcion_ingreso ?? '',
     signos_vitales: (e.signos_vitales as Record<string, string>) ?? {},
+    revision_sistemas: (e.revision_sistemas as Record<string, ValorNormalNotas>) ?? {},
     examen_fisico: (e.examen_fisico as Record<string, string | ValorNormalNotas>) ?? {},
     diagnosticos: e.diagnosticos ?? [],
   } : undefined
@@ -252,6 +254,13 @@ export default function DetalleEncuentro() {
                   </div>
                 )}
 
+                {e.descripcion_ingreso && (
+                  <div>
+                    <p className="text-xs text-slate-400 mb-1">Descripción general del paciente</p>
+                    <p className="text-sm text-slate-800 leading-relaxed">{e.descripcion_ingreso}</p>
+                  </div>
+                )}
+
                 {e.signos_vitales && Object.keys(e.signos_vitales).length > 0 && (() => {
                   const sv = e.signos_vitales!
                   const camposSignos = campos.filter(c => c.seccion === 'signos_vitales')
@@ -302,6 +311,35 @@ export default function DetalleEncuentro() {
                   )
                 })()}
 
+                {e.revision_sistemas && Object.keys(e.revision_sistemas).length > 0 && (() => {
+                  const rs = e.revision_sistemas!
+                  const camposRevision = campos.filter(c => c.seccion === 'revision_sistemas')
+                  const filas: React.ReactNode[] = []
+
+                  for (const c of camposRevision) {
+                    const v = rs[c.clave] as ValorNormalNotas | undefined
+                    if (!v) continue
+                    const notas = v.notas?.trim()
+                    filas.push(
+                      <div key={c.clave} className="flex gap-2 text-sm">
+                        <span className="text-slate-400 shrink-0 w-48">{c.nombre}</span>
+                        {v.normal
+                          ? <span className="text-green-700 text-xs">Niega</span>
+                          : <span className="text-amber-700 text-xs font-medium">Refiere{notas ? `: ${notas}` : ''}</span>
+                        }
+                      </div>
+                    )
+                  }
+
+                  if (filas.length === 0) return null
+                  return (
+                    <div>
+                      <p className="text-xs text-slate-400 mb-2">Revisión por sistemas</p>
+                      <div className="space-y-1">{filas}</div>
+                    </div>
+                  )
+                })()}
+
                 {e.examen_fisico && Object.keys(e.examen_fisico).length > 0 && (() => {
                   const ef = e.examen_fisico!
                   const camposExamen = campos.filter(c => c.seccion === 'examen_fisico')
@@ -325,10 +363,10 @@ export default function DetalleEncuentro() {
                       filas.push(
                         <div key={c.clave} className="flex gap-2 text-sm">
                           <span className="text-slate-400 shrink-0 w-40">{c.nombre}</span>
-                          {v.normal && !notas
-                            ? <span className="text-green-700 text-xs">Normal</span>
-                            : <span className="text-slate-800">{notas || '—'}</span>
-                          }
+                          <span className={`text-xs font-medium shrink-0 ${v.normal ? 'text-green-700' : 'text-amber-700'}`}>
+                            {v.normal ? 'Normal' : 'Anormal'}
+                          </span>
+                          {notas && <span className="text-slate-700">{notas}</span>}
                         </div>
                       )
                     }
