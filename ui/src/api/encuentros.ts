@@ -152,3 +152,14 @@ export function useEncuentrosPaginados(params: EncuentrosPaginadosParams) {
     staleTime: 1000 * 30,
   })
 }
+
+type ExportFiltros = Pick<EncuentrosPaginadosParams, 'q' | 'desde' | 'hasta' | 'finalidad'>
+
+export function exportarEncuentros(filtros: ExportFiltros) {
+  const p = new URLSearchParams({ export: '1' })
+  if (filtros.q) p.set('q', filtros.q)
+  if (filtros.desde) p.set('desde', filtros.desde)
+  if (filtros.hasta) p.set('hasta', filtros.hasta)
+  if (filtros.finalidad) p.set('finalidad', filtros.finalidad)
+  return apiFetch<EncuentrosPaginados>(`/encuentros?${p}`)
+}

@@ -282,6 +282,8 @@ func (h *PacienteHandler) listarPaginado(w http.ResponseWriter, r *http.Request)
 	minAtencion := strings.TrimSpace(r.URL.Query().Get("min_atencion"))
 	maxAtencion := strings.TrimSpace(r.URL.Query().Get("max_atencion"))
 
+	exportar := r.URL.Query().Get("export") == "1"
+
 	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
 	if page < 1 {
 		page = 1
@@ -389,7 +391,7 @@ func (h *PacienteHandler) listarPaginado(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	dataSQL := `
+	baseSQL := `
 		SELECT id, numero_version, es_ultima_version, esta_activo,
 		       tipo_documento, numero_documento, nombre_primero, nombre_segundo,
 		       apellido_primero, apellido_segundo, fecha_nacimiento, genero,
@@ -402,10 +404,19 @@ func (h *PacienteHandler) listarPaginado(w http.ResponseWriter, r *http.Request)
 		       EXTRACT(YEAR FROM AGE(NOW(), fecha_nacimiento))::int AS edad` +
 		extraColumnasPaciente + subqUltimaAtencion + `
 		FROM paciente ` + where +
-		` ORDER BY ` + ordenSQL +
-		fmt.Sprintf(` LIMIT $%d OFFSET $%d`, idx, idx+1)
+		` ORDER BY ` + ordenSQL
 
-	rows, err := h.db.Query(r.Context(), dataSQL, append(args, limit, offset)...)
+	var dataSQL string
+	var queryArgs []any
+	if exportar {
+		dataSQL = baseSQL
+		queryArgs = args
+	} else {
+		dataSQL = baseSQL + fmt.Sprintf(` LIMIT $%d OFFSET $%d`, idx, idx+1)
+		queryArgs = append(args, limit, offset)
+	}
+
+	rows, err := h.db.Query(r.Context(), dataSQL, queryArgs...)
 	if err != nil {
 		log.Printf("listarPaginado query: %v", err)
 		responderError(w, http.StatusInternalServerError, "error al consultar pacientes")

@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router'
 import {
-  Search, Plus, Filter, Trash2, ChevronLeft, ChevronRight, ClipboardList,
+  Search, Plus, Filter, Trash2, ChevronLeft, ChevronRight, ClipboardList, Download,
 } from 'lucide-react'
-import { useEncuentrosPaginados } from '../api/encuentros'
+import { useEncuentrosPaginados, exportarEncuentros } from '../api/encuentros'
+import { descargarCSV, descargarXLSX } from '../utils/csv'
 
 const LIMIT = 30
 
@@ -62,6 +63,33 @@ export default function EncuentrosGlobal() {
   }
 
   const hayFiltros = Object.values(filtros).some(v => v !== '')
+  const [descargando, setDescargando] = useState<'csv' | 'xlsx' | null>(null)
+
+  const HEADERS_ENC = ['Fecha', 'Paciente', 'Tipo doc', 'Documento', 'Finalidad', 'Código diagnóstico', 'Diagnóstico']
+
+  async function obtenerFilas() {
+    const { encuentros } = await exportarEncuentros({ q: qDebounced, ...filtrosDebounced })
+    return encuentros.map(e => [
+      new Date(e.fecha_atencion).toLocaleDateString('es-CO'),
+      e.paciente_nombre, e.tipo_documento, e.paciente_documento,
+      e.finalidad_consulta_nombre,
+      e.codigo_diagnostico_principal, e.descripcion_diagnostico ?? '',
+    ])
+  }
+
+  async function descargarCsv() {
+    setDescargando('csv')
+    try {
+      descargarCSV(`encuentros_${new Date().toISOString().slice(0, 10)}.csv`, HEADERS_ENC, await obtenerFilas())
+    } finally { setDescargando(null) }
+  }
+
+  async function descargarExcel() {
+    setDescargando('xlsx')
+    try {
+      descargarXLSX(`encuentros_${new Date().toISOString().slice(0, 10)}.xlsx`, HEADERS_ENC, await obtenerFilas())
+    } finally { setDescargando(null) }
+  }
 
   const { data, isLoading, isFetching, isError } = useEncuentrosPaginados({
     q: qDebounced,
@@ -83,13 +111,31 @@ export default function EncuentrosGlobal() {
           <h2 className="page-title">Consultas</h2>
           <p className="page-desc">Todos los encuentros clínicos registrados</p>
         </div>
-        <button
-          onClick={() => navigate('/nueva-consulta/nuevo')}
-          className="btn-primary"
-        >
-          <Plus size={15} />
-          Nuevo encuentro
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={descargarCsv}
+            disabled={descargando !== null || total === 0}
+            className="btn-secondary flex items-center gap-1.5 disabled:opacity-40"
+          >
+            <Download size={14} />
+            {descargando === 'csv' ? 'Generando…' : 'CSV'}
+          </button>
+          <button
+            onClick={descargarExcel}
+            disabled={descargando !== null || total === 0}
+            className="btn-secondary flex items-center gap-1.5 disabled:opacity-40"
+          >
+            <Download size={14} />
+            {descargando === 'xlsx' ? 'Generando…' : 'Excel'}
+          </button>
+          <button
+            onClick={() => navigate('/nueva-consulta/nuevo')}
+            className="btn-primary"
+          >
+            <Plus size={15} />
+            Nuevo encuentro
+          </button>
+        </div>
       </div>
 
       <div className="card-hce overflow-hidden">

@@ -126,3 +126,18 @@ export function useActualizarPaciente(documento: string) {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['pacientes'] }),
   })
 }
+
+type ExportFiltros = Omit<PaginadosParams, 'page' | 'limit'>
+
+export function exportarPacientes(filtros: ExportFiltros) {
+  const p = new URLSearchParams({ export: '1', orden: filtros.orden, dir: filtros.dir })
+  if (filtros.q) p.set('q', filtros.q)
+  if (filtros.tipo_usuario) p.set('tipo_usuario', filtros.tipo_usuario)
+  if (filtros.genero) p.set('genero', filtros.genero)
+  if (filtros.zona_residencia) p.set('zona_residencia', filtros.zona_residencia)
+  if (filtros.eps) p.set('eps', filtros.eps)
+  if (filtros.telefono) p.set('telefono', filtros.telefono)
+  if (filtros.min_atencion) p.set('min_atencion', filtros.min_atencion)
+  if (filtros.max_atencion) p.set('max_atencion', filtros.max_atencion)
+  return apiFetch<PacientesPaginados>(`/pacientes?${p}`)
+}

@@ -2,10 +2,11 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router'
 import {
   Search, UserPlus, ChevronUp, ChevronDown, ArrowUpDown,
-  ChevronLeft, ChevronRight, Filter, Trash2,
+  ChevronLeft, ChevronRight, Filter, Trash2, Download,
 } from 'lucide-react'
-import { usePacientesPaginados, type Paciente } from '../api/pacientes'
+import { usePacientesPaginados, exportarPacientes, type Paciente } from '../api/pacientes'
 import { SelectorEps } from '../components/SelectorEps'
+import { descargarCSV, descargarXLSX } from '../utils/csv'
 
 const TIPOS_USUARIO = [
   { value: '', label: 'Todos los tipos' },
@@ -112,6 +113,39 @@ export default function ListaPacientes() {
   const desde = total === 0 ? 0 : (page - 1) * LIMIT + 1
   const hasta = Math.min(page * LIMIT, total)
   const hayFiltros = Object.values(filtros).some(v => v !== '')
+  const [descargando, setDescargando] = useState<'csv' | 'xlsx' | null>(null)
+
+  const HEADERS_PAC = ['Tipo doc', 'Documento', 'Primer nombre', 'Segundo nombre', 'Primer apellido',
+    'Segundo apellido', 'Fecha nacimiento', 'Edad', 'Género', 'Tipo usuario', 'EPS',
+    'Teléfono', 'Correo', 'Zona residencia', 'Última atención', 'Fecha registro']
+
+  async function obtenerFilas() {
+    const { pacientes } = await exportarPacientes({ q: qDebounced, orden, dir, ...filtrosDebounced })
+    return pacientes.map(p => [
+      p.tipo_documento, p.numero_documento,
+      p.nombre_primero, p.nombre_segundo ?? '',
+      p.apellido_primero, p.apellido_segundo ?? '',
+      p.fecha_nacimiento, p.edad,
+      p.genero_nombre, p.tipo_usuario_nombre,
+      p.codigo_eps ?? '', p.telefono ?? '', p.correo_electronico ?? '',
+      p.zona_residencia_nombre,
+      p.ultima_atencion ?? '', p.fecha_creacion,
+    ])
+  }
+
+  async function descargarCsv() {
+    setDescargando('csv')
+    try {
+      descargarCSV(`pacientes_${new Date().toISOString().slice(0, 10)}.csv`, HEADERS_PAC, await obtenerFilas())
+    } finally { setDescargando(null) }
+  }
+
+  async function descargarExcel() {
+    setDescargando('xlsx')
+    try {
+      descargarXLSX(`pacientes_${new Date().toISOString().slice(0, 10)}.xlsx`, HEADERS_PAC, await obtenerFilas())
+    } finally { setDescargando(null) }
+  }
 
   return (
     <div className="page-hce">
@@ -120,10 +154,28 @@ export default function ListaPacientes() {
           <h2 className="page-title">Pacientes</h2>
           <p className="page-desc">Listado general de pacientes registrados</p>
         </div>
-        <button onClick={() => navigate('/pacientes/nuevo')} className="btn-primary">
-          <UserPlus size={15} />
-          Nuevo paciente
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={descargarCsv}
+            disabled={descargando !== null || total === 0}
+            className="btn-secondary flex items-center gap-1.5 disabled:opacity-40"
+          >
+            <Download size={14} />
+            {descargando === 'csv' ? 'Generando…' : 'CSV'}
+          </button>
+          <button
+            onClick={descargarExcel}
+            disabled={descargando !== null || total === 0}
+            className="btn-secondary flex items-center gap-1.5 disabled:opacity-40"
+          >
+            <Download size={14} />
+            {descargando === 'xlsx' ? 'Generando…' : 'Excel'}
+          </button>
+          <button onClick={() => navigate('/pacientes/nuevo')} className="btn-primary">
+            <UserPlus size={15} />
+            Nuevo paciente
+          </button>
+        </div>
       </div>
 
       <div className="card-hce overflow-hidden">

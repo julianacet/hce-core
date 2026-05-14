@@ -390,6 +390,7 @@ func (h *EncuentroHandler) listarGlobal(w http.ResponseWriter, r *http.Request) 
 	hasta := strings.TrimSpace(r.URL.Query().Get("hasta"))
 	finalidad := strings.TrimSpace(r.URL.Query().Get("finalidad"))
 	estado := strings.TrimSpace(r.URL.Query().Get("estado"))
+	exportar := r.URL.Query().Get("export") == "1"
 
 	page := 1
 	limit := 30
@@ -434,11 +435,7 @@ func (h *EncuentroHandler) listarGlobal(w http.ResponseWriter, r *http.Request) 
 		where += ` AND ec.estado = $` + fmt.Sprintf("%d", len(args))
 	}
 
-	argsCount := append(args, limit, offset)
-	idxLimit := fmt.Sprintf("%d", len(argsCount)-1)
-	idxOffset := fmt.Sprintf("%d", len(argsCount))
-
-	query := `
+	baseQuery := `
 		SELECT
 			ec.encuentro_id,
 			ec.fecha_atencion,
@@ -461,10 +458,22 @@ func (h *EncuentroHandler) listarGlobal(w http.ResponseWriter, r *http.Request) 
 		JOIN paciente p ON p.numero_documento = ec.paciente_documento
 			AND p.es_ultima_version = TRUE AND p.esta_activo = TRUE
 		WHERE ` + where + `
-		ORDER BY ec.fecha_atencion DESC
-		LIMIT $` + idxLimit + ` OFFSET $` + idxOffset
+		ORDER BY ec.fecha_atencion DESC`
 
-	rows, err := h.db.Query(r.Context(), query, argsCount...)
+	var query string
+	var queryArgs []any
+	if exportar {
+		query = baseQuery
+		queryArgs = args
+	} else {
+		argsCount := append(args, limit, offset)
+		idxLimit := fmt.Sprintf("%d", len(argsCount)-1)
+		idxOffset := fmt.Sprintf("%d", len(argsCount))
+		query = baseQuery + ` LIMIT $` + idxLimit + ` OFFSET $` + idxOffset
+		queryArgs = argsCount
+	}
+
+	rows, err := h.db.Query(r.Context(), query, queryArgs...)
 	if err != nil {
 		log.Printf("listarGlobal encuentros: %v", err)
 		responderError(w, http.StatusInternalServerError, "error al consultar encuentros")
