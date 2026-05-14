@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router'
-import { Search, X, ClipboardList, CheckCircle, Clock, ChevronRight } from 'lucide-react'
+import { Search, X, ClipboardList, ChevronRight } from 'lucide-react'
 import { useEncuentros, type FiltrosEncuentro, type Encuentro } from '../../api/encuentros'
 
 const FINALIDADES = [
@@ -14,21 +14,6 @@ function formatFecha(iso: string) {
   return new Date(iso).toLocaleDateString('es-CO', {
     day: '2-digit', month: 'short', year: 'numeric',
   })
-}
-
-function BadgeEstado({ estado }: { estado: Encuentro['estado'] }) {
-  if (estado === 'finalizado') {
-    return (
-      <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-green-100 text-green-700">
-        <CheckCircle size={10} /> Finalizado
-      </span>
-    )
-  }
-  return (
-    <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
-      <Clock size={10} /> Borrador
-    </span>
-  )
 }
 
 export default function HistorialEncuentros() {
@@ -60,11 +45,10 @@ export default function HistorialEncuentros() {
     setFiltrosDebounced({})
   }
 
-  const hayFiltros = !!(filtros.desde || filtros.hasta || filtros.diagnostico)
+  const hayFiltros = !!(form.desde || form.hasta || form.diagnostico)
 
-  // Filtrar por finalidad en cliente (el endpoint no lo soporta actualmente)
   const visibles = form.finalidad
-    ? encuentros.filter(e => e.finalidad_consulta === form.finalidad)
+    ? encuentros.filter((e: Encuentro) => e.finalidad_consulta === form.finalidad)
     : encuentros
 
   return (
@@ -151,21 +135,20 @@ export default function HistorialEncuentros() {
                 <th className="px-5 py-2.5">Fecha</th>
                 <th className="px-4 py-2.5">Finalidad</th>
                 <th className="px-4 py-2.5">Diagnóstico</th>
-                <th className="px-4 py-2.5">Estado</th>
                 <th className="px-4 py-2.5" />
               </tr>
             </thead>
             <tbody className="divide-y" style={{ borderColor: 'var(--hce-border)' }}>
               {isError && (
                 <tr>
-                  <td colSpan={5} className="px-5 py-8 text-center text-sm text-red-500">
+                  <td colSpan={4} className="px-5 py-8 text-center text-sm text-red-500">
                     Error al cargar. Intenta de nuevo.
                   </td>
                 </tr>
               )}
               {!isLoading && !isError && visibles.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-5 py-12 text-center">
+                  <td colSpan={4} className="px-5 py-12 text-center">
                     <ClipboardList size={28} className="mx-auto mb-2 text-slate-300" />
                     <p className="text-sm" style={{ color: 'var(--hce-text-muted)' }}>
                       {hayFiltros || form.finalidad
@@ -203,9 +186,6 @@ export default function HistorialEncuentros() {
                         {e.motivo_consulta.slice(0, 60)}{e.motivo_consulta.length > 60 ? '…' : ''}
                       </span>
                     )}
-                  </td>
-                  <td className="px-4 py-3">
-                    <BadgeEstado estado={e.estado} />
                   </td>
                   <td className="px-4 py-3 text-right">
                     <ChevronRight size={15} className="text-slate-300 inline" />

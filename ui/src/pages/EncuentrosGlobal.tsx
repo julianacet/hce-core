@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router'
 import {
-  Search, Plus, Filter, Trash2, ChevronLeft, ChevronRight,
-  ClipboardList, CheckCircle, Clock,
+  Search, Plus, Filter, Trash2, ChevronLeft, ChevronRight, ClipboardList,
 } from 'lucide-react'
-import { useEncuentrosPaginados, type EncuentroResumen } from '../api/encuentros'
+import { useEncuentrosPaginados } from '../api/encuentros'
 
 const LIMIT = 30
 
@@ -21,21 +20,6 @@ function formatFecha(iso: string) {
   })
 }
 
-function BadgeEstado({ estado }: { estado: EncuentroResumen['estado'] }) {
-  if (estado === 'finalizado') {
-    return (
-      <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-green-100 text-green-700">
-        <CheckCircle size={10} /> Finalizado
-      </span>
-    )
-  }
-  return (
-    <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
-      <Clock size={10} /> Borrador
-    </span>
-  )
-}
-
 export default function EncuentrosGlobal() {
   const navigate = useNavigate()
 
@@ -44,7 +28,7 @@ export default function EncuentrosGlobal() {
   const [page, setPage] = useState(1)
   const [filtrosAbiertos, setFiltrosAbiertos] = useState(false)
   const [filtros, setFiltros] = useState({
-    desde: '', hasta: '', finalidad: '', estado: '',
+    desde: '', hasta: '', finalidad: '',
   })
   const [filtrosDebounced, setFiltrosDebounced] = useState(filtros)
 
@@ -64,7 +48,7 @@ export default function EncuentrosGlobal() {
   }
 
   function limpiarFiltros() {
-    setFiltros({ desde: '', hasta: '', finalidad: '', estado: '' })
+    setFiltros({ desde: '', hasta: '', finalidad: '' })
     setPage(1)
   }
 
@@ -149,18 +133,6 @@ export default function EncuentrosGlobal() {
                   </select>
                 </div>
                 <div>
-                  <label className="label-hce">Estado</label>
-                  <select
-                    className="input-hce"
-                    value={filtros.estado}
-                    onChange={e => setFiltro('estado', e.target.value)}
-                  >
-                    <option value="">Todos</option>
-                    <option value="finalizado">Finalizado</option>
-                    <option value="borrador">Borrador</option>
-                  </select>
-                </div>
-                <div>
                   <label className="label-hce">Desde</label>
                   <input
                     type="date"
@@ -222,21 +194,20 @@ export default function EncuentrosGlobal() {
                 <th className="px-4 py-2.5">Fecha</th>
                 <th className="px-4 py-2.5">Finalidad</th>
                 <th className="px-4 py-2.5">Diagnóstico</th>
-                <th className="px-4 py-2.5">Estado</th>
                 <th className="px-4 py-2.5" />
               </tr>
             </thead>
             <tbody className="divide-y" style={{ borderColor: 'var(--hce-border)' }}>
               {isError && (
                 <tr>
-                  <td colSpan={6} className="px-5 py-8 text-center text-sm text-red-500">
+                  <td colSpan={5} className="px-5 py-8 text-center text-sm text-red-500">
                     Error al cargar. Intenta de nuevo.
                   </td>
                 </tr>
               )}
               {!isLoading && !isError && encuentros.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-5 py-12 text-center">
+                  <td colSpan={5} className="px-5 py-12 text-center">
                     <ClipboardList size={28} className="mx-auto mb-2 text-slate-300" />
                     <p className="text-sm" style={{ color: 'var(--hce-text-muted)' }}>
                       {qDebounced || hayFiltros
@@ -284,9 +255,6 @@ export default function EncuentrosGlobal() {
                     ) : (
                       <span className="text-xs text-slate-300">—</span>
                     )}
-                  </td>
-                  <td className="px-4 py-3">
-                    <BadgeEstado estado={e.estado} />
                   </td>
                   <td className="px-4 py-3 text-right">
                     <span className="text-xs" style={{ color: 'var(--hce-primary)' }}>

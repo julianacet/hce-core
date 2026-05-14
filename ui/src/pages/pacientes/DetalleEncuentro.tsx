@@ -1,9 +1,9 @@
 import { useParams } from 'react-router'
-import { Activity, Printer, Clock, CheckCircle } from 'lucide-react'
+import { Activity, Printer } from 'lucide-react'
 import { useState } from 'react'
 import { useTabParam } from '../../hooks/useTabParam'
 import { pdf } from '@react-pdf/renderer'
-import { useEncuentro, useFinalizarEncuentro, type ValorNormalNotas } from '../../api/encuentros'
+import { useEncuentro, type ValorNormalNotas } from '../../api/encuentros'
 import { useAuditoriaEncuentro } from '../../api/auditoria'
 import { usePaciente } from '../../api/pacientes'
 import { useMedico } from '../../context/MedicoContext'
@@ -44,7 +44,6 @@ export default function DetalleEncuentro() {
   const { data: e, isLoading, isError } = useEncuentro(id ?? '', encId ?? '')
   const { data: logs = [] } = useAuditoriaEncuentro(encId ?? '')
   const { data: paciente } = usePaciente(id ?? '')
-  const finalizar = useFinalizarEncuentro(id ?? '', encId ?? '')
   const { data: campos = [] } = useCamposClinicosActivos()
   const { data: formulas = [] } = useFormulas(id ?? '', encId ?? '')
   const { data: notas = [] } = useNotasEncuentro(id ?? '', encId ?? '')
@@ -114,27 +113,6 @@ export default function DetalleEncuentro() {
 
   return (
     <div className="space-y-4">
-
-      {/* Borrador banner */}
-      {e.estado === 'borrador' && (
-        <div
-          className="card-hce px-5 py-3 flex items-center justify-between border-l-4"
-          style={{ borderLeftColor: 'var(--hce-primary)' }}
-        >
-          <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--hce-text)' }}>
-            <Clock size={15} style={{ color: 'var(--hce-primary)' }} />
-            <span>Este encuentro está en <strong>borrador</strong> — aún no ha sido finalizado.</span>
-          </div>
-          <button
-            onClick={() => finalizar.mutateAsync()}
-            disabled={finalizar.isPending}
-            className="btn-primary text-sm disabled:opacity-50 flex items-center gap-1.5"
-          >
-            <CheckCircle size={14} />
-            {finalizar.isPending ? 'Finalizando…' : 'Finalizar consulta'}
-          </button>
-        </div>
-      )}
 
       {/* Metadata del encuentro */}
       <div className="card-hce px-5 py-4">

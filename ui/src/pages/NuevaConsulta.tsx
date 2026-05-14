@@ -3,7 +3,8 @@ import { useNavigate, useLocation } from 'react-router'
 import { Search, Filter, Trash2, Check, UserRound, ChevronRight } from 'lucide-react'
 import { usePacientesPaginados, type Paciente } from '../api/pacientes'
 import { useCrearEncuentro, type EncuentroInput } from '../api/encuentros'
-import EncuentroForm from '../components/EncuentroForm'
+import { apiFetch } from '../api/client'
+import EncuentroForm, { type FormulaData } from '../components/EncuentroForm'
 import { SelectorEps } from '../components/SelectorEps'
 
 const TIPOS_USUARIO = [
@@ -114,9 +115,33 @@ export default function NuevaConsulta() {
     setFormKey(k => k + 1)
   }
 
-  async function handleSubmit(data: EncuentroInput) {
+  async function handleSubmit(data: EncuentroInput, formulas: FormulaData) {
     const encuentro = await crear.mutateAsync(data)
-    navigate(`/pacientes/${paciente!.numero_documento}/encuentros/${encuentro.encuentro_id}`)
+    const doc = paciente!.numero_documento
+    const encId = encuentro.encuentro_id
+
+    for (const tipo of ['pos', 'no_pos'] as const) {
+      const meds = formulas[tipo].filter(m => m.nombre.trim())
+      if (meds.length === 0) continue
+      await apiFetch(`/pacientes/${doc}/encuentros/${encId}/formulas`, {
+        method: 'POST',
+        body: JSON.stringify({
+          tipo,
+          medicamentos: meds.map(m => ({
+            nombre_medicamento: m.nombre,
+            concentracion: m.concentracion || undefined,
+            forma_farmaceutica: m.formaFarmaceutica || undefined,
+            dosis: m.dosis,
+            frecuencia: m.frecuencia,
+            duracion_tratamiento: m.duracion,
+            cantidad_dispensar: parseInt(m.cantidad) || undefined,
+            indicaciones: m.indicaciones || undefined,
+          })),
+        }),
+      })
+    }
+
+    navigate(`/pacientes/${doc}/encuentros/${encId}`)
   }
 
   const selectedDocumento = paciente?.numero_documento ?? null
@@ -321,9 +346,14 @@ export default function NuevaConsulta() {
           key={formKey}
           documento={paciente?.numero_documento ?? ''}
           genero={paciente?.genero}
+          paciente={paciente ? {
+            nombre: nombreCompleto(paciente),
+            documento: paciente.numero_documento,
+            tipoDocumento: paciente.tipo_documento,
+            fechaNacimiento: new Date(paciente.fecha_nacimiento).toLocaleDateString('es-CO'),
+          } : undefined}
           onSubmit={handleSubmit}
           isPending={crear.isPending}
-          submitLabel="Crear encuentro"
           onCancelar={limpiarPaciente}
         />
       </div>

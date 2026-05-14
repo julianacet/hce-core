@@ -232,16 +232,34 @@ export default function AntecedentesTab({
   const [answers, setAnswers] = useState<Record<string, AnswerState>>({})
   const [guardado, setGuardado] = useState(false)
   const dataRef = useRef<typeof data | null>(null)
+  const initialized = useRef(false)
 
   useEffect(() => {
     if (!data || dataRef.current === data) return
     dataRef.current = data
+    initialized.current = false
     const init: Record<string, AnswerState> = {}
     Object.values(data).flat().forEach(p => {
       init[p.id] = { valor: normalizarBooleano(p.valor ?? ''), detalle: p.detalle ?? '' }
     })
     setAnswers(init)
+    setTimeout(() => { initialized.current = true }, 0)
   }, [data])
+
+  useEffect(() => {
+    if (!initialized.current || readOnly) return
+    const t = setTimeout(async () => {
+      const respuestas: RespuestaInput[] = Object.entries(answers)
+        .filter(([, a]) => a.valor !== '')
+        .map(([id, a]) => ({ pregunta_id: id, valor: a.valor, detalle: a.detalle || undefined }))
+      try {
+        await guardar.mutateAsync(respuestas)
+        setGuardado(true)
+        setTimeout(() => setGuardado(false), 2000)
+      } catch { /* silent */ }
+    }, 800)
+    return () => clearTimeout(t)
+  }, [answers])
 
   function setValor(id: string, valor: string) {
     setAnswers(prev => ({ ...prev, [id]: { ...prev[id], valor } }))
@@ -249,19 +267,6 @@ export default function AntecedentesTab({
 
   function setDetalle(id: string, detalle: string) {
     setAnswers(prev => ({ ...prev, [id]: { ...prev[id], detalle } }))
-  }
-
-  async function handleGuardar() {
-    const respuestas: RespuestaInput[] = Object.entries(answers)
-      .filter(([, a]) => a.valor !== '')
-      .map(([id, a]) => ({
-        pregunta_id: id,
-        valor: a.valor,
-        detalle: a.detalle || undefined,
-      }))
-    await guardar.mutateAsync(respuestas)
-    setGuardado(true)
-    setTimeout(() => setGuardado(false), 2500)
   }
 
   if (isLoading) {
@@ -313,15 +318,15 @@ export default function AntecedentesTab({
       ))}
 
       {!readOnly && (
-        <div className="flex justify-end items-center gap-3 pt-2">
-          {guardado && (
-            <span className="flex items-center gap-1.5 text-sm text-green-600">
-              <CheckCircle size={15} /> Guardado
+        <div className="flex justify-end items-center h-5">
+          {guardar.isPending && (
+            <span className="text-xs text-slate-400">Guardando...</span>
+          )}
+          {guardado && !guardar.isPending && (
+            <span className="flex items-center gap-1 text-xs text-green-600">
+              <CheckCircle size={12} /> Guardado
             </span>
           )}
-          <button type="button" className="btn-primary" onClick={handleGuardar} disabled={guardar.isPending}>
-            {guardar.isPending ? 'Guardando...' : 'Guardar antecedentes'}
-          </button>
         </div>
       )}
     </div>

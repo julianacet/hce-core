@@ -28,7 +28,7 @@ func listarNotas(db *pgxpool.Pool) http.HandlerFunc {
 			SELECT id, encuentro_id, texto, fecha_creacion, creado_por
 			FROM encuentro_nota
 			WHERE encuentro_id = $1
-			ORDER BY fecha_creacion ASC`,
+			ORDER BY fecha_creacion DESC`,
 			encuentroID,
 		)
 		if err != nil {

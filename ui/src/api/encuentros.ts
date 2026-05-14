@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiFetch } from './client'
 
 export type DiagnosticoItem = {
-  tipo: 'principal' | 'secundario' | 'nota'
+  tipo: 'impresion' | 'principal' | 'secundario' | 'nota'
   codigo?: string
   descripcion: string
 }
@@ -104,29 +104,6 @@ export function useCrearEncuentro(documento: string) {
   })
 }
 
-export function useFinalizarEncuentro(documento: string, encuentroId: string) {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: () =>
-      apiFetch<Encuentro>(`/pacientes/${documento}/encuentros/${encuentroId}/finalizar`, {
-        method: 'PATCH',
-      }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['encuentros', documento] }),
-  })
-}
-
-export function useActualizarEncuentro(documento: string, encuentroId: string) {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: (data: Partial<EncuentroInput>) =>
-      apiFetch<Encuentro>(`/pacientes/${documento}/encuentros/${encuentroId}`, {
-        method: 'PUT',
-        body: JSON.stringify(data),
-      }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['encuentros', documento] }),
-  })
-}
-
 // ── Listado global de encuentros ─────────────────────────────────────────────
 
 export type EncuentroResumen = {
@@ -155,7 +132,6 @@ type EncuentrosPaginadosParams = {
   desde: string
   hasta: string
   finalidad: string
-  estado: string
 }
 
 export function useEncuentrosPaginados(params: EncuentrosPaginadosParams) {
@@ -170,7 +146,6 @@ export function useEncuentrosPaginados(params: EncuentrosPaginadosParams) {
       if (params.desde) p.set('desde', params.desde)
       if (params.hasta) p.set('hasta', params.hasta)
       if (params.finalidad) p.set('finalidad', params.finalidad)
-      if (params.estado) p.set('estado', params.estado)
       return apiFetch<EncuentrosPaginados>(`/encuentros?${p}`)
     },
     placeholderData: (prev) => prev,

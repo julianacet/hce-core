@@ -39,8 +39,6 @@ func EncuentrosRouter(db *pgxpool.Pool) http.Handler {
 	r.Post("/", h.crear)
 	r.Route("/{encuentroId}", func(r chi.Router) {
 		r.Get("/", h.obtener)
-		r.Put("/", h.actualizar)
-		r.Patch("/finalizar", h.finalizar)
 		r.Delete("/", h.eliminar)
 		r.Mount("/formulas", FormulasRouter(db))
 		r.Mount("/consentimiento", ConsentimientoEncuentroRouter(db))
@@ -68,13 +66,14 @@ const columnasEncuentro = `
 	CASE causa_externa WHEN '13' THEN 'Enfermedad general' WHEN '01' THEN 'Accidente de trabajo' WHEN '02' THEN 'Accidente de tránsito' WHEN '03' THEN 'Otro accidente' WHEN '04' THEN 'Lesión por agresión' WHEN '05' THEN 'Lesión autoinfligida' WHEN '06' THEN 'Evento catastrófico' ELSE causa_externa END AS causa_externa_nombre,
 	CASE via_ingreso WHEN '01' THEN 'Urgencias' WHEN '02' THEN 'Consulta externa' WHEN '03' THEN 'Hospitalización' ELSE via_ingreso END AS via_ingreso_nombre`
 
-// GET /pacientes/{documento}/encuentros?desde=&hasta=&diagnostico=
+// GET /pacientes/{documento}/encuentros?desde=&hasta=&diagnostico=&estado=
 func (h *EncuentroHandler) listar(w http.ResponseWriter, r *http.Request) {
 	documento := chi.URLParam(r, "documento")
 
 	desde := strings.TrimSpace(r.URL.Query().Get("desde"))
 	hasta := strings.TrimSpace(r.URL.Query().Get("hasta"))
 	diagnostico := strings.TrimSpace(r.URL.Query().Get("diagnostico"))
+	estado := strings.TrimSpace(r.URL.Query().Get("estado"))
 
 	query := `SELECT` + columnasEncuentro + `
 		FROM encuentro_clinico
@@ -88,6 +87,10 @@ func (h *EncuentroHandler) listar(w http.ResponseWriter, r *http.Request) {
 	if hasta != "" {
 		args = append(args, hasta+" 23:59:59")
 		query += ` AND fecha_atencion <= $` + fmt.Sprintf("%d", len(args))
+	}
+	if estado != "" {
+		args = append(args, estado)
+		query += ` AND estado = $` + fmt.Sprintf("%d", len(args))
 	}
 	if diagnostico != "" {
 		args = append(args, "%"+strings.ToLower(diagnostico)+"%")
@@ -205,69 +208,6 @@ func (h *EncuentroHandler) crear(w http.ResponseWriter, r *http.Request) {
 	responderJSON(w, http.StatusCreated, e)
 }
 
-// PUT /pacientes/{documento}/encuentros/{encuentroId}
-// Actualiza un encuentro en borrador (UPDATE directo, sin SCD2).
-// Los encuentros finalizados son inmutables; usar notas de corrección.
-func (h *EncuentroHandler) actualizar(w http.ResponseWriter, r *http.Request) {
-	documento := chi.URLParam(r, "documento")
-	encuentroID := chi.URLParam(r, "encuentroId")
-
-	var input models.EncuentroInput
-	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		responderError(w, http.StatusBadRequest, "body inválido")
-		return
-	}
-
-	var rowID, estadoActual string
-	err := h.db.QueryRow(r.Context(), `
-		SELECT id, estado FROM encuentro_clinico
-		WHERE encuentro_id = $1 AND paciente_documento = $2
-		  AND es_ultima_version = TRUE AND esta_activo = TRUE`,
-		encuentroID, documento,
-	).Scan(&rowID, &estadoActual)
-	if err != nil {
-		responderError(w, http.StatusNotFound, "encuentro no encontrado")
-		return
-	}
-	if estadoActual != "borrador" {
-		responderError(w, http.StatusUnprocessableEntity, "el encuentro ya fue finalizado; use notas de corrección para aclaraciones")
-		return
-	}
-
-	e, err := actualizarBorradorEncuentro(r.Context(), h.db, rowID, input)
-	if err != nil {
-		log.Printf("actualizar encuentro borrador: %v", err)
-		responderError(w, http.StatusInternalServerError, "error al actualizar encuentro")
-		return
-	}
-
-	responderJSON(w, http.StatusOK, e)
-}
-
-// PATCH /pacientes/{documento}/encuentros/{encuentroId}/finalizar
-// Cierra el encuentro: borrador → finalizado. A partir de aquí es inmutable.
-func (h *EncuentroHandler) finalizar(w http.ResponseWriter, r *http.Request) {
-	documento := chi.URLParam(r, "documento")
-	encuentroID := chi.URLParam(r, "encuentroId")
-
-	row := h.db.QueryRow(r.Context(), `
-		UPDATE encuentro_clinico SET estado = 'finalizado'
-		WHERE encuentro_id = $1 AND paciente_documento = $2
-		  AND es_ultima_version = TRUE AND esta_activo = TRUE AND estado = 'borrador'
-		RETURNING `+columnasEncuentro,
-		encuentroID, documento,
-	)
-
-	e, err := escanearEncuentro(row)
-	if err != nil {
-		responderError(w, http.StatusNotFound, "encuentro borrador no encontrado")
-		return
-	}
-
-	e.Diagnosticos = cargarDiagnosticos(r.Context(), h.db, e.ID)
-	responderJSON(w, http.StatusOK, e)
-}
-
 // DELETE /pacientes/{documento}/encuentros/{encuentroId} — elimina todas las versiones
 func (h *EncuentroHandler) eliminar(w http.ResponseWriter, r *http.Request) {
 	u := appmiddleware.UsuarioDesdeContexto(r.Context())
@@ -336,7 +276,7 @@ func insertarEncuentro(ctx context.Context, db encuentroQuerier, encuentroID str
 
 	row := db.QueryRow(ctx, `
 		INSERT INTO encuentro_clinico (
-			encuentro_id, numero_version, es_ultima_version, esta_activo,
+			encuentro_id, numero_version, es_ultima_version, esta_activo, estado,
 			paciente_documento, encuentro_padre_id,
 			fecha_atencion, causa_externa, finalidad_consulta, via_ingreso,
 			motivo_consulta, descripcion_ingreso,
@@ -344,7 +284,7 @@ func insertarEncuentro(ctx context.Context, db encuentroQuerier, encuentroID str
 			codigo_diagnostico_principal, descripcion_diagnostico, plan_manejo,
 			creado_por
 		) VALUES (
-			$1, $2, TRUE, TRUE,
+			$1, $2, TRUE, TRUE, 'finalizado',
 			$3, $4,
 			$5, $6, $7, $8,
 			$9, $10,
@@ -412,87 +352,6 @@ func cargarDiagnosticos(ctx context.Context, db *pgxpool.Pool, encuentroClinicID
 		diags = append(diags, d)
 	}
 	return diags
-}
-
-func actualizarBorradorEncuentro(ctx context.Context, db *pgxpool.Pool, rowID string, input models.EncuentroInput) (models.Encuentro, error) {
-	fechaAtencion := time.Now()
-	if input.FechaAtencion != nil {
-		if t, err := time.Parse(time.RFC3339, *input.FechaAtencion); err == nil {
-			fechaAtencion = t
-		}
-	}
-
-	var codigoPrincipal *string
-	var descPrincipal *string
-	for _, d := range input.Diagnosticos {
-		if d.Tipo == "principal" {
-			codigoPrincipal = d.Codigo
-			desc := d.Descripcion
-			descPrincipal = &desc
-			break
-		}
-	}
-
-	tx, err := db.Begin(ctx)
-	if err != nil {
-		return models.Encuentro{}, err
-	}
-	defer tx.Rollback(ctx)
-
-	row := tx.QueryRow(ctx, `
-		UPDATE encuentro_clinico SET
-			encuentro_padre_id           = $1,
-			fecha_atencion               = $2,
-			causa_externa                = $3,
-			finalidad_consulta           = $4,
-			via_ingreso                  = $5,
-			motivo_consulta              = $6,
-			descripcion_ingreso          = $7,
-			signos_vitales               = $8,
-			examen_fisico                = $9,
-			revision_sistemas            = $10,
-			codigo_diagnostico_principal = $11,
-			descripcion_diagnostico      = $12,
-			plan_manejo                  = $13
-		WHERE id = $14
-		RETURNING `+columnasEncuentro,
-		input.EncuentroPadreID, fechaAtencion, input.CausaExterna, input.FinalidadConsulta, input.ViaIngreso,
-		input.MotivoConsulta, input.DescripcionIngreso,
-		asJSON(input.SignosVitales), asJSON(input.ExamenFisico), asJSON(input.RevisionSistemas),
-		codigoPrincipal, descPrincipal, input.PlanManejo,
-		rowID,
-	)
-
-	e, err := escanearEncuentro(row)
-	if err != nil {
-		return models.Encuentro{}, err
-	}
-
-	_, err = tx.Exec(ctx, `DELETE FROM encuentro_diagnostico WHERE encuentro_clinico_id = $1`, rowID)
-	if err != nil {
-		return models.Encuentro{}, err
-	}
-
-	for i, d := range input.Diagnosticos {
-		if strings.TrimSpace(d.Descripcion) == "" {
-			continue
-		}
-		_, err = tx.Exec(ctx,
-			`INSERT INTO encuentro_diagnostico (encuentro_clinico_id, tipo, codigo, descripcion, orden) VALUES ($1, $2, $3, $4, $5)`,
-			e.ID, d.Tipo, d.Codigo, d.Descripcion, i,
-		)
-		if err != nil {
-			return models.Encuentro{}, fmt.Errorf("insertar diagnóstico: %w", err)
-		}
-		e.Diagnosticos = append(e.Diagnosticos, models.EncuentroDiagnostico{
-			Tipo: d.Tipo, Codigo: d.Codigo, Descripcion: d.Descripcion, Orden: i,
-		})
-	}
-
-	if err := tx.Commit(ctx); err != nil {
-		return models.Encuentro{}, err
-	}
-	return e, nil
 }
 
 // ── Listado global de encuentros ─────────────────────────────────────────────
