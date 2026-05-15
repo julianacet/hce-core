@@ -2,11 +2,16 @@ services:
   hce-db:
     image: postgres:15-alpine
     container_name: ${COMPOSE_PROJECT_NAME:-hce}-db
-    restart: always
+    restart: unless-stopped
     environment:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: ${DB_NAME}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     volumes:
       - ./db/data:/var/lib/postgresql/data
       - ./db/init.sql:/docker-entrypoint-initdb.d/01_init.sql
@@ -14,21 +19,21 @@ services:
       - ./db/seed_ocupaciones.sql:/docker-entrypoint-initdb.d/03_seed_ocupaciones.sql
       - ./db/seed_eps.sql:/docker-entrypoint-initdb.d/04_seed_eps.sql
       - ./db/seed_medicamentos.sql:/docker-entrypoint-initdb.d/05_seed_medicamentos.sql
-    ports:
-      - "${DB_PORT}:5432"
 
   hce-api:
     build: ./api
     container_name: ${COMPOSE_PROJECT_NAME:-hce}-api
-    restart: always
+    restart: unless-stopped
     depends_on:
-      - hce-db
+      hce-db:
+        condition: service_healthy
     environment:
       DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@${COMPOSE_PROJECT_NAME:-hce}-db:5432/${DB_NAME}?sslmode=disable
       JWT_SECRET: ${JWT_SECRET}
       PORT: ${DOCKER_API_PORT}
       ALLOWED_ORIGIN: ${DOCKER_ALLOWED_ORIGIN}
       APP_TZ: ${APP_TZ:-America/Bogota}
+      TZ: ${APP_TZ:-America/Bogota}
     ports:
       - "${DOCKER_API_PORT}:${DOCKER_API_PORT}"
 
@@ -38,6 +43,6 @@ services:
       args:
         VITE_API_URL: ${DOCKER_VITE_API_URL}
     container_name: ${COMPOSE_PROJECT_NAME:-hce}-ui
-    restart: always
+    restart: unless-stopped
     ports:
       - "${UI_PORT}:80"

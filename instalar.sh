@@ -31,6 +31,15 @@ if [[ ! -f "docker-compose.yml" ]]; then
   error "No se encontró docker-compose.yml. Ejecuta el script desde la carpeta raíz del proyecto."
 fi
 
+if [[ -d "$SCRIPT_DIR/db/data" && -n "$(ls -A "$SCRIPT_DIR/db/data" 2>/dev/null)" ]]; then
+  warn "Ya existe una base de datos en db/data/."
+  warn "Si es una ACTUALIZACIÓN, los datos se conservan y el instalador solo reconstruye las imágenes."
+  warn "Si querés una instalación LIMPIA desde cero: sudo rm -rf db/data y volvé a ejecutar."
+  echo ""
+  read -rp "  ¿Continuar con los datos existentes? [s/N]: " CONFIRMAR
+  [[ "${CONFIRMAR,,}" == "s" ]] || error "Instalación cancelada."
+fi
+
 # ── Instalar Docker si no está ────────────────────────────────────────────────
 
 titulo "1. Verificando Docker..."
@@ -87,7 +96,8 @@ echo ""
 # Nombre del consultorio (proyecto)
 read -rp "  Nombre corto del consultorio (sin espacios, ej: mi-consultorio): " NOMBRE_PROYECTO
 NOMBRE_PROYECTO="${NOMBRE_PROYECTO:-hce}"
-NOMBRE_PROYECTO="${NOMBRE_PROYECTO// /-}"
+NOMBRE_PROYECTO=$(echo "$NOMBRE_PROYECTO" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g' | sed 's/-\+/-/g' | sed 's/^-//' | sed 's/-$//')
+[[ -n "$NOMBRE_PROYECTO" ]] || NOMBRE_PROYECTO="hce"
 
 # Puerto de acceso
 read -rp "  Puerto de acceso en el navegador [80]: " UI_PORT
@@ -97,16 +107,40 @@ UI_PORT="${UI_PORT:-80}"
 read -rp "  Puerto del backend API [8000]: " API_PORT
 API_PORT="${API_PORT:-8000}"
 
+# Verificar que los puertos no estén en uso
+for PUERTO in "$UI_PORT" "$API_PORT"; do
+  if ss -tlnp 2>/dev/null | grep -q ":${PUERTO} " || \
+     ss -tlnp 2>/dev/null | grep -q ":${PUERTO}$"; then
+    error "El puerto $PUERTO ya está en uso. Detén el proceso que lo ocupa o elige otro puerto."
+  fi
+done
+
+# Dirección del servidor (para acceso desde otros equipos en la red)
+echo ""
+info "Si el sistema solo se usará en este equipo, dejá 'localhost'."
+info "Si otros equipos de la red van a acceder al sistema, ingresá la IP de este servidor (ej: 192.168.1.10)."
+read -rp "  Dirección del servidor [localhost]: " SERVER_HOST
+SERVER_HOST="${SERVER_HOST:-localhost}"
+
+# Zona horaria
+read -rp "  Zona horaria [America/Bogota]: " APP_TZ
+APP_TZ="${APP_TZ:-America/Bogota}"
+
 # Contraseña de la base de datos
 while true; do
-  read -rsp "  Contraseña para la base de datos (mín. 8 caracteres): " DB_PASS
+  read -rsp "  Contraseña para la base de datos (mín. 8 caracteres, sin @ / : # ?): " DB_PASS
   echo ""
-  if [[ ${#DB_PASS} -ge 8 ]]; then break
-  else warn "La contraseña debe tener al menos 8 caracteres."; fi
+  if [[ ${#DB_PASS} -lt 8 ]]; then
+    warn "La contraseña debe tener al menos 8 caracteres."
+  elif [[ "$DB_PASS" =~ [@/:?#] ]]; then
+    warn "La contraseña no puede contener los caracteres: @ / : ? #"
+  else
+    break
+  fi
 done
 
 # Generar JWT_SECRET aleatorio
-JWT_SECRET=$(openssl rand -base64 48 | tr -d '\n')
+JWT_SECRET=$(head -c 48 /dev/urandom | base64 | tr -d '\n=')
 
 ok "Configuración lista"
 
@@ -125,19 +159,18 @@ DB_PORT=5432
 DATABASE_URL=postgresql://hce:${DB_PASS}@${NOMBRE_PROYECTO}-db:5432/hce_provider?sslmode=disable
 JWT_SECRET=${JWT_SECRET}
 PORT=${API_PORT}
-ALLOWED_ORIGIN=http://localhost:${UI_PORT}
 
-VITE_API_URL=http://localhost:${API_PORT}
+VITE_API_URL=http://${SERVER_HOST}:${API_PORT}
 UI_PORT=${UI_PORT}
-APP_TZ=America/Bogota
+APP_TZ=${APP_TZ}
 
 DOCKER_API_PORT=${API_PORT}
-DOCKER_ALLOWED_ORIGIN=$([ "${UI_PORT}" = "80" ] && echo "http://localhost" || echo "http://localhost:${UI_PORT}")
-DOCKER_VITE_API_URL=http://localhost:${API_PORT}
+DOCKER_ALLOWED_ORIGIN=$([ "${UI_PORT}" = "80" ] && echo "http://${SERVER_HOST}" || echo "http://${SERVER_HOST}:${UI_PORT}")
+DOCKER_VITE_API_URL=http://${SERVER_HOST}:${API_PORT}
 EOF
 
 cat > "$SCRIPT_DIR/ui/.env" <<EOF
-VITE_API_URL=http://localhost:${API_PORT}
+VITE_API_URL=http://${SERVER_HOST}:${API_PORT}
 EOF
 
 ok "Archivos .env creados"
@@ -148,7 +181,7 @@ titulo "4. Construyendo e iniciando los servicios..."
 info "Esto puede tomar unos minutos la primera vez..."
 echo ""
 
-docker compose up -d --build
+docker compose -f docker-compose.yml up -d --build
 
 echo ""
 ok "Servicios iniciados"
@@ -159,10 +192,10 @@ titulo "5. Esperando que la base de datos esté lista..."
 
 MAX_INTENTOS=30
 INTENTO=0
-until docker compose exec -T hce-db pg_isready -U hce -d hce_provider &>/dev/null; do
+until docker compose -f docker-compose.yml exec -T hce-db pg_isready -U hce -d hce_provider &>/dev/null; do
   INTENTO=$((INTENTO + 1))
   if [[ $INTENTO -ge $MAX_INTENTOS ]]; then
-    error "La base de datos no respondió después de ${MAX_INTENTOS} segundos. Revisa los logs: docker compose logs hce-db"
+    error "La base de datos no respondió después de ${MAX_INTENTOS} segundos. Revisa los logs: docker compose -f docker-compose.yml logs hce-db"
   fi
   sleep 1
 done
@@ -173,13 +206,22 @@ ok "Base de datos lista"
 
 titulo "6. Verificando el backend..."
 
-MAX_INTENTOS=20
+# Detectar herramienta HTTP disponible
+if command -v curl &>/dev/null; then
+  check_health() { curl -sf "http://localhost:${API_PORT}/health" &>/dev/null; }
+elif command -v wget &>/dev/null; then
+  check_health() { wget -qO- "http://localhost:${API_PORT}/health" &>/dev/null; }
+else
+  warn "No se encontró curl ni wget. Omitiendo verificación del backend."
+  check_health() { return 0; }
+fi
+
+MAX_INTENTOS=60
 INTENTO=0
-until curl -sf "http://localhost:${API_PORT}/health" &>/dev/null; do
+until check_health; do
   INTENTO=$((INTENTO + 1))
   if [[ $INTENTO -ge $MAX_INTENTOS ]]; then
-    warn "El backend aún no responde. Puede tardar unos segundos más."
-    break
+    error "El backend no respondió después de ${MAX_INTENTOS} segundos. Revisa los logs: docker compose -f docker-compose.yml logs hce-api"
   fi
   sleep 1
 done

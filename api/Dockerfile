@@ -12,11 +12,13 @@ RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o hce-api ./cmd/main.go
 FROM alpine:3.20
 
 RUN apk add --no-cache ca-certificates tzdata
-ENV TZ=America/Bogota
 
 WORKDIR /app
 COPY --from=builder /app/hce-api .
 
 EXPOSE 8000
+
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
+  CMD wget -qO- http://localhost:8000/health || exit 1
 
 CMD ["./hce-api"]
