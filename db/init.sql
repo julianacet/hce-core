@@ -7,7 +7,8 @@
 -- 1. Extensiones
 -- ============================================================
 
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";  -- conservada por compatibilidad
+CREATE EXTENSION IF NOT EXISTS pg_trgm;      -- búsqueda de texto por similitud (LIKE/ILIKE eficiente)
 
 -- ============================================================
 -- 2. Tabla de referencia: códigos CUPS
@@ -26,7 +27,7 @@ CREATE TABLE cups_codigo (
 -- ============================================================
 
 CREATE TABLE usuario (
-    id              UUID        PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id              UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
     nombre_usuario  TEXT        UNIQUE NOT NULL,
     nombre_completo TEXT        NOT NULL,
     rol             VARCHAR(20) NOT NULL DEFAULT 'medico'
@@ -41,7 +42,7 @@ CREATE TABLE usuario (
 -- ============================================================
 
 CREATE TABLE paciente (
-    id                UUID        PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id                UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
     numero_version    INTEGER     NOT NULL DEFAULT 1,
     es_ultima_version BOOLEAN     NOT NULL DEFAULT TRUE,
     esta_activo       BOOLEAN     NOT NULL DEFAULT TRUE,
@@ -92,8 +93,12 @@ CREATE UNIQUE INDEX idx_paciente_documento_activo
 
 -- Historial completo de versiones de un paciente
 CREATE INDEX idx_paciente_documento ON paciente(numero_documento);
--- Búsqueda por nombre
+-- Búsqueda por nombre exacto (ORDER BY, igualdad)
 CREATE INDEX idx_paciente_nombre ON paciente(apellido_primero, nombre_primero)
+    WHERE es_ultima_version = TRUE;
+-- Búsqueda por substring (ILIKE '%texto%') usando trigramas
+CREATE INDEX idx_paciente_nombre_trgm ON paciente
+    USING gin((apellido_primero || ' ' || nombre_primero) gin_trgm_ops)
     WHERE es_ultima_version = TRUE;
 
 -- ============================================================
@@ -102,7 +107,7 @@ CREATE INDEX idx_paciente_nombre ON paciente(apellido_primero, nombre_primero)
 
 CREATE TABLE encuentro_clinico (
     -- Versión de la fila
-    id                UUID        PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id                UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
     encuentro_id      UUID        NOT NULL,  -- hilo conductor entre versiones del mismo encuentro
     numero_version    INTEGER     NOT NULL DEFAULT 1,
     es_ultima_version BOOLEAN     NOT NULL DEFAULT TRUE,
@@ -148,6 +153,9 @@ CREATE INDEX idx_encuentro_ultima
     ON encuentro_clinico(encuentro_id) WHERE es_ultima_version = TRUE;
 CREATE INDEX idx_encuentro_id       ON encuentro_clinico(encuentro_id);
 CREATE INDEX idx_encuentro_paciente ON encuentro_clinico(paciente_documento);
+CREATE INDEX idx_encuentro_paciente_activo
+    ON encuentro_clinico(paciente_documento)
+    WHERE es_ultima_version = TRUE;
 CREATE INDEX idx_encuentro_fecha    ON encuentro_clinico(fecha_atencion DESC);
 
 -- ============================================================
@@ -155,7 +163,7 @@ CREATE INDEX idx_encuentro_fecha    ON encuentro_clinico(fecha_atencion DESC);
 -- ============================================================
 
 CREATE TABLE formula_medica (
-    id                UUID        PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id                UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
     formula_id        UUID        NOT NULL,
     numero_version    INTEGER     NOT NULL DEFAULT 1,
     es_ultima_version BOOLEAN     NOT NULL DEFAULT TRUE,
@@ -173,7 +181,7 @@ CREATE INDEX idx_formula_encuentro ON formula_medica(encuentro_id);
 
 -- Medicamentos: ligados a la versión exacta de la fórmula (formula_medica.id)
 CREATE TABLE formula_medicamento (
-    id         UUID    PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id         UUID    PRIMARY KEY DEFAULT gen_random_uuid(),
     formula_id UUID    NOT NULL REFERENCES formula_medica(id) ON DELETE RESTRICT,
 
     nombre_medicamento   TEXT    NOT NULL,
@@ -194,7 +202,7 @@ CREATE INDEX idx_medicamento_formula ON formula_medicamento(formula_id);
 -- ============================================================
 
 CREATE TABLE factura (
-    id                UUID        PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id                UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
     factura_id        UUID        NOT NULL,
     numero_version    INTEGER     NOT NULL DEFAULT 1,
     es_ultima_version BOOLEAN     NOT NULL DEFAULT TRUE,
@@ -205,8 +213,8 @@ CREATE TABLE factura (
     estado        VARCHAR(20) NOT NULL DEFAULT 'activa'
                   CHECK (estado IN ('activa', 'anulada')),
 
-    subtotal      NUMERIC(15, 2) NOT NULL DEFAULT 0,
-    total         NUMERIC(15, 2) NOT NULL DEFAULT 0,
+    subtotal      NUMERIC(15, 2) NOT NULL DEFAULT 0 CHECK (subtotal >= 0),
+    total         NUMERIC(15, 2) NOT NULL DEFAULT 0 CHECK (total >= 0),
 
     -- Resultados de validación externa (FEV/DIAN — fase futura)
     cuv  TEXT,
@@ -224,14 +232,14 @@ CREATE INDEX idx_factura_estado   ON factura(estado);
 
 -- Items de la factura: ligados a la versión exacta
 CREATE TABLE factura_item (
-    id         UUID          PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id         UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
     factura_id UUID          NOT NULL REFERENCES factura(id) ON DELETE RESTRICT,
 
     codigo_cups    VARCHAR(6)     NOT NULL REFERENCES cups_codigo(codigo) ON UPDATE CASCADE,
     descripcion    TEXT           NOT NULL,
     valor_unitario NUMERIC(15, 2) NOT NULL,
     cantidad       INTEGER        NOT NULL DEFAULT 1 CHECK (cantidad > 0),
-    subtotal       NUMERIC(15, 2) NOT NULL,   -- guardado explícitamente para auditoría
+    subtotal       NUMERIC(15, 2) NOT NULL CHECK (subtotal = valor_unitario * cantidad),
     orden          INTEGER        NOT NULL DEFAULT 1
 );
 
@@ -242,7 +250,7 @@ CREATE INDEX idx_factura_item_factura ON factura_item(factura_id);
 -- ============================================================
 
 CREATE TABLE rips_generado (
-    id           UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     encuentro_id UUID,                           -- nulo en lotes mensuales
     factura_id   UUID REFERENCES factura(id),
     periodo      VARCHAR(7),                     -- "YYYY-MM" para lotes mensuales
@@ -266,7 +274,7 @@ CREATE INDEX idx_rips_periodo   ON rips_generado(periodo)      WHERE periodo IS 
 -- ============================================================
 
 CREATE TABLE plantilla_consentimiento (
-    id           UUID        PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id           UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
     nombre       VARCHAR(100) NOT NULL,
     contenido    TEXT        NOT NULL,  -- soporta {{variables}}
     esta_activo  BOOLEAN     NOT NULL DEFAULT TRUE,
@@ -275,7 +283,7 @@ CREATE TABLE plantilla_consentimiento (
 );
 
 CREATE TABLE consentimiento_generado (
-    id                   UUID        PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id                   UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
     encuentro_id         UUID        NOT NULL,
     plantilla_id         UUID        REFERENCES plantilla_consentimiento(id),
     paciente_documento   VARCHAR(20) NOT NULL,
@@ -307,7 +315,7 @@ INSERT INTO plantilla_consentimiento (nombre, contenido, creado_por) VALUES (
 -- ============================================================
 
 CREATE TABLE encuesta_satisfaccion (
-    id                        UUID        PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id                        UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
     fecha_atencion            DATE        NOT NULL,            -- ingresada manualmente por el personal
     paciente_documento        TEXT,                            -- opcional, para privacidad
     -- Dimensiones 1-5
@@ -334,11 +342,11 @@ CREATE INDEX idx_encuesta_fecha ON encuesta_satisfaccion(fecha_atencion DESC);
 -- ============================================================
 
 CREATE TABLE insumo (
-    id            UUID          PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id            UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
     nombre        TEXT          NOT NULL,
     descripcion   TEXT,
     unidad        TEXT          NOT NULL,  -- unidad, caja, rollo, ml…
-    stock_actual  NUMERIC(10,2) NOT NULL DEFAULT 0,
+    stock_actual  NUMERIC(10,2) NOT NULL DEFAULT 0 CHECK (stock_actual >= 0),
     stock_minimo  NUMERIC(10,2) NOT NULL DEFAULT 0,  -- dispara alerta cuando stock_actual <= stock_minimo
     esta_activo   BOOLEAN       NOT NULL DEFAULT TRUE,
     fecha_creacion TIMESTAMPTZ  NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -349,7 +357,7 @@ CREATE TABLE insumo (
 -- referencia_tipo + referencia_id permiten vincular la salida a un encuentro
 -- o factura en el futuro (descuento automático).
 CREATE TABLE insumo_movimiento (
-    id               UUID          PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id               UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
     insumo_id        UUID          NOT NULL REFERENCES insumo(id),
     tipo             VARCHAR(10)   NOT NULL CHECK (tipo IN ('entrada', 'salida', 'ajuste')),
     cantidad         NUMERIC(10,2) NOT NULL,
@@ -369,7 +377,7 @@ CREATE INDEX idx_insumo_movimiento_fecha  ON insumo_movimiento(fecha_movimiento 
 -- ============================================================
 
 CREATE TABLE proveedor (
-    id                    UUID        PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id                    UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
     razon_social          TEXT        NOT NULL,
     nit                   VARCHAR(20),
     tipo                  VARCHAR(40) NOT NULL
@@ -401,7 +409,7 @@ CREATE INDEX idx_proveedor_tipo  ON proveedor(tipo);
 -- ============================================================
 
 CREATE TABLE tipo_evento_adverso (
-    id           UUID         PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id           UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
     nombre       VARCHAR(120) NOT NULL,
     descripcion  TEXT,
     requiere_reporte_invima BOOLEAN NOT NULL DEFAULT FALSE,
@@ -413,7 +421,7 @@ CREATE TABLE tipo_evento_adverso (
 CREATE SEQUENCE evento_adverso_numero_seq START 1;
 
 CREATE TABLE evento_adverso (
-    id      UUID    PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id      UUID    PRIMARY KEY DEFAULT gen_random_uuid(),
     numero  BIGINT  NOT NULL DEFAULT nextval('evento_adverso_numero_seq'),
     tipo_id UUID    REFERENCES tipo_evento_adverso(id),
     fecha_evento TIMESTAMPTZ NOT NULL,
@@ -504,17 +512,24 @@ CREATE INDEX idx_log_fecha          ON log_auditoria(fecha_cambio DESC);
 
 CREATE OR REPLACE FUNCTION fn_auditar_cambios()
 RETURNS TRIGGER AS $$
+DECLARE
+    v_usuario_id TEXT;
 BEGIN
+    -- Lee el ID del usuario de la app desde una variable de sesión.
+    -- El backend la setea con: SET LOCAL "app.usuario_id" = '<uuid>'
+    -- dentro de la misma transacción que ejecuta el cambio.
+    v_usuario_id := NULLIF(current_setting('app.usuario_id', TRUE), '');
+
     IF (TG_OP = 'DELETE') THEN
-        INSERT INTO log_auditoria(nombre_tabla, registro_id, accion, datos_anteriores)
-        VALUES (TG_TABLE_NAME, OLD.id, 'DELETE', to_jsonb(OLD));
+        INSERT INTO log_auditoria(nombre_tabla, registro_id, accion, datos_anteriores, usuario_id)
+        VALUES (TG_TABLE_NAME, OLD.id, 'DELETE', to_jsonb(OLD), v_usuario_id);
         RETURN OLD;
     ELSIF (TG_OP = 'UPDATE') THEN
-        INSERT INTO log_auditoria(nombre_tabla, registro_id, accion, datos_anteriores, datos_nuevos)
-        VALUES (TG_TABLE_NAME, OLD.id, 'UPDATE', to_jsonb(OLD), to_jsonb(NEW));
+        INSERT INTO log_auditoria(nombre_tabla, registro_id, accion, datos_anteriores, datos_nuevos, usuario_id)
+        VALUES (TG_TABLE_NAME, OLD.id, 'UPDATE', to_jsonb(OLD), to_jsonb(NEW), v_usuario_id);
     ELSIF (TG_OP = 'INSERT') THEN
-        INSERT INTO log_auditoria(nombre_tabla, registro_id, accion, datos_nuevos)
-        VALUES (TG_TABLE_NAME, NEW.id, 'INSERT', to_jsonb(NEW));
+        INSERT INTO log_auditoria(nombre_tabla, registro_id, accion, datos_nuevos, usuario_id)
+        VALUES (TG_TABLE_NAME, NEW.id, 'INSERT', to_jsonb(NEW), v_usuario_id);
     END IF;
     RETURN NEW;
 END;
@@ -654,7 +669,7 @@ CREATE INDEX IF NOT EXISTS idx_eps_codigo  ON eps(codigo);
 -- ============================================================
 
 CREATE TABLE IF NOT EXISTS antecedente_pregunta (
-    id                  UUID        PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id                  UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
     categoria           VARCHAR(20) NOT NULL
                         CHECK (categoria IN ('personal','familiar','farmacologico','alergico','quirurgico','habito','gineco')),
     texto               TEXT        NOT NULL,
@@ -669,7 +684,7 @@ CREATE TABLE IF NOT EXISTS antecedente_pregunta (
 );
 
 CREATE TABLE IF NOT EXISTS antecedente_respuesta (
-    id               UUID        PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id               UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
     numero_documento TEXT        NOT NULL,
     pregunta_id      UUID        NOT NULL REFERENCES antecedente_pregunta(id) ON DELETE CASCADE,
     valor            TEXT        NOT NULL,
@@ -1011,3 +1026,14 @@ CREATE TRIGGER trg_auditoria_insumo
 CREATE TRIGGER trg_auditoria_consentimiento
     AFTER INSERT OR UPDATE OR DELETE ON consentimiento_generado
     FOR EACH ROW EXECUTE FUNCTION fn_auditar_cambios();
+
+-- ============================================================
+-- FK diferidos — definidos al final porque referencian tablas
+-- que se crean después que la tabla origen (orden del schema).
+-- ============================================================
+
+-- paciente.codigo_municipio_residencia → municipio(codigo)
+-- (municipio se define en la sección 16, después de paciente en la 4)
+ALTER TABLE paciente
+    ADD CONSTRAINT fk_paciente_municipio
+    FOREIGN KEY (codigo_municipio_residencia) REFERENCES municipio(codigo);

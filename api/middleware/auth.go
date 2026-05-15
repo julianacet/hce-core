@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/golang-jwt/jwt/v5"
+	"hce/api/repository"
 )
 
 type contextKey string
@@ -46,6 +47,7 @@ func RequiereAuth(secreto string) func(http.Handler) http.Handler {
 			}
 
 			ctx := context.WithValue(r.Context(), UsuarioKey, claims)
+			ctx = repository.ContextConUsuario(ctx, claims.ID)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
