@@ -72,12 +72,13 @@ const router = createBrowserRouter([
               { path: 'auditoria', element: <AuditoriaPaciente /> },
             ],
           },
+
+          // Rutas desconocidas autenticadas → inicio
+          { path: '*', element: <Navigate to="/" replace /> },
         ],
       },
     ],
   },
-
-  { path: '*', element: <Navigate to="/" replace /> },
 ])
 
 export default function AppRouter() {

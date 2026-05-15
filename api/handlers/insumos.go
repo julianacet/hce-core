@@ -6,11 +6,15 @@ import (
 	"net/http"
 	"strings"
 
+	"errors"
+
 	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	appmiddleware "hce/api/middleware"
 	"hce/api/models"
+	"hce/api/repository"
 )
 
 func InsumosRouter(db *pgxpool.Pool) chi.Router {
@@ -212,63 +216,63 @@ func (h *insumosHandler) registrarMovimiento(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	tx, err := h.db.Begin(r.Context())
-	if err != nil {
-		log.Printf("iniciar tx movimiento: %v", err)
-		responderError(w, http.StatusInternalServerError, "error al iniciar transacción")
-		return
-	}
-	defer tx.Rollback(r.Context())
+	var (
+		insumoNotFound      bool
+		stockInsuficiente   bool
+		m                   models.Movimiento
+		errInsumo           = errors.New("insumo no encontrado")
+		errStockInsuficiente = errors.New("stock insuficiente")
+	)
 
-	var nuevoStock float64
-	var stockActual float64
-	if err := tx.QueryRow(r.Context(),
-		`SELECT stock_actual FROM insumo WHERE id=$1 AND esta_activo=TRUE FOR UPDATE`,
-		insumoID,
-	).Scan(&stockActual); err != nil {
-		responderError(w, http.StatusNotFound, "insumo no encontrado")
-		return
-	}
-
-	switch input.Tipo {
-	case "entrada":
-		nuevoStock = stockActual + input.Cantidad
-	case "salida":
-		nuevoStock = stockActual - input.Cantidad
-		if nuevoStock < 0 {
-			responderError(w, http.StatusBadRequest, "existencias insuficientes para registrar la salida")
-			return
+	if err := repository.ExecTx(r.Context(), h.db, func(tx pgx.Tx) error {
+		var stockActual float64
+		if err := tx.QueryRow(r.Context(),
+			`SELECT stock_actual FROM insumo WHERE id=$1 AND esta_activo=TRUE FOR UPDATE`,
+			insumoID,
+		).Scan(&stockActual); err != nil {
+			insumoNotFound = true
+			return errInsumo
 		}
-	case "ajuste":
-		nuevoStock = input.Cantidad
-	}
 
-	if _, err := tx.Exec(r.Context(),
-		`UPDATE insumo SET stock_actual=$1 WHERE id=$2`, nuevoStock, insumoID,
-	); err != nil {
-		log.Printf("actualizar stock: %v", err)
-		responderError(w, http.StatusInternalServerError, "error al actualizar stock")
-		return
-	}
+		var nuevoStock float64
+		switch input.Tipo {
+		case "entrada":
+			nuevoStock = stockActual + input.Cantidad
+		case "salida":
+			nuevoStock = stockActual - input.Cantidad
+			if nuevoStock < 0 {
+				stockInsuficiente = true
+				return errStockInsuficiente
+			}
+		case "ajuste":
+			nuevoStock = input.Cantidad
+		}
 
-	var m models.Movimiento
-	if err := tx.QueryRow(r.Context(), `
-		INSERT INTO insumo_movimiento
-			(insumo_id, tipo, cantidad, stock_resultante, referencia_tipo, notas, creado_por)
-		VALUES ($1, $2, $3, $4, 'manual', $5, $6)
-		RETURNING id, insumo_id, tipo, cantidad, stock_resultante, notas, fecha_movimiento, creado_por`,
-		insumoID, input.Tipo, input.Cantidad, nuevoStock, input.Notas, u.Nombre,
-	).Scan(&m.ID, &m.InsumoID, &m.Tipo, &m.Cantidad,
-		&m.StockResultante, &m.Notas, &m.FechaMovimiento, &m.CreadoPor,
-	); err != nil {
-		log.Printf("insertar movimiento: %v", err)
-		responderError(w, http.StatusInternalServerError, "error al registrar movimiento")
-		return
-	}
+		if _, err := tx.Exec(r.Context(),
+			`UPDATE insumo SET stock_actual=$1 WHERE id=$2`, nuevoStock, insumoID,
+		); err != nil {
+			return err
+		}
 
-	if err := tx.Commit(r.Context()); err != nil {
-		log.Printf("commit movimiento: %v", err)
-		responderError(w, http.StatusInternalServerError, "error al confirmar transacción")
+		return tx.QueryRow(r.Context(), `
+			INSERT INTO insumo_movimiento
+				(insumo_id, tipo, cantidad, stock_resultante, referencia_tipo, notas, creado_por)
+			VALUES ($1, $2, $3, $4, 'manual', $5, $6)
+			RETURNING id, insumo_id, tipo, cantidad, stock_resultante, notas, fecha_movimiento, creado_por`,
+			insumoID, input.Tipo, input.Cantidad, nuevoStock, input.Notas, u.Nombre,
+		).Scan(&m.ID, &m.InsumoID, &m.Tipo, &m.Cantidad,
+			&m.StockResultante, &m.Notas, &m.FechaMovimiento, &m.CreadoPor,
+		)
+	}); err != nil {
+		switch {
+		case insumoNotFound:
+			responderError(w, http.StatusNotFound, "insumo no encontrado")
+		case stockInsuficiente:
+			responderError(w, http.StatusBadRequest, "existencias insuficientes para registrar la salida")
+		default:
+			log.Printf("registrar movimiento: %v", err)
+			responderError(w, http.StatusInternalServerError, "error al procesar movimiento")
+		}
 		return
 	}
 

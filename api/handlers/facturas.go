@@ -9,10 +9,12 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	appmiddleware "hce/api/middleware"
 	"hce/api/models"
+	"hce/api/repository"
 )
 
 type FacturaHandler struct {
@@ -159,44 +161,32 @@ func (h *FacturaHandler) crear(w http.ResponseWriter, r *http.Request) {
 
 	u := appmiddleware.UsuarioDesdeContexto(r.Context())
 	facturaEntityID := uuid.New().String()
-
-	tx, err := h.db.Begin(r.Context())
-	if err != nil {
-		responderError(w, http.StatusInternalServerError, "error al iniciar transacción")
-		return
-	}
-	defer tx.Rollback(r.Context())
-
 	var rowID string
-	err = tx.QueryRow(r.Context(), `
-		INSERT INTO factura (factura_id, numero_version, es_ultima_version, esta_activo,
-		                     paciente_documento, estado, subtotal, total, creado_por)
-		VALUES ($1, 1, TRUE, TRUE, $2, 'activa', $3, $3, $4)
-		RETURNING id`,
-		facturaEntityID, input.PacienteDocumento, subtotal, u.Nombre,
-	).Scan(&rowID)
-	if err != nil {
+
+	if err := repository.ExecTx(r.Context(), h.db, func(tx pgx.Tx) error {
+		if err := tx.QueryRow(r.Context(), `
+			INSERT INTO factura (factura_id, numero_version, es_ultima_version, esta_activo,
+			                     paciente_documento, estado, subtotal, total, creado_por)
+			VALUES ($1, 1, TRUE, TRUE, $2, 'activa', $3, $3, $4)
+			RETURNING id`,
+			facturaEntityID, input.PacienteDocumento, subtotal, u.Nombre,
+		).Scan(&rowID); err != nil {
+			return err
+		}
+		for i, item := range input.Items {
+			itemSubtotal := float64(int64(item.Cantidad)*int64(math.Round(item.ValorUnitario*100))) / 100
+			if _, err := tx.Exec(r.Context(), `
+				INSERT INTO factura_item (factura_id, codigo_cups, descripcion, valor_unitario, cantidad, subtotal, orden)
+				VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+				rowID, item.CodigoCups, item.Descripcion, item.ValorUnitario, item.Cantidad, itemSubtotal, i+1,
+			); err != nil {
+				return err
+			}
+		}
+		return nil
+	}); err != nil {
 		log.Printf("crear factura: %v", err)
 		responderError(w, http.StatusInternalServerError, "error al crear factura")
-		return
-	}
-
-	for i, item := range input.Items {
-		itemSubtotal := float64(int64(item.Cantidad)*int64(math.Round(item.ValorUnitario*100))) / 100
-		_, err = tx.Exec(r.Context(), `
-			INSERT INTO factura_item (factura_id, codigo_cups, descripcion, valor_unitario, cantidad, subtotal, orden)
-			VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-			rowID, item.CodigoCups, item.Descripcion, item.ValorUnitario, item.Cantidad, itemSubtotal, i+1,
-		)
-		if err != nil {
-			log.Printf("crear factura_item: %v", err)
-			responderError(w, http.StatusInternalServerError, "error al guardar item de factura")
-			return
-		}
-	}
-
-	if err := tx.Commit(r.Context()); err != nil {
-		responderError(w, http.StatusInternalServerError, "error al confirmar transacción")
 		return
 	}
 
@@ -256,42 +246,28 @@ func (h *FacturaHandler) actualizar(w http.ResponseWriter, r *http.Request) {
 	}
 	subtotal := float64(subtotalCentavos) / 100
 
-	tx, err := h.db.Begin(r.Context())
-	if err != nil {
-		responderError(w, http.StatusInternalServerError, "error al iniciar transacción")
-		return
-	}
-	defer tx.Rollback(r.Context())
-
-	if _, err = tx.Exec(r.Context(), `DELETE FROM factura_item WHERE factura_id=$1`, rowID); err != nil {
-		log.Printf("eliminar items factura: %v", err)
-		responderError(w, http.StatusInternalServerError, "error al actualizar items")
-		return
-	}
-
-	for i, item := range input.Items {
-		itemSubtotal := float64(int64(item.Cantidad)*int64(math.Round(item.ValorUnitario*100))) / 100
-		if _, err = tx.Exec(r.Context(),
-			`INSERT INTO factura_item (factura_id, codigo_cups, descripcion, valor_unitario, cantidad, subtotal, orden)
-			 VALUES ($1,$2,$3,$4,$5,$6,$7)`,
-			rowID, item.CodigoCups, item.Descripcion, item.ValorUnitario, item.Cantidad, itemSubtotal, i+1,
-		); err != nil {
-			log.Printf("insertar item factura: %v", err)
-			responderError(w, http.StatusInternalServerError, "error al guardar item")
-			return
+	if err := repository.ExecTx(r.Context(), h.db, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(r.Context(), `DELETE FROM factura_item WHERE factura_id=$1`, rowID); err != nil {
+			return err
 		}
-	}
-
-	if _, err = tx.Exec(r.Context(),
-		`UPDATE factura SET subtotal=$1, total=$1 WHERE id=$2`,
-		subtotal, rowID,
-	); err != nil {
-		responderError(w, http.StatusInternalServerError, "error al actualizar totales")
-		return
-	}
-
-	if err = tx.Commit(r.Context()); err != nil {
-		responderError(w, http.StatusInternalServerError, "error al confirmar transacción")
+		for i, item := range input.Items {
+			itemSubtotal := float64(int64(item.Cantidad)*int64(math.Round(item.ValorUnitario*100))) / 100
+			if _, err := tx.Exec(r.Context(),
+				`INSERT INTO factura_item (factura_id, codigo_cups, descripcion, valor_unitario, cantidad, subtotal, orden)
+				 VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+				rowID, item.CodigoCups, item.Descripcion, item.ValorUnitario, item.Cantidad, itemSubtotal, i+1,
+			); err != nil {
+				return err
+			}
+		}
+		_, err := tx.Exec(r.Context(),
+			`UPDATE factura SET subtotal=$1, total=$1 WHERE id=$2`,
+			subtotal, rowID,
+		)
+		return err
+	}); err != nil {
+		log.Printf("actualizar factura: %v", err)
+		responderError(w, http.StatusInternalServerError, "error al actualizar factura")
 		return
 	}
 

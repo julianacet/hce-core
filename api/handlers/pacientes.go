@@ -16,6 +16,7 @@ import (
 
 	appmiddleware "hce/api/middleware"
 	"hce/api/models"
+	"hce/api/repository"
 )
 
 // extraColumnasPaciente appends CASE WHEN labels after the main column list.
@@ -223,32 +224,21 @@ func (h *PacienteHandler) actualizar(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tx, err := h.db.Begin(r.Context())
-	if err != nil {
-		responderError(w, http.StatusInternalServerError, "error al iniciar transacción")
-		return
-	}
-	defer tx.Rollback(r.Context())
-
-	_, err = tx.Exec(r.Context(),
-		`UPDATE paciente SET es_ultima_version = FALSE WHERE numero_documento = $1 AND es_ultima_version = TRUE`,
-		documento,
-	)
-	if err != nil {
-		responderError(w, http.StatusInternalServerError, "error al versionar paciente")
-		return
-	}
-
 	input.NumeroDocumento = documento
 	u := appmiddleware.UsuarioDesdeContexto(r.Context())
-	p, err := insertarPaciente(r.Context(), tx, input, versionActual+1, u.Nombre)
-	if err != nil {
+	var p models.Paciente
+	if err := repository.ExecTx(r.Context(), h.db, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(r.Context(),
+			`UPDATE paciente SET es_ultima_version = FALSE WHERE numero_documento = $1 AND es_ultima_version = TRUE`,
+			documento,
+		); err != nil {
+			return err
+		}
+		var txErr error
+		p, txErr = insertarPaciente(r.Context(), tx, input, versionActual+1, u.Nombre)
+		return txErr
+	}); err != nil {
 		responderError(w, http.StatusInternalServerError, "error al guardar nueva versión")
-		return
-	}
-
-	if err := tx.Commit(r.Context()); err != nil {
-		responderError(w, http.StatusInternalServerError, "error al confirmar transacción")
 		return
 	}
 

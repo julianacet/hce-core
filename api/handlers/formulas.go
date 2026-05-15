@@ -8,10 +8,12 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	appmiddleware "hce/api/middleware"
 	"hce/api/models"
+	"hce/api/repository"
 )
 
 type FormulaHandler struct {
@@ -134,70 +136,61 @@ func (h *FormulaHandler) crear(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tx, err := h.db.Begin(r.Context())
-	if err != nil {
-		responderError(w, http.StatusInternalServerError, "error al iniciar transacción")
-		return
-	}
-	defer tx.Rollback(r.Context())
-
-	u := appmiddleware.UsuarioDesdeContexto(r.Context())
-	formulaID := uuid.New().String()
-
-	var f models.Formula
-	err = tx.QueryRow(r.Context(), `
-		INSERT INTO formula_medica (
-			formula_id, numero_version, es_ultima_version, esta_activo,
-			encuentro_id, tipo, observaciones, creado_por
-		) VALUES ($1, 1, TRUE, TRUE, $2, $3, $4, $5)
-		RETURNING id, formula_id, numero_version, es_ultima_version, esta_activo,
-		          encuentro_id, tipo, observaciones, fecha_creacion, creado_por`,
-		formulaID, encuentroID, input.Tipo, input.Observaciones, u.Nombre,
-	).Scan(
-		&f.ID, &f.FormulaID, &f.NumeroVersion, &f.EsUltimaVersion, &f.EstaActivo,
-		&f.EncuentroID, &f.Tipo, &f.Observaciones, &f.FechaCreacion, &f.CreadoPor,
-	)
-	if err != nil {
-		log.Printf("crear formula: %v", err)
-		responderError(w, http.StatusInternalServerError, "error al crear fórmula")
-		return
-	}
-
-	// Insertar medicamentos en orden
-	meds := make([]models.Medicamento, 0, len(input.Medicamentos))
-	for i, m := range input.Medicamentos {
+	// Validar medicamentos antes de abrir la transacción
+	for _, m := range input.Medicamentos {
 		if m.NombreMedicamento == "" {
 			responderError(w, http.StatusBadRequest, "cada medicamento requiere nombre")
 			return
 		}
-		var med models.Medicamento
-		err = tx.QueryRow(r.Context(), `
-			INSERT INTO formula_medicamento (
-				formula_id, nombre_medicamento, concentracion, forma_farmaceutica,
-				dosis, frecuencia, duracion_tratamiento, cantidad_dispensar,
-				indicaciones, orden
-			) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-			RETURNING id, formula_id, nombre_medicamento, concentracion, forma_farmaceutica,
-			          dosis, frecuencia, duracion_tratamiento, cantidad_dispensar,
-			          indicaciones, orden`,
-			f.ID, m.NombreMedicamento, m.Concentracion, m.FormaFarmaceutica,
-			m.Dosis, m.Frecuencia, m.DuracionTratamiento, m.CantidadDispensar,
-			m.Indicaciones, i+1,
-		).Scan(
-			&med.ID, &med.FormulaID, &med.NombreMedicamento, &med.Concentracion, &med.FormaFarmaceutica,
-			&med.Dosis, &med.Frecuencia, &med.DuracionTratamiento, &med.CantidadDispensar,
-			&med.Indicaciones, &med.Orden,
-		)
-		if err != nil {
-			log.Printf("insertar medicamento: %v", err)
-			responderError(w, http.StatusInternalServerError, "error al guardar medicamento")
-			return
-		}
-		meds = append(meds, med)
 	}
 
-	if err := tx.Commit(r.Context()); err != nil {
-		responderError(w, http.StatusInternalServerError, "error al confirmar transacción")
+	u := appmiddleware.UsuarioDesdeContexto(r.Context())
+	formulaID := uuid.New().String()
+	var f models.Formula
+	meds := make([]models.Medicamento, 0, len(input.Medicamentos))
+
+	if err := repository.ExecTx(r.Context(), h.db, func(tx pgx.Tx) error {
+		if err := tx.QueryRow(r.Context(), `
+			INSERT INTO formula_medica (
+				formula_id, numero_version, es_ultima_version, esta_activo,
+				encuentro_id, tipo, observaciones, creado_por
+			) VALUES ($1, 1, TRUE, TRUE, $2, $3, $4, $5)
+			RETURNING id, formula_id, numero_version, es_ultima_version, esta_activo,
+			          encuentro_id, tipo, observaciones, fecha_creacion, creado_por`,
+			formulaID, encuentroID, input.Tipo, input.Observaciones, u.Nombre,
+		).Scan(
+			&f.ID, &f.FormulaID, &f.NumeroVersion, &f.EsUltimaVersion, &f.EstaActivo,
+			&f.EncuentroID, &f.Tipo, &f.Observaciones, &f.FechaCreacion, &f.CreadoPor,
+		); err != nil {
+			return err
+		}
+		for i, m := range input.Medicamentos {
+			var med models.Medicamento
+			if err := tx.QueryRow(r.Context(), `
+				INSERT INTO formula_medicamento (
+					formula_id, nombre_medicamento, concentracion, forma_farmaceutica,
+					dosis, frecuencia, duracion_tratamiento, cantidad_dispensar,
+					indicaciones, orden
+				) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+				RETURNING id, formula_id, nombre_medicamento, concentracion, forma_farmaceutica,
+				          dosis, frecuencia, duracion_tratamiento, cantidad_dispensar,
+				          indicaciones, orden`,
+				f.ID, m.NombreMedicamento, m.Concentracion, m.FormaFarmaceutica,
+				m.Dosis, m.Frecuencia, m.DuracionTratamiento, m.CantidadDispensar,
+				m.Indicaciones, i+1,
+			).Scan(
+				&med.ID, &med.FormulaID, &med.NombreMedicamento, &med.Concentracion, &med.FormaFarmaceutica,
+				&med.Dosis, &med.Frecuencia, &med.DuracionTratamiento, &med.CantidadDispensar,
+				&med.Indicaciones, &med.Orden,
+			); err != nil {
+				return err
+			}
+			meds = append(meds, med)
+		}
+		return nil
+	}); err != nil {
+		log.Printf("crear formula: %v", err)
+		responderError(w, http.StatusInternalServerError, "error al crear fórmula")
 		return
 	}
 

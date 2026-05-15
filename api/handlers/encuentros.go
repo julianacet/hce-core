@@ -18,6 +18,7 @@ import (
 
 	appmiddleware "hce/api/middleware"
 	"hce/api/models"
+	"hce/api/repository"
 )
 
 // asJSON convierte json.RawMessage a []byte para pgx; nil si vacío.
@@ -193,23 +194,15 @@ func (h *EncuentroHandler) crear(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tx, err := h.db.Begin(r.Context())
-	if err != nil {
-		responderError(w, http.StatusInternalServerError, "error al iniciar transacción")
-		return
-	}
-	defer tx.Rollback(r.Context())
-
 	u := appmiddleware.UsuarioDesdeContexto(r.Context())
-	e, err := insertarEncuentro(r.Context(), tx, uuid.New().String(), documento, input, 1, u.Nombre)
-	if err != nil {
+	var e models.Encuentro
+	if err := repository.ExecTx(r.Context(), h.db, func(tx pgx.Tx) error {
+		var txErr error
+		e, txErr = insertarEncuentro(r.Context(), tx, uuid.New().String(), documento, input, 1, u.Nombre)
+		return txErr
+	}); err != nil {
 		log.Printf("crear encuentro: %v", err)
 		responderError(w, http.StatusInternalServerError, "error al crear encuentro")
-		return
-	}
-
-	if err := tx.Commit(r.Context()); err != nil {
-		responderError(w, http.StatusInternalServerError, "error al confirmar transacción")
 		return
 	}
 

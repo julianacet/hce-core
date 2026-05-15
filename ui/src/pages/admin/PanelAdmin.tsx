@@ -1,9 +1,10 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useTabParam } from '../../hooks/useTabParam'
 import { useTema, DEFAULTS, type Tema } from '../../context/TemaContext'
 import { Upload, Trash2, CheckCircle, RotateCcw, Plus, Pencil, X, ShieldCheck, Stethoscope, Users, AlertTriangle, ExternalLink, ClipboardList, Activity, Info, PowerOff, Power, Pill } from 'lucide-react'
 import { RowMenu } from '../../components/RowMenu'
 import { NavigationGuard } from '../../components/NavigationGuard'
+import { useConfirmar } from '../../components/ModalConfirmar'
 import {
   usePlantillas,
   useCrearPlantilla,
@@ -101,7 +102,7 @@ const CAMPOS_COLOR: Campo[] = [
 
 // ── Gestión de tipos de eventos adversos ──────────────────────────────────────
 
-function TiposEventoAdversoAdmin() {
+function TiposEventoAdversoAdmin({ onAbierto }: { onAbierto?: (v: boolean) => void }) {
   const { data: tipos = [] } = useTiposEventoAdverso(true)
   const crear = useCrearTipo()
   const [editando, setEditando] = useState<TipoEventoAdverso | null>(null)
@@ -109,6 +110,8 @@ function TiposEventoAdversoAdmin() {
   const [form, setForm] = useState<TipoInput>({ nombre: '', descripcion: null, requiere_reporte_invima: false })
   const [mostrarForm, setMostrarForm] = useState(false)
   const [error, setError] = useState('')
+  const { confirmar, modal } = useConfirmar()
+  useEffect(() => { onAbierto?.(mostrarForm) }, [mostrarForm, onAbierto])
 
   function abrirNuevo() {
     setEditando(null)
@@ -144,6 +147,7 @@ function TiposEventoAdversoAdmin() {
 
   return (
     <div className="space-y-4">
+      {modal}
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm" style={{ color: 'var(--hce-text-muted)' }}>
@@ -251,10 +255,10 @@ function TipoRow({ tipo, onEditar }: { tipo: TipoEventoAdverso; onEditar: () => 
           label: 'Eliminar permanentemente',
           icon: <Trash2 size={14} />,
           danger: true,
-          onClick: () => {
-            if (confirm(`¿Eliminar el tipo "${tipo.nombre}"? Esta acción no se puede deshacer.`))
-              eliminar.mutate(tipo.id)
-          },
+          onClick: () => confirmar(
+            `¿Eliminar el tipo "${tipo.nombre}"? Esta acción no se puede deshacer.`,
+            () => eliminar.mutate(tipo.id),
+          ),
         },
       ]} />
     </div>
@@ -271,7 +275,7 @@ const VARIABLES_CONSENTIMIENTO = [
   { clave: 'fecha',              etiqueta: 'Fecha' },
 ]
 
-function PlantillasAdmin() {
+function PlantillasAdmin({ onAbierto }: { onAbierto?: (v: boolean) => void }) {
   const { data: plantillas = [] } = usePlantillas()
   const crear = useCrearPlantilla()
   const desactivar = useDesactivarPlantilla()
@@ -281,6 +285,9 @@ function PlantillasAdmin() {
   const [formP, setFormP] = useState({ nombre: '', contenido: '' })
   const actualizar = useActualizarPlantilla(editando?.id ?? '')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const { confirmar, modal } = useConfirmar()
+  const formAbierto = nueva || !!editando
+  useEffect(() => { onAbierto?.(formAbierto) }, [formAbierto, onAbierto])
 
   function abrirNueva() {
     setEditando(null)
@@ -331,6 +338,7 @@ function PlantillasAdmin() {
 
   return (
     <div className="space-y-4">
+      {modal}
       <div className="flex items-center justify-end">
         <button onClick={abrirNueva} className="btn-primary">
           <Plus size={14} /> Nueva plantilla
@@ -361,10 +369,10 @@ function PlantillasAdmin() {
                 label: 'Eliminar permanentemente',
                 icon: <Trash2 size={14} />,
                 danger: true,
-                onClick: () => {
-                  if (confirm(`¿Eliminar la plantilla "${p.nombre}"? Esta acción no se puede deshacer.`))
-                    eliminar.mutate(p.id)
-                },
+                onClick: () => confirmar(
+                  `¿Eliminar la plantilla "${p.nombre}"? Esta acción no se puede deshacer.`,
+                  () => eliminar.mutate(p.id),
+                ),
               },
             ]} />
           </div>
@@ -457,7 +465,7 @@ const FORM_USUARIO_INICIAL: UsuarioInput = {
   contrasena: '',
 }
 
-function UsuariosAdmin() {
+function UsuariosAdmin({ onAbierto }: { onAbierto?: (v: boolean) => void }) {
   const { data: usuarios = [] } = useUsuarios()
   const crear = useCrearUsuario()
   const toggle = useDesactivarUsuario()
@@ -467,6 +475,9 @@ function UsuariosAdmin() {
   const [form, setForm] = useState<UsuarioInput>(FORM_USUARIO_INICIAL)
   const [error, setError] = useState('')
   const actualizar = useActualizarUsuario(editando?.id ?? '')
+  const { confirmar, modal } = useConfirmar()
+  const formAbierto = nuevo || !!editando
+  useEffect(() => { onAbierto?.(formAbierto) }, [formAbierto, onAbierto])
 
   function abrirNuevo() {
     setEditando(null)
@@ -503,19 +514,18 @@ function UsuariosAdmin() {
     }
   }
 
-  async function handleToggle(u: Usuario) {
+  function handleToggle(u: Usuario) {
     const accion = u.esta_activo ? 'Desactivar' : 'Reactivar'
-    if (!confirm(`¿${accion} al usuario "${u.nombre_completo}"?`)) return
-    await toggle.mutateAsync(u.id)
+    confirmar(`¿${accion} al usuario "${u.nombre_completo}"?`, () => toggle.mutateAsync(u.id))
   }
 
-  async function handleEliminar(u: Usuario) {
-    if (!confirm(`¿Eliminar permanentemente al usuario "${u.nombre_completo}"? Esta acción no se puede deshacer.`)) return
-    try {
-      await eliminar.mutateAsync(u.id)
-    } catch (e: unknown) {
-      alert(e instanceof Error ? e.message : 'No se pudo eliminar el usuario.')
-    }
+  function handleEliminar(u: Usuario) {
+    confirmar(
+      `¿Eliminar permanentemente al usuario "${u.nombre_completo}"? Esta acción no se puede deshacer.`,
+      () => eliminar.mutateAsync(u.id).catch((e: unknown) => {
+        setError(e instanceof Error ? e.message : 'No se pudo eliminar el usuario.')
+      }),
+    )
   }
 
   const activos = usuarios.filter((u) => u.esta_activo)
@@ -523,6 +533,7 @@ function UsuariosAdmin() {
 
   return (
     <div className="space-y-4">
+      {modal}
       <div className="flex items-center justify-between">
         <p className="text-xs text-slate-500">{activos.length} usuario{activos.length !== 1 ? 's' : ''} activo{activos.length !== 1 ? 's' : ''}</p>
         <button onClick={abrirNuevo} className="btn-primary flex items-center gap-1.5">
@@ -579,7 +590,7 @@ function UsuariosAdmin() {
                 className="input-hce"
                 value={form.contrasena}
                 onChange={(e) => setForm((f) => ({ ...f, contrasena: e.target.value }))}
-                placeholder={editando ? '••••••••' : 'Mínimo 6 caracteres'}
+                placeholder={editando ? '••••••••' : 'Mínimo 8 caracteres'}
               />
             </div>
           </div>
@@ -690,7 +701,7 @@ const FORM_PREGUNTA_INICIAL: FormPregunta = {
   orden: 0,
 }
 
-function AntecedentesAdmin() {
+function AntecedentesAdmin({ onAbierto }: { onAbierto?: (v: boolean) => void }) {
   const { data: preguntas = [] } = usePreguntas()
   const crear = useCrearPregunta()
   const [editando, setEditando] = useState<AntecedentePregunta | null>(null)
@@ -699,6 +710,7 @@ function AntecedentesAdmin() {
   const [opcionesRaw, setOpcionesRaw] = useState('')
   const [mostrarForm, setMostrarForm] = useState(false)
   const [error, setError] = useState('')
+  useEffect(() => { onAbierto?.(mostrarForm) }, [mostrarForm, onAbierto])
 
   const porCategoria = CATEGORIAS_OPTS.map(cat => ({
     cat,
@@ -902,9 +914,11 @@ function AntecedentesAdmin() {
 function PreguntaRow({ pregunta, onEditar }: { pregunta: AntecedentePregunta; onEditar: () => void }) {
   const toggle = useTogglePregunta(pregunta.id)
   const eliminar = useEliminarPregunta()
+  const { confirmar, modal } = useConfirmar()
   const loading = toggle.isPending || eliminar.isPending
   return (
     <div className={`flex items-center gap-3 px-4 py-3 ${!pregunta.esta_activo ? 'opacity-60' : ''}`}>
+      {modal}
       <ClipboardList className={`w-4 h-4 shrink-0 ${pregunta.esta_activo ? 'text-blue-400' : 'text-slate-300'}`} />
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
@@ -936,10 +950,10 @@ function PreguntaRow({ pregunta, onEditar }: { pregunta: AntecedentePregunta; on
           label: 'Eliminar permanentemente',
           icon: <Trash2 size={14} />,
           danger: true,
-          onClick: () => {
-            if (confirm(`¿Eliminar la pregunta "${pregunta.texto}"? Esta acción no se puede deshacer.`))
-              eliminar.mutate(pregunta.id)
-          },
+          onClick: () => confirmar(
+            `¿Eliminar la pregunta "${pregunta.texto}"? Esta acción no se puede deshacer.`,
+            () => eliminar.mutate(pregunta.id),
+          ),
         },
       ]} />
     </div>
@@ -976,7 +990,7 @@ const FORM_CAMPO_INICIAL: CampoClinicoInput = {
   descripcion: undefined,
 }
 
-function CamposClinicosAdmin() {
+function CamposClinicosAdmin({ onAbierto }: { onAbierto?: (v: boolean) => void }) {
   const { data: campos = [] } = useTodosCamposClinicos()
   const crear = useCrearCampoClinico()
   const [editando, setEditando] = useState<CampoClinico | null>(null)
@@ -985,6 +999,7 @@ function CamposClinicosAdmin() {
   const [opcionesRaw, setOpcionesRaw] = useState('')
   const [mostrarForm, setMostrarForm] = useState(false)
   const [error, setError] = useState('')
+  useEffect(() => { onAbierto?.(mostrarForm) }, [mostrarForm, onAbierto])
 
   const porSeccion = ['signos_vitales', 'examen_fisico', 'revision_sistemas'].map(sec => ({
     sec,
@@ -1167,9 +1182,11 @@ function CamposClinicosAdmin() {
 function CampoRow({ campo, onEditar }: { campo: CampoClinico; onEditar: () => void }) {
   const toggle = useToggleCampoClinico(campo.id)
   const eliminar = useEliminarCampoClinico()
+  const { confirmar, modal } = useConfirmar()
   const loading = toggle.isPending || eliminar.isPending
   return (
     <div className={`flex items-center gap-3 px-4 py-3 ${!campo.esta_activo ? 'opacity-60' : ''}`}>
+      {modal}
       <Activity className={`w-4 h-4 shrink-0 ${campo.esta_activo ? 'text-blue-400' : 'text-slate-300'}`} />
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
@@ -1202,10 +1219,10 @@ function CampoRow({ campo, onEditar }: { campo: CampoClinico; onEditar: () => vo
           label: 'Eliminar permanentemente',
           icon: <Trash2 size={14} />,
           danger: true,
-          onClick: () => {
-            if (confirm(`¿Eliminar el campo "${campo.nombre}"? Se perderán todos los datos registrados. Esta acción no se puede deshacer.`))
-              eliminar.mutate(campo.id)
-          },
+          onClick: () => confirmar(
+            `¿Eliminar el campo "${campo.nombre}"? Se perderán todos los datos registrados. Esta acción no se puede deshacer.`,
+            () => eliminar.mutate(campo.id),
+          ),
         },
       ]} />
     </div>
@@ -1217,9 +1234,11 @@ function CampoRow({ campo, onEditar }: { campo: CampoClinico; onEditar: () => vo
 function MedRow({ med, onEditar }: { med: MedicamentoPredefinido; onEditar: () => void }) {
   const toggle = useToggleMedicamento(med.id)
   const eliminar = useEliminarMedicamento()
+  const { confirmar, modal } = useConfirmar()
   const loading = toggle.isPending || eliminar.isPending
   return (
     <div className={`flex items-center gap-3 px-4 py-3 ${!med.esta_activo ? 'opacity-60' : ''}`}>
+      {modal}
       <Pill className={`w-4 h-4 shrink-0 ${med.esta_activo ? 'text-teal-400' : 'text-slate-300'}`} />
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
@@ -1250,17 +1269,17 @@ function MedRow({ med, onEditar }: { med: MedicamentoPredefinido; onEditar: () =
           label: 'Eliminar permanentemente',
           icon: <Trash2 size={14} />,
           danger: true,
-          onClick: () => {
-            if (confirm(`¿Eliminar "${med.nombre}"? Esta acción no se puede deshacer.`))
-              eliminar.mutate(med.id)
-          },
+          onClick: () => confirmar(
+            `¿Eliminar "${med.nombre}"? Esta acción no se puede deshacer.`,
+            () => eliminar.mutate(med.id),
+          ),
         },
       ]} />
     </div>
   )
 }
 
-function MedicamentosAdmin() {
+function MedicamentosAdmin({ onAbierto }: { onAbierto?: (v: boolean) => void }) {
   const [q, setQ] = useState('')
   const [tipoFiltro, setTipoFiltro] = useState<'pos' | 'no_pos' | ''>('')
   const { data: meds = [], isFetching } = useMedicamentosAdmin(tipoFiltro, q)
@@ -1271,6 +1290,7 @@ function MedicamentosAdmin() {
   const [form, setForm] = useState<MedicamentoInput>(emptyForm)
   const [mostrarForm, setMostrarForm] = useState(false)
   const [error, setError] = useState('')
+  useEffect(() => { onAbierto?.(mostrarForm) }, [mostrarForm, onAbierto])
 
   function abrirNuevo() {
     setEditando(null)
@@ -1409,12 +1429,18 @@ export default function PanelAdmin() {
   const [guardado, setGuardado] = useState(false)
   const [guardando, setGuardando] = useState(false)
   const [errorTema, setErrorTema] = useState<string | null>(null)
+  const [formularioAbierto, setFormularioAbierto] = useState(false)
   const [tab, setTab] = useTabParam(
     'tab',
     'apariencia' as const,
     ['apariencia', 'consentimientos', 'usuarios', 'eventos', 'antecedentes', 'campos', 'medicamentos'] as const,
   )
   const inputLogo = useRef<HTMLInputElement>(null)
+
+  function cambiarTab(nuevaTab: typeof tab) {
+    setFormularioAbierto(false)
+    setTab(nuevaTab)
+  }
 
   function set<K extends keyof Tema>(key: K, value: Tema[K]) {
     setForm((prev) => ({ ...prev, [key]: value }))
@@ -1423,6 +1449,11 @@ export default function PanelAdmin() {
   function handleLogo(e: React.ChangeEvent<HTMLInputElement>) {
     const archivo = e.target.files?.[0]
     if (!archivo) return
+    if (archivo.size > 500 * 1024) {
+      setErrorTema('El logo no puede superar 500 KB.')
+      e.target.value = ''
+      return
+    }
     const reader = new FileReader()
     reader.onload = (ev) => set('logoBase64', ev.target?.result as string)
     reader.readAsDataURL(archivo)
@@ -1460,7 +1491,7 @@ export default function PanelAdmin() {
 
   return (
     <>
-    <NavigationGuard when={aparienciaDirty} />
+    <NavigationGuard when={aparienciaDirty || formularioAbierto} />
     <div className="page-hce">
       <div className="page-header">
         <h2 className="page-title">Panel de administración</h2>
@@ -1479,7 +1510,7 @@ export default function PanelAdmin() {
         ] as const).map(({ id, label }) => (
           <button
             key={id}
-            onClick={() => setTab(id)}
+            onClick={() => cambiarTab(id)}
             className={`tab-hce ${tab === id ? 'tab-hce--active' : 'tab-hce--inactive'}`}
           >
             {label}
@@ -1487,12 +1518,12 @@ export default function PanelAdmin() {
         ))}
       </div>
 
-      {tab === 'consentimientos' && <PlantillasAdmin />}
-      {tab === 'usuarios' && <UsuariosAdmin />}
-      {tab === 'eventos' && <TiposEventoAdversoAdmin />}
-      {tab === 'antecedentes' && <AntecedentesAdmin />}
-      {tab === 'campos' && <CamposClinicosAdmin />}
-      {tab === 'medicamentos' && <MedicamentosAdmin />}
+      {tab === 'consentimientos' && <PlantillasAdmin onAbierto={setFormularioAbierto} />}
+      {tab === 'usuarios' && <UsuariosAdmin onAbierto={setFormularioAbierto} />}
+      {tab === 'eventos' && <TiposEventoAdversoAdmin onAbierto={setFormularioAbierto} />}
+      {tab === 'antecedentes' && <AntecedentesAdmin onAbierto={setFormularioAbierto} />}
+      {tab === 'campos' && <CamposClinicosAdmin onAbierto={setFormularioAbierto} />}
+      {tab === 'medicamentos' && <MedicamentosAdmin onAbierto={setFormularioAbierto} />}
 
       {tab === 'apariencia' && <form onSubmit={guardar} className="space-y-6">
 
