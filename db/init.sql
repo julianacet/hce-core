@@ -540,22 +540,6 @@ CREATE TRIGGER trg_auditoria_usuario
     AFTER INSERT OR UPDATE OR DELETE ON usuario
     FOR EACH ROW EXECUTE FUNCTION fn_auditar_cambios();
 
-CREATE TRIGGER trg_auditoria_cita
-    AFTER INSERT OR UPDATE OR DELETE ON cita
-    FOR EACH ROW EXECUTE FUNCTION fn_auditar_cambios();
-
-CREATE TRIGGER trg_auditoria_evento_adverso
-    AFTER INSERT OR UPDATE OR DELETE ON evento_adverso
-    FOR EACH ROW EXECUTE FUNCTION fn_auditar_cambios();
-
-CREATE TRIGGER trg_auditoria_insumo
-    AFTER INSERT OR UPDATE OR DELETE ON insumo
-    FOR EACH ROW EXECUTE FUNCTION fn_auditar_cambios();
-
-CREATE TRIGGER trg_auditoria_consentimiento
-    AFTER INSERT OR UPDATE OR DELETE ON consentimiento_generado
-    FOR EACH ROW EXECUTE FUNCTION fn_auditar_cambios();
-
 -- ============================================================
 -- 12. Seeds
 -- ============================================================
@@ -565,7 +549,7 @@ CREATE TRIGGER trg_auditoria_consentimiento
 -- (bcrypt del password real, generado por el backend).
 
 INSERT INTO usuario (nombre_usuario, nombre_completo, rol, hash_contrasena) VALUES
-    ('admin', 'Administrador', 'admin', '$2a$12$ItytOuCJ/XQQvxe/9Cvxo.GQ8cs6h16JxJzb6S7PguCUAovZ/p29G');
+    ('admin', 'Administrador', 'admin', '$2a$12$PzqOQnnsH/dFBIzm1p2gMe1YaNwqKU2B7WKoAoKszYmjwRckjQ0Iq');
 
 -- Códigos CUPS frecuentes en consulta externa (muestra — cargar catálogo completo).
 -- Fuente oficial: https://www.minsalud.gov.co (Res. 2706/2025)
@@ -1010,3 +994,20 @@ CREATE TABLE IF NOT EXISTS medicamento_predefinido (
 CREATE INDEX IF NOT EXISTS idx_medicamento_tipo   ON medicamento_predefinido(tipo);
 CREATE INDEX IF NOT EXISTS idx_medicamento_nombre ON medicamento_predefinido
     USING gin(to_tsvector('spanish', nombre));
+
+-- Triggers de auditoría para tablas definidas después de la sección de triggers principal
+CREATE TRIGGER trg_auditoria_cita
+    AFTER INSERT OR UPDATE OR DELETE ON cita
+    FOR EACH ROW EXECUTE FUNCTION fn_auditar_cambios();
+
+CREATE TRIGGER trg_auditoria_evento_adverso
+    AFTER INSERT OR UPDATE OR DELETE ON evento_adverso
+    FOR EACH ROW EXECUTE FUNCTION fn_auditar_cambios();
+
+CREATE TRIGGER trg_auditoria_insumo
+    AFTER INSERT OR UPDATE OR DELETE ON insumo
+    FOR EACH ROW EXECUTE FUNCTION fn_auditar_cambios();
+
+CREATE TRIGGER trg_auditoria_consentimiento
+    AFTER INSERT OR UPDATE OR DELETE ON consentimiento_generado
+    FOR EACH ROW EXECUTE FUNCTION fn_auditar_cambios();

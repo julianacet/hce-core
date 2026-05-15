@@ -129,6 +129,11 @@ ALLOWED_ORIGIN=http://localhost:${UI_PORT}
 
 VITE_API_URL=http://localhost:${API_PORT}
 UI_PORT=${UI_PORT}
+APP_TZ=America/Bogota
+
+DOCKER_API_PORT=${API_PORT}
+DOCKER_ALLOWED_ORIGIN=$([ "${UI_PORT}" = "80" ] && echo "http://localhost" || echo "http://localhost:${UI_PORT}")
+DOCKER_VITE_API_URL=http://localhost:${API_PORT}
 EOF
 
 cat > "$SCRIPT_DIR/ui/.env" <<EOF

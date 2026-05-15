@@ -6,7 +6,7 @@ import {
   Search, UserPlus, ChevronUp, ChevronDown, ArrowUpDown,
   ChevronLeft, ChevronRight, Filter, Trash2, Download,
 } from 'lucide-react'
-import { usePacientesPaginados, exportarPacientes, type Paciente } from '../api/pacientes'
+import { usePacientesPaginados, exportarPacientes } from '../api/pacientes'
 import { SelectorEps } from '../components/SelectorEps'
 import { descargarCSV, descargarXLSX } from '../utils/csv'
 import { nombreCompleto } from '../utils/paciente'
@@ -72,7 +72,6 @@ export default function ListaPacientes() {
       setFiltrosAbiertos(false)
     } else {
       setQ('')
-      setQDebounced('')
       setFiltrosAbiertos(true)
       setPage(1)
     }
