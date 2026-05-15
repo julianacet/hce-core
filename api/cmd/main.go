@@ -56,8 +56,23 @@ func main() {
 
 	r := chi.NewRouter()
 
-	r.Use(chimiddleware.Logger)
+	r.Use(func(next http.Handler) http.Handler {
+		logged := chimiddleware.Logger(next)
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path == "/health" {
+				next.ServeHTTP(w, r)
+				return
+			}
+			logged.ServeHTTP(w, r)
+		})
+	})
 	r.Use(chimiddleware.Recoverer)
+	r.Use(func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			r.Body = http.MaxBytesReader(w, r.Body, 1<<20) // 1 MB
+			next.ServeHTTP(w, r)
+		})
+	})
 
 	if allowedOrigins, allowedOriginsExists := os.LookupEnv("ALLOWED_ORIGIN"); allowedOriginsExists && allowedOrigins != "" {
 		origins := strings.Split(allowedOrigins, ",")
@@ -114,7 +129,13 @@ func main() {
 		r.With(appmiddleware.RequiereRol("admin")).Mount("/usuarios", handlers.UsuariosRouter(db))
 	})
 
-	srv := &http.Server{Addr: ":" + port, Handler: r}
+	srv := &http.Server{
+		Addr:         ":" + port,
+		Handler:      r,
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 60 * time.Second,
+		IdleTimeout:  120 * time.Second,
+	}
 
 	go func() {
 		log.Printf("Servidor escuchando en :%s", port)

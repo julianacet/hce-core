@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"golang.org/x/crypto/bcrypt"
 
+	appmiddleware "hce/api/middleware"
 	"hce/api/models"
 )
 
@@ -64,8 +65,8 @@ func (h *usuariosHandler) crear(w http.ResponseWriter, r *http.Request) {
 		responderError(w, http.StatusBadRequest, "nombre_usuario y nombre_completo son obligatorios")
 		return
 	}
-	if input.Contrasena == "" {
-		responderError(w, http.StatusBadRequest, "la contraseña es obligatoria al crear un usuario")
+	if len(input.Contrasena) < 8 {
+		responderError(w, http.StatusBadRequest, "la contraseña debe tener al menos 8 caracteres")
 		return
 	}
 	if input.Rol != "admin" && input.Rol != "medico" && input.Rol != "auxiliar" {
@@ -166,6 +167,12 @@ func (h *usuariosHandler) toggle(w http.ResponseWriter, r *http.Request) {
 
 func (h *usuariosHandler) eliminar(w http.ResponseWriter, r *http.Request) {
 	usuarioID := chi.URLParam(r, "usuarioId")
+
+	u := appmiddleware.UsuarioDesdeContexto(r.Context())
+	if u != nil && u.ID == usuarioID {
+		responderError(w, http.StatusConflict, "no podés eliminar tu propia cuenta")
+		return
+	}
 
 	var nombreUsuario string
 	err := h.db.QueryRow(r.Context(),

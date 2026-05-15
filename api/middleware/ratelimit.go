@@ -24,6 +24,23 @@ type loginBucket struct {
 
 var loginRL = &loginLimiter{buckets: make(map[string]*loginBucket)}
 
+func init() {
+	go func() {
+		ticker := time.NewTicker(5 * time.Minute)
+		defer ticker.Stop()
+		for range ticker.C {
+			now := time.Now()
+			loginRL.mu.Lock()
+			for ip, b := range loginRL.buckets {
+				if now.After(b.resetAt) {
+					delete(loginRL.buckets, ip)
+				}
+			}
+			loginRL.mu.Unlock()
+		}
+	}()
+}
+
 // LimitarLogin rechaza con 429 si la IP supera loginMaxAttempts intentos por loginWindow.
 func LimitarLogin(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
