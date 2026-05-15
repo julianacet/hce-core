@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiFetch } from './client'
+import { PLANTILLAS_CONSENTIMIENTO_KEY, CONSENTIMIENTO_KEY } from './keys'
 
 export type PlantillaConsentimiento = {
   id: string
@@ -29,12 +30,11 @@ export type ConsentimientoGenerado = {
 
 export function usePlantillas() {
   return useQuery<PlantillaConsentimiento[]>({
-    queryKey: ['plantillas-consentimiento'],
+    queryKey: PLANTILLAS_CONSENTIMIENTO_KEY,
     queryFn: () => apiFetch('/consentimientos/plantillas'),
   })
 }
 
-const PLANTILLAS_KEY = ['plantillas-consentimiento']
 
 export function useCrearPlantilla() {
   const qc = useQueryClient()
@@ -42,7 +42,7 @@ export function useCrearPlantilla() {
     mutationFn: (input) =>
       apiFetch('/consentimientos/plantillas', { method: 'POST', body: JSON.stringify(input) }),
     onSuccess: (nueva) => {
-      qc.setQueryData<PlantillaConsentimiento[]>(PLANTILLAS_KEY, (old) => [...(old ?? []), nueva])
+      qc.setQueryData<PlantillaConsentimiento[]>(PLANTILLAS_CONSENTIMIENTO_KEY, (old) => [...(old ?? []), nueva])
     },
   })
 }
@@ -53,7 +53,7 @@ export function useActualizarPlantilla(id: string) {
     mutationFn: (input) =>
       apiFetch(`/consentimientos/plantillas/${id}`, { method: 'PUT', body: JSON.stringify(input) }),
     onSuccess: (actualizada) => {
-      qc.setQueryData<PlantillaConsentimiento[]>(PLANTILLAS_KEY, (old) =>
+      qc.setQueryData<PlantillaConsentimiento[]>(PLANTILLAS_CONSENTIMIENTO_KEY, (old) =>
         old?.map((p) => (p.id === id ? actualizada : p)) ?? []
       )
     },
@@ -66,7 +66,7 @@ export function useDesactivarPlantilla() {
     mutationFn: (id) =>
       apiFetch(`/consentimientos/plantillas/${id}/toggle`, { method: 'PATCH' }),
     onSuccess: ({ esta_activo }, id) => {
-      qc.setQueryData<PlantillaConsentimiento[]>(PLANTILLAS_KEY, (old) =>
+      qc.setQueryData<PlantillaConsentimiento[]>(PLANTILLAS_CONSENTIMIENTO_KEY, (old) =>
         old?.map((p) => (p.id === id ? { ...p, esta_activo } : p)) ?? []
       )
     },
@@ -78,7 +78,7 @@ export function useEliminarPlantilla() {
   return useMutation<void, Error, string>({
     mutationFn: (id) => apiFetch(`/consentimientos/plantillas/${id}`, { method: 'DELETE' }),
     onSuccess: (_, id) => {
-      qc.setQueryData<PlantillaConsentimiento[]>(PLANTILLAS_KEY, (old) => old?.filter((p) => p.id !== id) ?? [])
+      qc.setQueryData<PlantillaConsentimiento[]>(PLANTILLAS_CONSENTIMIENTO_KEY, (old) => old?.filter((p) => p.id !== id) ?? [])
     },
   })
 }
@@ -87,7 +87,7 @@ export function useEliminarPlantilla() {
 
 export function useConsentimientoEncuentro(pacienteId: string, encId: string, enabled = false) {
   return useQuery<ConsentimientoGenerado | null>({
-    queryKey: ['consentimiento', encId],
+    queryKey: [...CONSENTIMIENTO_KEY, encId],
     queryFn: async () => {
       try {
         return await apiFetch<ConsentimientoGenerado>(
@@ -111,6 +111,6 @@ export function useRegistrarConsentimiento(pacienteId: string, encId: string) {
         method: 'POST',
         body: JSON.stringify(input),
       }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['consentimiento', encId] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: [...CONSENTIMIENTO_KEY, encId] }),
   })
 }

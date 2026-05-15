@@ -22,7 +22,7 @@ func AuthRouter(db *pgxpool.Pool, secreto string) http.Handler {
 	h := &AuthHandler{db: db, secreto: secreto}
 	r := chi.NewRouter()
 
-	r.Post("/login", h.login)
+	r.With(appmiddleware.LimitarLogin).Post("/login", h.login)
 	r.Post("/logout", h.logout)
 	r.With(appmiddleware.RequiereAuth(secreto)).Get("/me", h.me)
 

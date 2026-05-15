@@ -3,7 +3,7 @@ package handlers
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+	"errors"
 	"log"
 	"net/http"
 	"strconv"
@@ -162,7 +162,12 @@ func (h *PacienteHandler) obtener(w http.ResponseWriter, r *http.Request) {
 
 	p, err := escanearPaciente(row)
 	if err != nil {
-		responderError(w, http.StatusNotFound, "paciente no encontrado")
+		if errors.Is(err, pgx.ErrNoRows) {
+			responderError(w, http.StatusNotFound, "paciente no encontrado")
+		} else {
+			log.Printf("obtener paciente %s: %v", documento, err)
+			responderError(w, http.StatusInternalServerError, "error al leer paciente")
+		}
 		return
 	}
 
@@ -327,65 +332,49 @@ func (h *PacienteHandler) listarPaginado(w http.ResponseWriter, r *http.Request)
 		ordenSQL = "apellido_primero ASC, nombre_primero ASC"
 	}
 
+	var args argList
 	where := "WHERE es_ultima_version = TRUE AND esta_activo = TRUE"
-	args := []any{}
-	idx := 1
 
 	if q != "" {
 		like := "%" + strings.ToLower(q) + "%"
-		where += fmt.Sprintf(` AND (
-			numero_documento ILIKE $%[1]d OR
-			LOWER(nombre_primero) LIKE $%[1]d OR
-			LOWER(nombre_segundo) LIKE $%[1]d OR
-			LOWER(apellido_primero) LIKE $%[1]d OR
-			LOWER(apellido_segundo) LIKE $%[1]d OR
-			telefono LIKE $%[1]d OR
-			LOWER(correo_electronico) LIKE $%[1]d OR
-			LOWER(nombre_primero || ' ' || apellido_primero) LIKE $%[1]d OR
-			LOWER(apellido_primero || ' ' || nombre_primero) LIKE $%[1]d
-		)`, idx)
-		args = append(args, like)
-		idx++
+		p := args.Add(like)
+		where += ` AND (
+			numero_documento ILIKE ` + p + ` OR
+			LOWER(nombre_primero) LIKE ` + p + ` OR
+			LOWER(nombre_segundo) LIKE ` + p + ` OR
+			LOWER(apellido_primero) LIKE ` + p + ` OR
+			LOWER(apellido_segundo) LIKE ` + p + ` OR
+			telefono LIKE ` + p + ` OR
+			LOWER(correo_electronico) LIKE ` + p + ` OR
+			LOWER(nombre_primero || ' ' || apellido_primero) LIKE ` + p + ` OR
+			LOWER(apellido_primero || ' ' || nombre_primero) LIKE ` + p + `
+		)`
 	}
 	if tipoUsuario != "" {
-		where += fmt.Sprintf(` AND tipo_usuario = $%d`, idx)
-		args = append(args, tipoUsuario)
-		idx++
+		where += ` AND tipo_usuario = ` + args.Add(tipoUsuario)
 	}
 	if genero != "" {
-		where += fmt.Sprintf(` AND genero = $%d`, idx)
-		args = append(args, genero)
-		idx++
+		where += ` AND genero = ` + args.Add(genero)
 	}
 	if zonaResidencia != "" {
-		where += fmt.Sprintf(` AND zona_residencia = $%d`, idx)
-		args = append(args, zonaResidencia)
-		idx++
+		where += ` AND zona_residencia = ` + args.Add(zonaResidencia)
 	}
 	if eps != "" {
-		where += fmt.Sprintf(` AND codigo_eps ILIKE $%d`, idx)
-		args = append(args, "%"+eps+"%")
-		idx++
+		where += ` AND codigo_eps ILIKE ` + args.Add("%"+eps+"%")
 	}
 	if telefono != "" {
-		where += fmt.Sprintf(` AND telefono ILIKE $%d`, idx)
-		args = append(args, "%"+telefono+"%")
-		idx++
+		where += ` AND telefono ILIKE ` + args.Add("%"+telefono+"%")
 	}
 	const subqFechaAtencion = `(SELECT MAX(ec.fecha_atencion) FROM encuentro_clinico ec WHERE ec.paciente_documento = numero_documento AND ec.estado = 'finalizado' AND ec.es_ultima_version = TRUE)::date`
 	if minAtencion != "" {
-		where += fmt.Sprintf(` AND `+subqFechaAtencion+` >= $%d::date`, idx)
-		args = append(args, minAtencion)
-		idx++
+		where += ` AND ` + subqFechaAtencion + ` >= ` + args.Add(minAtencion) + `::date`
 	}
 	if maxAtencion != "" {
-		where += fmt.Sprintf(` AND `+subqFechaAtencion+` <= $%d::date`, idx)
-		args = append(args, maxAtencion)
-		idx++
+		where += ` AND ` + subqFechaAtencion + ` <= ` + args.Add(maxAtencion) + `::date`
 	}
 
 	var total int
-	if err := h.db.QueryRow(r.Context(), "SELECT COUNT(*) FROM paciente "+where, args...).Scan(&total); err != nil {
+	if err := h.db.QueryRow(r.Context(), "SELECT COUNT(*) FROM paciente "+where, args.Slice()...).Scan(&total); err != nil {
 		log.Printf("listarPaginado count: %v", err)
 		responderError(w, http.StatusInternalServerError, "error al contar pacientes")
 		return
@@ -410,10 +399,10 @@ func (h *PacienteHandler) listarPaginado(w http.ResponseWriter, r *http.Request)
 	var queryArgs []any
 	if exportar {
 		dataSQL = baseSQL
-		queryArgs = args
+		queryArgs = args.Slice()
 	} else {
-		dataSQL = baseSQL + fmt.Sprintf(` LIMIT $%d OFFSET $%d`, idx, idx+1)
-		queryArgs = append(args, limit, offset)
+		dataSQL = baseSQL + ` LIMIT ` + args.Add(limit) + ` OFFSET ` + args.Add(offset)
+		queryArgs = args.Slice()
 	}
 
 	rows, err := h.db.Query(r.Context(), dataSQL, queryArgs...)
@@ -516,12 +505,3 @@ func insertarPaciente(ctx context.Context, db queryRower, input models.PacienteI
 	return escanearPaciente(row)
 }
 
-func responderJSON(w http.ResponseWriter, status int, data any) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(data)
-}
-
-func responderError(w http.ResponseWriter, status int, mensaje string) {
-	responderJSON(w, status, map[string]string{"error": mensaje})
-}

@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"encoding/json"
 	"log"
 	"net/http"
 
@@ -27,44 +26,44 @@ func (h *dashboardHandler) resumen(w http.ResponseWriter, r *http.Request) {
 		UltimosPacientes: []models.UltimoPaciente{},
 	}
 
-	// Encuentros de hoy
 	if err := h.db.QueryRow(ctx, `
 		SELECT COUNT(*) FROM encuentro_clinico
 		WHERE fecha_atencion::date = CURRENT_DATE
 		  AND es_ultima_version = TRUE AND esta_activo = TRUE`,
 	).Scan(&res.EncuentrosHoy); err != nil {
 		log.Printf("dashboard encuentros_hoy: %v", err)
+		res.Advertencias = append(res.Advertencias, "encuentros_hoy")
 	}
 
-	// Pacientes distintos atendidos este mes
 	if err := h.db.QueryRow(ctx, `
 		SELECT COUNT(DISTINCT paciente_documento) FROM encuentro_clinico
 		WHERE date_trunc('month', fecha_atencion) = date_trunc('month', CURRENT_DATE)
 		  AND es_ultima_version = TRUE AND esta_activo = TRUE`,
 	).Scan(&res.PacientesMes); err != nil {
 		log.Printf("dashboard pacientes_mes: %v", err)
+		res.Advertencias = append(res.Advertencias, "pacientes_mes")
 	}
 
-	// Total facturado este mes (emitida + pagada)
 	if err := h.db.QueryRow(ctx, `
 		SELECT COALESCE(SUM(total), 0) FROM factura
-		WHERE date_trunc('month', fecha_emision) = date_trunc('month', CURRENT_DATE)
-		  AND estado IN ('emitida', 'pagada')
+		WHERE date_trunc('month', fecha_creacion) = date_trunc('month', CURRENT_DATE)
+		  AND estado = 'activa'
 		  AND es_ultima_version = TRUE AND esta_activo = TRUE`,
 	).Scan(&res.FacturadoMes); err != nil {
 		log.Printf("dashboard facturado_mes: %v", err)
+		res.Advertencias = append(res.Advertencias, "facturado_mes")
 	}
 
-	// Promedio satisfacción general (todo el tiempo)
 	var promedio *float64
 	if err := h.db.QueryRow(ctx, `
 		SELECT AVG(satisfaccion_general)::float FROM encuesta_satisfaccion`,
 	).Scan(&promedio); err != nil {
 		log.Printf("dashboard satisfaccion: %v", err)
+		res.Advertencias = append(res.Advertencias, "satisfaccion_promedio")
+	} else {
+		res.SatisfaccionPromedio = promedio
 	}
-	res.SatisfaccionPromedio = promedio
 
-	// Insumos con stock bajo o agotado
 	rows, err := h.db.Query(ctx, `
 		SELECT id, nombre, stock_actual, stock_minimo, unidad
 		FROM insumo
@@ -72,6 +71,7 @@ func (h *dashboardHandler) resumen(w http.ResponseWriter, r *http.Request) {
 		ORDER BY (stock_actual - stock_minimo) ASC`)
 	if err != nil {
 		log.Printf("dashboard insumos_stock_bajo: %v", err)
+		res.Advertencias = append(res.Advertencias, "insumos_stock_bajo")
 	} else {
 		defer rows.Close()
 		for rows.Next() {
@@ -82,7 +82,6 @@ func (h *dashboardHandler) resumen(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Últimos 8 pacientes atendidos
 	rows2, err := h.db.Query(ctx, `
 		SELECT
 			e.encuentro_id,
@@ -103,6 +102,7 @@ func (h *dashboardHandler) resumen(w http.ResponseWriter, r *http.Request) {
 		LIMIT 8`)
 	if err != nil {
 		log.Printf("dashboard ultimos_pacientes: %v", err)
+		res.Advertencias = append(res.Advertencias, "ultimos_pacientes")
 	} else {
 		defer rows2.Close()
 		for rows2.Next() {
@@ -116,6 +116,5 @@ func (h *dashboardHandler) resumen(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(res)
+	responderJSON(w, http.StatusOK, res)
 }

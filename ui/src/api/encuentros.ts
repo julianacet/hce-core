@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiFetch } from './client'
+import { ENCUENTROS_KEY, ENCUENTROS_GLOBAL_KEY } from './keys'
 
 export type DiagnosticoItem = {
   tipo: 'impresion' | 'principal' | 'secundario' | 'nota'
@@ -20,7 +21,7 @@ export type Encuentro = {
   numero_version: number
   es_ultima_version: boolean
   esta_activo: boolean
-  estado: 'borrador' | 'finalizado'
+  estado: 'finalizado'
   paciente_documento: string
   encuentro_padre_id?: string
   fecha_atencion: string
@@ -71,7 +72,7 @@ export type FiltrosEncuentro = {
 
 export function useEncuentros(documento: string, filtros?: FiltrosEncuentro) {
   return useQuery({
-    queryKey: ['encuentros', documento, filtros],
+    queryKey: [...ENCUENTROS_KEY, documento, filtros],
     queryFn: () => {
       const params = new URLSearchParams()
       if (filtros?.desde) params.set('desde', filtros.desde)
@@ -86,7 +87,7 @@ export function useEncuentros(documento: string, filtros?: FiltrosEncuentro) {
 
 export function useEncuentro(documento: string, encuentroId: string) {
   return useQuery({
-    queryKey: ['encuentros', documento, encuentroId],
+    queryKey: [...ENCUENTROS_KEY, documento, encuentroId],
     queryFn: () => apiFetch<Encuentro>(`/pacientes/${documento}/encuentros/${encuentroId}`),
     enabled: !!documento && !!encuentroId,
   })
@@ -100,7 +101,10 @@ export function useCrearEncuentro(documento: string) {
         method: 'POST',
         body: JSON.stringify(data),
       }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['encuentros', documento] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [...ENCUENTROS_KEY, documento] })
+      qc.invalidateQueries({ queryKey: ENCUENTROS_GLOBAL_KEY })
+    },
   })
 }
 
@@ -109,7 +113,7 @@ export function useCrearEncuentro(documento: string) {
 export type EncuentroResumen = {
   encuentro_id: string
   fecha_atencion: string
-  estado: 'borrador' | 'finalizado'
+  estado: 'finalizado'
   finalidad_consulta: string
   finalidad_consulta_nombre: string
   motivo_consulta: string
@@ -136,7 +140,7 @@ type EncuentrosPaginadosParams = {
 
 export function useEncuentrosPaginados(params: EncuentrosPaginadosParams) {
   return useQuery({
-    queryKey: ['encuentros-global', params],
+    queryKey: [...ENCUENTROS_GLOBAL_KEY, params],
     queryFn: () => {
       const p = new URLSearchParams({
         page: String(params.page),

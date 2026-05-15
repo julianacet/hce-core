@@ -1,32 +1,11 @@
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router'
 import { usePaciente, useActualizarPaciente, type PacienteInput } from '../../api/pacientes'
-import { SelectorMunicipioCol, SelectorPais } from '../../components/SelectorUbicacion'
-import { SelectorOcupacion } from '../../components/SelectorOcupacion'
-import { SelectorEps } from '../../components/SelectorEps'
 import { useMunicipio } from '../../api/divipola'
 import { useOcupacion } from '../../api/ocupaciones'
 import { useEpsInfo } from '../../api/eps'
 import { nombrePais } from '../../data/paises'
-
-function calcularEdad(fechaStr: string): number | null {
-  if (!fechaStr) return null
-  const hoy = new Date()
-  const nac = new Date(fechaStr)
-  let edad = hoy.getFullYear() - nac.getFullYear()
-  const m = hoy.getMonth() - nac.getMonth()
-  if (m < 0 || (m === 0 && hoy.getDate() < nac.getDate())) edad--
-  return edad >= 0 ? edad : null
-}
-
-function Campo({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <p className="label-hce">{label}</p>
-      {children}
-    </div>
-  )
-}
+import PacienteFormFields from '../../components/PacienteFormFields'
 
 export default function FichaPaciente() {
   const { id } = useParams()
@@ -145,179 +124,13 @@ export default function FichaPaciente() {
 
   // ── Modo edición ─────────────────────────────────────────────────────────────
   return (
-    <form onSubmit={handleSubmit} className="card-hce p-6 space-y-5">
-      <h3 className="card-title">Editar datos del paciente</h3>
-
-      {/* Documento — solo lectura */}
-      <div className="grid grid-cols-2 gap-4">
-        <Campo label="Tipo de documento">
-          <select value={form.tipo_documento} onChange={(e) => set('tipo_documento', e.target.value)} className="input-hce">
-            <option value="CC">CC — Cédula de Ciudadanía</option>
-            <option value="TI">TI — Tarjeta de Identidad</option>
-            <option value="CE">CE — Cédula de Extranjería</option>
-            <option value="PA">PA — Pasaporte</option>
-            <option value="RC">RC — Registro Civil</option>
-            <option value="NV">NV — Nacido Vivo</option>
-            <option value="PE">PE — Permiso Especial de Permanencia</option>
-            <option value="PT">PT — Permiso por Protección Temporal</option>
-            <option value="MS">MS — Menor sin identificación</option>
-            <option value="AS">AS — Adulto sin identificación</option>
-          </select>
-        </Campo>
-        <Campo label="Número de documento">
-          <input type="text" value={form.numero_documento ?? ''} onChange={(e) => set('numero_documento', e.target.value)}
-            required className="input-hce" />
-        </Campo>
-      </div>
-
-      {/* Nombres */}
-      <div className="grid grid-cols-2 gap-4">
-        <Campo label="Primer nombre *">
-          <input type="text" value={form.nombre_primero ?? ''} onChange={(e) => set('nombre_primero', e.target.value)}
-            required className="input-hce" />
-        </Campo>
-        <Campo label="Segundo nombre">
-          <input type="text" value={form.nombre_segundo ?? ''} onChange={(e) => set('nombre_segundo', e.target.value)}
-            className="input-hce" />
-        </Campo>
-        <Campo label="Primer apellido *">
-          <input type="text" value={form.apellido_primero ?? ''} onChange={(e) => set('apellido_primero', e.target.value)}
-            required className="input-hce" />
-        </Campo>
-        <Campo label="Segundo apellido">
-          <input type="text" value={form.apellido_segundo ?? ''} onChange={(e) => set('apellido_segundo', e.target.value)}
-            className="input-hce" />
-        </Campo>
-      </div>
-
-      {/* Datos personales */}
-      <div className="grid grid-cols-2 gap-4">
-        <Campo label="Fecha de nacimiento *">
-          <input type="date" value={form.fecha_nacimiento ?? ''} onChange={(e) => set('fecha_nacimiento', e.target.value)}
-            required className="input-hce" />
-        </Campo>
-        <Campo label="Edad">
-          <input type="text" readOnly
-            value={form.fecha_nacimiento ? (calcularEdad(form.fecha_nacimiento) !== null ? `${calcularEdad(form.fecha_nacimiento)} años` : '') : ''}
-            placeholder="Se calcula automáticamente"
-            className="input-hce bg-slate-50 text-slate-500 cursor-default" />
-        </Campo>
-        <Campo label="Género *">
-          <select value={form.genero} onChange={(e) => set('genero', e.target.value)} className="input-hce">
-            <option value="M">Masculino</option>
-            <option value="F">Femenino</option>
-            <option value="X">Otro</option>
-          </select>
-        </Campo>
-        <Campo label="Estado civil">
-          <select value={form.estado_civil ?? ''} onChange={(e) => set('estado_civil', e.target.value)} className="input-hce">
-            <option value="">— Seleccionar —</option>
-            <option value="01">Soltero/a</option>
-            <option value="02">Casado/a</option>
-            <option value="03">Unión libre</option>
-            <option value="04">Separado/a</option>
-            <option value="05">Divorciado/a</option>
-            <option value="06">Viudo/a</option>
-          </select>
-        </Campo>
-        <Campo label="Ocupación">
-          <SelectorOcupacion
-            value={form.ocupacion ?? ''}
-            nombre={editOcupacionNombre}
-            onChange={(codigo, nombre) => { set('ocupacion', codigo); setEditOcupacionNombre(nombre) }}
-          />
-        </Campo>
-      </div>
-
-      {/* Contacto */}
-      <div className="grid grid-cols-2 gap-4">
-        <Campo label="Teléfono">
-          <input type="tel" value={form.telefono ?? ''} onChange={(e) => set('telefono', e.target.value)}
-            className="input-hce" />
-        </Campo>
-        <Campo label="Correo electrónico">
-          <input type="email" value={form.correo_electronico ?? ''} onChange={(e) => set('correo_electronico', e.target.value)}
-            className="input-hce" />
-        </Campo>
-        <SelectorMunicipioCol
-          value={form.codigo_municipio_residencia ?? ''}
-          onChange={(v) => set('codigo_municipio_residencia', v)}
-          required
-        />
-        <Campo label="Dirección">
-          <input type="text" value={form.direccion ?? ''} onChange={(e) => set('direccion', e.target.value)}
-            className="input-hce" />
-        </Campo>
-        <Campo label="Zona de residencia *">
-          <select value={form.zona_residencia} onChange={(e) => set('zona_residencia', e.target.value)} className="input-hce">
-            <option value="U">Urbana</option>
-            <option value="R">Rural</option>
-          </select>
-        </Campo>
-        <Campo label="País de origen">
-          <SelectorPais
-            value={form.codigo_pais_origen ?? '170'}
-            onChange={(v) => set('codigo_pais_origen', v)}
-            required
-          />
-        </Campo>
-      </div>
-
-      {/* Responsable */}
-      <div className="grid grid-cols-2 gap-4">
-        <Campo label="Nombre del responsable">
-          <input type="text" value={form.nombre_responsable ?? ''} onChange={(e) => set('nombre_responsable', e.target.value)}
-            className="input-hce" />
-        </Campo>
-        <Campo label="Teléfono del responsable">
-          <input type="tel" value={form.telefono_responsable ?? ''} onChange={(e) => set('telefono_responsable', e.target.value)}
-            className="input-hce" />
-        </Campo>
-        <Campo label="Parentesco">
-          <input type="text" value={form.parentesco_responsable ?? ''} onChange={(e) => set('parentesco_responsable', e.target.value)}
-            className="input-hce" />
-        </Campo>
-      </div>
-
-      {/* Aseguramiento */}
-      <div className="grid grid-cols-2 gap-4">
-        <Campo label="Tipo de usuario *">
-          <select value={form.tipo_usuario} onChange={(e) => set('tipo_usuario', e.target.value)} className="input-hce">
-            <option value="01">Contributivo</option>
-            <option value="02">Subsidiado</option>
-            <option value="03">Vinculado</option>
-            <option value="04">Particular</option>
-            <option value="05">Indígena</option>
-            <option value="06">No asegurado</option>
-          </select>
-        </Campo>
-        <SelectorEps
-          value={form.codigo_eps ?? ''}
-          onChange={(v) => set('codigo_eps', v)}
-        />
-        <Campo label="Pertenencia étnica *">
-          <select value={form.codigo_etnia} onChange={(e) => set('codigo_etnia', e.target.value)} className="input-hce">
-            <option value="00">Sin pertenencia étnica</option>
-            <option value="01">Indígena</option>
-            <option value="02">ROM (gitano)</option>
-            <option value="03">Raizal del Archipiélago</option>
-            <option value="04">Palenquero de San Basilio</option>
-            <option value="05">Afrocolombiano / afrodescendiente</option>
-            <option value="06">Otro</option>
-          </select>
-        </Campo>
-        <Campo label="Discapacidad *">
-          <select value={form.codigo_discapacidad} onChange={(e) => set('codigo_discapacidad', e.target.value)} className="input-hce">
-            <option value="00">Sin discapacidad</option>
-            <option value="01">Física</option>
-            <option value="02">Cognitiva</option>
-            <option value="03">Mental</option>
-            <option value="04">Visual</option>
-            <option value="05">Auditiva</option>
-            <option value="06">Múltiple</option>
-          </select>
-        </Campo>
-      </div>
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <PacienteFormFields
+        form={form}
+        onChange={set}
+        ocupacionNombre={editOcupacionNombre}
+        onOcupacionNombreChange={setEditOcupacionNombre}
+      />
 
       {actualizar.isError && (
         <p className="form-error">
@@ -325,13 +138,12 @@ export default function FichaPaciente() {
         </p>
       )}
 
-      <div className="flex justify-end gap-3 pt-2 border-t border-slate-100">
+      <div className="flex justify-end gap-3 pb-6">
         <button type="button" onClick={() => setEditando(false)} disabled={actualizar.isPending}
           className="btn-secondary">
           Cancelar
         </button>
-        <button type="submit" disabled={actualizar.isPending}
-          className="btn-primary">
+        <button type="submit" disabled={actualizar.isPending} className="btn-primary">
           {actualizar.isPending ? 'Guardando...' : 'Guardar cambios'}
         </button>
       </div>

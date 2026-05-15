@@ -5,7 +5,9 @@ import { Upload, Trash2, CheckCircle } from 'lucide-react'
 export default function Configuracion() {
   const { medico, guardar } = useMedico()
   const [form, setForm] = useState<DatosMedico>(medico)
+  const [guardando, setGuardando] = useState(false)
   const [guardado, setGuardado] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const inputFirma = useRef<HTMLInputElement>(null)
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -25,11 +27,19 @@ export default function Configuracion() {
     if (inputFirma.current) inputFirma.current.value = ''
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    guardar(form)
-    setGuardado(true)
-    setTimeout(() => setGuardado(false), 2500)
+    setGuardando(true)
+    setError(null)
+    try {
+      await guardar(form)
+      setGuardado(true)
+      setTimeout(() => setGuardado(false), 2500)
+    } catch (err) {
+      setError((err as Error)?.message ?? 'Error al guardar la configuración.')
+    } finally {
+      setGuardando(false)
+    }
   }
 
   return (
@@ -181,10 +191,7 @@ export default function Configuracion() {
               </button>
             </div>
           ) : (
-            <label className="flex flex-col items-center justify-center rounded-lg p-8 cursor-pointer transition-colors"
-              style={{ border: '2px dashed var(--hce-border)' }}
-              onMouseEnter={(e) => (e.currentTarget.style.borderColor = 'var(--hce-primary)')}
-              onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'var(--hce-border)')}>
+            <label className="flex flex-col items-center justify-center rounded-lg p-8 cursor-pointer transition-colors border-2 border-dashed border-[var(--hce-border)] hover:border-[var(--hce-primary)]">
               <Upload size={22} className="mb-2" style={{ color: 'var(--hce-text-muted)' }} />
               <span className="text-sm" style={{ color: 'var(--hce-text-muted)' }}>
                 Hacé clic para subir la imagen de tu firma
@@ -197,13 +204,17 @@ export default function Configuracion() {
           )}
         </div>
 
+        {error && <p className="form-error">{error}</p>}
+
         <div className="flex items-center justify-end gap-3">
-          {guardado && (
+          {guardado && !guardando && (
             <span className="flex items-center gap-1.5 text-sm text-green-600">
               <CheckCircle size={15} /> Guardado correctamente
             </span>
           )}
-          <button type="submit" className="btn-primary">Guardar configuración</button>
+          <button type="submit" disabled={guardando} className="btn-primary disabled:opacity-60">
+            {guardando ? 'Guardando...' : 'Guardar configuración'}
+          </button>
         </div>
       </form>
     </div>

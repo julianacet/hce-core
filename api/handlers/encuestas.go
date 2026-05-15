@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -25,7 +26,6 @@ func EncuestasRouter(db *pgxpool.Pool) chi.Router {
 type encuestasHandler struct{ db *pgxpool.Pool }
 
 func (h *encuestasHandler) listar(w http.ResponseWriter, r *http.Request) {
-	limit := 100
 	rows, err := h.db.Query(r.Context(), `
 		SELECT id, fecha_atencion, paciente_documento,
 		       facilidad_cita, tiempo_espera, calidad_atencion,
@@ -34,9 +34,10 @@ func (h *encuestasHandler) listar(w http.ResponseWriter, r *http.Request) {
 		       fecha_registro, registrado_por
 		FROM encuesta_satisfaccion
 		ORDER BY fecha_atencion DESC, fecha_registro DESC
-		LIMIT $1`, limit)
+		LIMIT 100`)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Printf("listar encuestas: %v", err)
+		responderError(w, http.StatusInternalServerError, "error al consultar encuestas")
 		return
 	}
 	defer rows.Close()
@@ -52,15 +53,15 @@ func (h *encuestasHandler) listar(w http.ResponseWriter, r *http.Request) {
 			&e.SatisfaccionGeneral, &e.Recomendaria, &e.Comentarios,
 			&e.FechaRegistro, &e.RegistradoPor,
 		); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			log.Printf("escanear encuesta: %v", err)
+			responderError(w, http.StatusInternalServerError, "error al leer encuesta")
 			return
 		}
 		e.FechaAtencion = fechaAtencion
 		encuestas = append(encuestas, e)
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(encuestas)
+	responderJSON(w, http.StatusOK, encuestas)
 }
 
 func (h *encuestasHandler) crear(w http.ResponseWriter, r *http.Request) {
@@ -72,7 +73,7 @@ func (h *encuestasHandler) crear(w http.ResponseWriter, r *http.Request) {
 
 	var input models.EncuestaInput
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		http.Error(w, "cuerpo inválido", http.StatusBadRequest)
+		responderError(w, http.StatusBadRequest, "body inválido")
 		return
 	}
 
@@ -83,7 +84,7 @@ func (h *encuestasHandler) crear(w http.ResponseWriter, r *http.Request) {
 	}
 	for _, d := range dims {
 		if d < 1 || d > 5 {
-			http.Error(w, "todas las calificaciones deben estar entre 1 y 5", http.StatusBadRequest)
+			responderError(w, http.StatusBadRequest, "todas las calificaciones deben estar entre 1 y 5")
 			return
 		}
 	}
@@ -114,14 +115,13 @@ func (h *encuestasHandler) crear(w http.ResponseWriter, r *http.Request) {
 		&e.FechaRegistro, &e.RegistradoPor,
 	)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Printf("crear encuesta: %v", err)
+		responderError(w, http.StatusInternalServerError, "error al guardar encuesta")
 		return
 	}
 	e.FechaAtencion = fechaAtencion
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(e)
+	responderJSON(w, http.StatusCreated, e)
 }
 
 func (h *encuestasHandler) resumen(w http.ResponseWriter, r *http.Request) {
@@ -152,7 +152,8 @@ func (h *encuestasHandler) resumen(w http.ResponseWriter, r *http.Request) {
 		&totalRecomiendan,
 	)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Printf("resumen encuestas: %v", err)
+		responderError(w, http.StatusInternalServerError, "error al calcular resumen")
 		return
 	}
 
@@ -160,6 +161,5 @@ func (h *encuestasHandler) resumen(w http.ResponseWriter, r *http.Request) {
 		res.PorcentajeNPS = float64(totalRecomiendan) / float64(res.Total) * 100
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(res)
+	responderJSON(w, http.StatusOK, res)
 }

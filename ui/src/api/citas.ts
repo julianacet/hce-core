@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiFetch } from './client'
+import { CITAS_KEY, CITAS_MES_KEY } from './keys'
 
 export type Cita = {
   id: string
@@ -29,14 +30,14 @@ export type CitaInput = {
 
 export function useCitas(fecha: string) {
   return useQuery<Cita[]>({
-    queryKey: ['citas', fecha],
+    queryKey: [...CITAS_KEY, fecha],
     queryFn: () => apiFetch(`/citas?fecha=${fecha}`),
   })
 }
 
 export function useCitasMes(desde: string, hasta: string) {
   return useQuery<Cita[]>({
-    queryKey: ['citas-mes', desde, hasta],
+    queryKey: [...CITAS_MES_KEY, desde, hasta],
     queryFn: () => apiFetch(`/citas?desde=${desde}&hasta=${hasta}`),
   })
 }
@@ -45,7 +46,7 @@ export function useCrearCita() {
   const qc = useQueryClient()
   return useMutation<Cita, Error, CitaInput>({
     mutationFn: (input) => apiFetch('/citas', { method: 'POST', body: JSON.stringify(input) }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['citas'] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: CITAS_KEY }),
   })
 }
 
@@ -53,7 +54,7 @@ export function useActualizarCita(id: string) {
   const qc = useQueryClient()
   return useMutation<Cita, Error, CitaInput>({
     mutationFn: (input) => apiFetch(`/citas/${id}`, { method: 'PUT', body: JSON.stringify(input) }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['citas'] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: CITAS_KEY }),
   })
 }
 
@@ -62,7 +63,7 @@ export function useCambiarEstadoCita(id: string) {
   return useMutation<Cita, Error, string>({
     mutationFn: (estado) =>
       apiFetch(`/citas/${id}/estado`, { method: 'PATCH', body: JSON.stringify({ estado }) }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['citas'] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: CITAS_KEY }),
   })
 }
 
@@ -71,8 +72,8 @@ export function useEliminarCita() {
   return useMutation<void, Error, string>({
     mutationFn: (id) => apiFetch(`/citas/${id}`, { method: 'DELETE' }),
     onSuccess: (_, id) => {
-      qc.setQueriesData<Cita[]>({ queryKey: ['citas'] }, (old) => old?.filter(c => c.id !== id) ?? [])
-      qc.setQueriesData<Cita[]>({ queryKey: ['citas-mes'] }, (old) => old?.filter(c => c.id !== id) ?? [])
+      qc.setQueriesData<Cita[]>({ queryKey: CITAS_KEY }, (old) => old?.filter(c => c.id !== id) ?? [])
+      qc.setQueriesData<Cita[]>({ queryKey: CITAS_MES_KEY }, (old) => old?.filter(c => c.id !== id) ?? [])
     },
   })
 }

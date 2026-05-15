@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiFetch } from './client'
+import { INSUMOS_KEY, MOVIMIENTOS_KEY, DASHBOARD_KEY } from './keys'
 
 export type Insumo = {
   id: string
@@ -39,14 +40,14 @@ export type Movimiento = {
 
 export function useInsumos(q?: string) {
   return useQuery<Insumo[]>({
-    queryKey: ['insumos', q ?? ''],
+    queryKey: [...INSUMOS_KEY, q ?? ''],
     queryFn: () => apiFetch(`/insumos${q ? `?q=${encodeURIComponent(q)}` : ''}`),
   })
 }
 
 export function useMovimientos(insumoId: string) {
   return useQuery<Movimiento[]>({
-    queryKey: ['movimientos', insumoId],
+    queryKey: [...MOVIMIENTOS_KEY, insumoId],
     queryFn: () => apiFetch(`/insumos/${insumoId}/movimientos`),
     enabled: !!insumoId,
   })
@@ -57,7 +58,7 @@ export function useCrearInsumo() {
   return useMutation<Insumo, Error, InsumoInput>({
     mutationFn: (input) =>
       apiFetch('/insumos', { method: 'POST', body: JSON.stringify(input) }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['insumos'] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: INSUMOS_KEY }),
   })
 }
 
@@ -66,7 +67,7 @@ export function useActualizarInsumo(id: string) {
   return useMutation<Insumo, Error, InsumoInput>({
     mutationFn: (input) =>
       apiFetch(`/insumos/${id}`, { method: 'PUT', body: JSON.stringify(input) }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['insumos'] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: INSUMOS_KEY }),
   })
 }
 
@@ -74,7 +75,7 @@ export function useDesactivarInsumo() {
   const qc = useQueryClient()
   return useMutation<void, Error, string>({
     mutationFn: (id) => apiFetch(`/insumos/${id}/toggle`, { method: 'PATCH' }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['insumos'] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: INSUMOS_KEY }),
   })
 }
 
@@ -87,9 +88,9 @@ export function useRegistrarMovimiento(insumoId: string) {
         body: JSON.stringify(input),
       }),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['insumos'] })
-      qc.invalidateQueries({ queryKey: ['movimientos', insumoId] })
-      qc.invalidateQueries({ queryKey: ['dashboard'] })
+      qc.invalidateQueries({ queryKey: INSUMOS_KEY })
+      qc.invalidateQueries({ queryKey: [...MOVIMIENTOS_KEY, insumoId] })
+      qc.invalidateQueries({ queryKey: DASHBOARD_KEY })
     },
   })
 }

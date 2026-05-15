@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiFetch } from './client'
+import { ANTECEDENTES_KEY, ANTECEDENTES_PREGUNTAS_KEY } from './keys'
 
 export type ListaCampo = { campo: string; label: string; requerido: boolean }
 
@@ -33,7 +34,7 @@ export type RespuestaInput = {
 
 export function useAntecedentes(documento: string) {
   return useQuery({
-    queryKey: ['antecedentes', documento],
+    queryKey: [...ANTECEDENTES_KEY, documento],
     queryFn: () => apiFetch<AntecedentesCompletos>(`/pacientes/${documento}/antecedentes`),
     enabled: !!documento,
   })
@@ -47,7 +48,7 @@ export function useGuardarAntecedentes(documento: string) {
         method: 'PUT',
         body: JSON.stringify(respuestas),
       }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['antecedentes', documento] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: [...ANTECEDENTES_KEY, documento] }),
   })
 }
 
@@ -55,12 +56,11 @@ export function useGuardarAntecedentes(documento: string) {
 
 export function usePreguntas() {
   return useQuery({
-    queryKey: ['antecedentes-preguntas'],
+    queryKey: ANTECEDENTES_PREGUNTAS_KEY,
     queryFn: () => apiFetch<AntecedentePregunta[]>('/antecedentes/preguntas'),
   })
 }
 
-const KEY = ['antecedentes-preguntas']
 
 export function useCrearPregunta() {
   const qc = useQueryClient()
@@ -68,7 +68,7 @@ export function useCrearPregunta() {
     mutationFn: (data: Omit<AntecedentePregunta, 'id' | 'esta_activo'>) =>
       apiFetch<AntecedentePregunta>('/antecedentes/preguntas', { method: 'POST', body: JSON.stringify(data) }),
     onSuccess: (nueva) => {
-      qc.setQueryData<AntecedentePregunta[]>(KEY, (old) => [...(old ?? []), nueva])
+      qc.setQueryData<AntecedentePregunta[]>(ANTECEDENTES_PREGUNTAS_KEY, (old) => [...(old ?? []), nueva])
     },
   })
 }
@@ -79,7 +79,7 @@ export function useActualizarPregunta(id: string) {
     mutationFn: (data: Omit<AntecedentePregunta, 'id' | 'esta_activo'>) =>
       apiFetch<AntecedentePregunta>(`/antecedentes/preguntas/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     onSuccess: (actualizada) => {
-      qc.setQueryData<AntecedentePregunta[]>(KEY, (old) =>
+      qc.setQueryData<AntecedentePregunta[]>(ANTECEDENTES_PREGUNTAS_KEY, (old) =>
         old?.map((p) => (p.id === id ? actualizada : p)) ?? []
       )
     },
@@ -91,7 +91,7 @@ export function useTogglePregunta(id: string) {
   return useMutation({
     mutationFn: () => apiFetch<{ esta_activo: boolean }>(`/antecedentes/preguntas/${id}/toggle`, { method: 'PATCH' }),
     onSuccess: ({ esta_activo }) => {
-      qc.setQueryData<AntecedentePregunta[]>(KEY, (old) =>
+      qc.setQueryData<AntecedentePregunta[]>(ANTECEDENTES_PREGUNTAS_KEY, (old) =>
         old?.map((p) => (p.id === id ? { ...p, esta_activo } : p)) ?? []
       )
     },
@@ -103,7 +103,7 @@ export function useEliminarPregunta() {
   return useMutation<void, Error, string>({
     mutationFn: (id) => apiFetch(`/antecedentes/preguntas/${id}`, { method: 'DELETE' }),
     onSuccess: (_, id) => {
-      qc.setQueryData<AntecedentePregunta[]>(KEY, (old) => old?.filter((p) => p.id !== id) ?? [])
+      qc.setQueryData<AntecedentePregunta[]>(ANTECEDENTES_PREGUNTAS_KEY, (old) => old?.filter((p) => p.id !== id) ?? [])
     },
   })
 }

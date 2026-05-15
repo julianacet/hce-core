@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiFetch } from './client'
+import { RIPS_RESUMEN_KEY, RIPS_HISTORIAL_KEY } from './keys'
 
 // ── Mensual (lote sin FEV) ────────────────────────────────────────────────────
 
@@ -35,7 +36,7 @@ export type RipsLoteItem = {
 
 export function useRipsMensualResumen(anio: number, mes: number) {
   return useQuery<RipsMensualResumen>({
-    queryKey: ['rips-resumen', anio, mes],
+    queryKey: [...RIPS_RESUMEN_KEY, anio, mes],
     queryFn: () => apiFetch(`/rips/resumen?anio=${anio}&mes=${mes}`),
     enabled: anio > 0 && mes > 0,
   })
@@ -43,7 +44,7 @@ export function useRipsMensualResumen(anio: number, mes: number) {
 
 export function useRipsHistorial() {
   return useQuery<RipsLoteItem[]>({
-    queryKey: ['rips-historial'],
+    queryKey: RIPS_HISTORIAL_KEY,
     queryFn: () => apiFetch('/rips/historial'),
   })
 }
@@ -57,7 +58,7 @@ export function useGenerarRipsMensual() {
         body: JSON.stringify(input),
       }),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['rips-historial'] })
+      qc.invalidateQueries({ queryKey: RIPS_HISTORIAL_KEY })
     },
   })
 }

@@ -161,11 +161,9 @@ export default function HistorialEncuentros() {
               {visibles.map(e => (
                 <tr
                   key={e.encuentro_id}
-                  className="cursor-pointer transition-colors"
+                  className="cursor-pointer transition-colors hover:bg-[var(--hce-bg)]"
                   style={{ color: 'var(--hce-text)' }}
                   onClick={() => navigate(`/pacientes/${id}/encuentros/${e.encuentro_id}`)}
-                  onMouseEnter={el => (el.currentTarget.style.background = 'var(--hce-bg)')}
-                  onMouseLeave={el => (el.currentTarget.style.background = '')}
                 >
                   <td className="px-5 py-3 whitespace-nowrap" style={{ color: 'var(--hce-text-muted)' }}>
                     {formatFecha(e.fecha_atencion)}

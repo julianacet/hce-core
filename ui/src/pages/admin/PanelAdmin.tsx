@@ -190,7 +190,7 @@ function TiposEventoAdversoAdmin() {
             </button>
             <button onClick={guardar} disabled={crear.isPending || actualizar.isPending}
               className="btn-primary">
-              Guardar
+              {crear.isPending || actualizar.isPending ? 'Guardando...' : 'Guardar'}
             </button>
           </div>
         </div>
@@ -406,20 +406,7 @@ function PlantillasAdmin() {
                     key={v.clave}
                     type="button"
                     onClick={() => insertarVariable(v.clave)}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border transition-colors"
-                    style={{
-                      borderColor: 'var(--hce-primary)',
-                      color: 'var(--hce-primary)',
-                      backgroundColor: 'white',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = 'var(--hce-primary)'
-                      e.currentTarget.style.color = 'white'
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = 'white'
-                      e.currentTarget.style.color = 'var(--hce-primary)'
-                    }}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border transition-colors border-[var(--hce-primary)] text-[var(--hce-primary)] bg-white hover:bg-[var(--hce-primary)] hover:text-white"
                   >
                     <Plus size={10} />
                     {v.etiqueta}
@@ -890,7 +877,7 @@ function AntecedentesAdmin() {
           <div className="flex justify-end gap-2">
             <button onClick={cerrar} className="btn-secondary">Cancelar</button>
             <button onClick={guardar} disabled={crear.isPending || actualizar.isPending} className="btn-primary">
-              Guardar
+              {crear.isPending || actualizar.isPending ? 'Guardando...' : 'Guardar'}
             </button>
           </div>
         </div>
@@ -1154,7 +1141,7 @@ function CamposClinicosAdmin() {
           <div className="flex justify-end gap-2">
             <button onClick={cerrar} className="btn-secondary">Cancelar</button>
             <button onClick={guardar} disabled={crear.isPending || actualizar.isPending} className="btn-primary">
-              Guardar
+              {crear.isPending || actualizar.isPending ? 'Guardando...' : 'Guardar'}
             </button>
           </div>
         </div>
@@ -1392,7 +1379,7 @@ function MedicamentosAdmin() {
           <div className="flex justify-end gap-2">
             <button onClick={cerrar} className="btn-secondary">Cancelar</button>
             <button onClick={guardar} disabled={crear.isPending || actualizar.isPending} className="btn-primary">
-              Guardar
+              {crear.isPending || actualizar.isPending ? 'Guardando...' : 'Guardar'}
             </button>
           </div>
         </div>
@@ -1420,6 +1407,8 @@ export default function PanelAdmin() {
   const { tema, guardarTema } = useTema()
   const [form, setForm] = useState<Tema>(tema)
   const [guardado, setGuardado] = useState(false)
+  const [guardando, setGuardando] = useState(false)
+  const [errorTema, setErrorTema] = useState<string | null>(null)
   const [tab, setTab] = useTabParam(
     'tab',
     'apariencia' as const,
@@ -1452,11 +1441,19 @@ export default function PanelAdmin() {
     setForm(DEFAULTS)
   }
 
-  function guardar(e: React.FormEvent) {
+  async function guardar(e: React.FormEvent) {
     e.preventDefault()
-    guardarTema(form)
-    setGuardado(true)
-    setTimeout(() => setGuardado(false), 2500)
+    setGuardando(true)
+    setErrorTema(null)
+    try {
+      await guardarTema(form)
+      setGuardado(true)
+      setTimeout(() => setGuardado(false), 2500)
+    } catch (err) {
+      setErrorTema((err as Error)?.message ?? 'Error al guardar la configuración.')
+    } finally {
+      setGuardando(false)
+    }
   }
 
   const aparienciaDirty = tab === 'apariencia' && JSON.stringify(form) !== JSON.stringify(tema)
@@ -1537,10 +1534,7 @@ export default function PanelAdmin() {
                 </button>
               </div>
             ) : (
-              <label className="flex flex-col items-center justify-center rounded-lg p-6 cursor-pointer transition-colors"
-                style={{ border: '2px dashed var(--hce-border)' }}
-                onMouseEnter={(e) => (e.currentTarget.style.borderColor = 'var(--hce-primary)')}
-                onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'var(--hce-border)')}>
+              <label className="flex flex-col items-center justify-center rounded-lg p-6 cursor-pointer transition-colors border-2 border-dashed border-[var(--hce-border)] hover:border-[var(--hce-primary)]">
                 <Upload size={20} className="mb-2" style={{ color: 'var(--hce-text-muted)' }} />
                 <span className="text-sm" style={{ color: 'var(--hce-text-muted)' }}>Subir logo</span>
                 <span className="text-xs mt-0.5" style={{ color: 'var(--hce-text-muted)' }}>PNG con fondo transparente recomendado</span>
@@ -1556,10 +1550,7 @@ export default function PanelAdmin() {
           <div className="flex flex-wrap gap-2">
             {PALETAS.map((p) => (
               <button key={p.nombre} type="button" onClick={() => aplicarPaleta(p)}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs transition-colors"
-                style={{ border: '1px solid var(--hce-border)', color: 'var(--hce-text)' }}
-                onMouseEnter={(e) => (e.currentTarget.style.borderColor = 'var(--hce-primary)')}
-                onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'var(--hce-border)')}>
+                className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs transition-colors border border-[var(--hce-border)] text-[var(--hce-text)] hover:border-[var(--hce-primary)]">
                 <span className="w-3 h-3 rounded-full" style={{ backgroundColor: p.t.colorPrimario }} />
                 <span className="w-3 h-3 rounded-full" style={{ backgroundColor: p.t.colorSidebar }} />
                 {p.nombre}
@@ -1639,12 +1630,15 @@ export default function PanelAdmin() {
             <RotateCcw size={14} /> Restaurar valores por defecto
           </button>
           <div className="flex items-center gap-3">
-            {guardado && (
+            {errorTema && <p className="form-error">{errorTema}</p>}
+            {guardado && !guardando && (
               <span className="flex items-center gap-1.5 text-sm text-green-600">
                 <CheckCircle size={15} /> Guardado
               </span>
             )}
-            <button type="submit" className="btn-primary">Guardar cambios</button>
+            <button type="submit" disabled={guardando} className="btn-primary disabled:opacity-60">
+              {guardando ? 'Guardando...' : 'Guardar cambios'}
+            </button>
           </div>
         </div>
       </form>}

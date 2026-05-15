@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiFetch } from './client'
+import { FACTURAS_KEY } from './keys'
 
 export type FacturaItem = {
   id: string
@@ -39,14 +40,14 @@ export type FacturaInput = {
 
 export function useFacturas(q?: string) {
   return useQuery({
-    queryKey: ['facturas', q ?? ''],
+    queryKey: [...FACTURAS_KEY, q ?? ''],
     queryFn: () => apiFetch<Factura[]>(`/facturas${q ? `?q=${encodeURIComponent(q)}` : ''}`),
   })
 }
 
 export function useFactura(facturaId: string) {
   return useQuery({
-    queryKey: ['facturas', facturaId],
+    queryKey: [...FACTURAS_KEY, facturaId],
     queryFn: () => apiFetch<Factura>(`/facturas/${facturaId}`),
     enabled: !!facturaId,
   })
@@ -60,7 +61,7 @@ export function useCrearFactura() {
         method: 'POST',
         body: JSON.stringify(data),
       }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['facturas'] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: FACTURAS_KEY }),
   })
 }
 
@@ -69,6 +70,6 @@ export function useAnularFactura(facturaId: string) {
   return useMutation({
     mutationFn: () =>
       apiFetch<Factura>(`/facturas/${facturaId}/anular`, { method: 'PATCH' }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['facturas'] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: FACTURAS_KEY }),
   })
 }

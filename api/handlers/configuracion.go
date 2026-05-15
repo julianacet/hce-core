@@ -1,9 +1,10 @@
 package handlers
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
-	"encoding/json"
+	"log"
 	"net/http"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -22,7 +23,6 @@ func GetConfiguracion(db *pgxpool.Pool) http.HandlerFunc {
 
 		w.Header().Set("Content-Type", "application/json")
 		if err != nil {
-			// Tabla vacía o no existe aún — devolver objetos vacíos
 			w.Write([]byte(`{"tema":{},"medico":{}}`))
 			return
 		}
@@ -35,7 +35,7 @@ func PutConfiguracionTema(db *pgxpool.Pool) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		body, err := io.ReadAll(r.Body)
 		if err != nil || !json.Valid(body) {
-			http.Error(w, "JSON inválido", 400)
+			responderError(w, http.StatusBadRequest, "JSON inválido")
 			return
 		}
 		u := appmiddleware.UsuarioDesdeContexto(r.Context())
@@ -50,7 +50,8 @@ func PutConfiguracionTema(db *pgxpool.Pool) http.HandlerFunc {
 			body, u.Nombre,
 		).Scan(&temaBytes)
 		if err != nil {
-			http.Error(w, err.Error(), 500)
+			log.Printf("guardar tema: %v", err)
+			responderError(w, http.StatusInternalServerError, "error al guardar tema")
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -63,7 +64,7 @@ func PutConfiguracionMedico(db *pgxpool.Pool) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		body, err := io.ReadAll(r.Body)
 		if err != nil || !json.Valid(body) {
-			http.Error(w, "JSON inválido", 400)
+			responderError(w, http.StatusBadRequest, "JSON inválido")
 			return
 		}
 		u := appmiddleware.UsuarioDesdeContexto(r.Context())
@@ -78,7 +79,8 @@ func PutConfiguracionMedico(db *pgxpool.Pool) http.HandlerFunc {
 			body, u.Nombre,
 		).Scan(&medicoBytes)
 		if err != nil {
-			http.Error(w, err.Error(), 500)
+			log.Printf("guardar medico: %v", err)
+			responderError(w, http.StatusInternalServerError, "error al guardar datos del médico")
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")

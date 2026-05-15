@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react'
+import { useDebounced } from '../hooks/useDebounced'
+import { DEBOUNCE_FILTROS_MS } from '../utils/constants'
 import { useNavigate } from 'react-router'
 import {
   Search, UserPlus, ChevronUp, ChevronDown, ArrowUpDown,
@@ -7,6 +9,7 @@ import {
 import { usePacientesPaginados, exportarPacientes, type Paciente } from '../api/pacientes'
 import { SelectorEps } from '../components/SelectorEps'
 import { descargarCSV, descargarXLSX } from '../utils/csv'
+import { nombreCompleto } from '../utils/paciente'
 
 const TIPOS_USUARIO = [
   { value: '', label: 'Todos los tipos' },
@@ -23,12 +26,6 @@ const LIMIT = 25
 type Orden = 'nombre' | 'edad' | 'tipoUsuario' | 'ultima_atencion' | 'fecha'
 type Dir = 'asc' | 'desc'
 
-function nombreCompleto(p: Paciente) {
-  return [p.nombre_primero, p.nombre_segundo, p.apellido_primero, p.apellido_segundo]
-    .filter(Boolean)
-    .join(' ')
-}
-
 function formatFecha(iso: string) {
   return new Date(iso).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' })
 }
@@ -43,7 +40,6 @@ function SortIcon({ activo, dir }: { activo: boolean; dir: Dir }) {
 export default function ListaPacientes() {
   const navigate = useNavigate()
   const [q, setQ] = useState('')
-  const [qDebounced, setQDebounced] = useState('')
   const [page, setPage] = useState(1)
   const [orden, setOrden] = useState<Orden>('nombre')
   const [dir, setDir] = useState<Dir>('asc')
@@ -52,18 +48,12 @@ export default function ListaPacientes() {
     tipo_usuario: '', genero: '', zona_residencia: '', eps: '', telefono: '',
     min_atencion: '', max_atencion: '',
   })
-  const [filtrosDebounced, setFiltrosDebounced] = useState(filtros)
   const [epsResetKey, setEpsResetKey] = useState(0)
 
-  useEffect(() => {
-    const t = setTimeout(() => { setQDebounced(q); setPage(1) }, 300)
-    return () => clearTimeout(t)
-  }, [q])
+  const qDebounced = useDebounced(q)
+  const filtrosDebounced = useDebounced(filtros, DEBOUNCE_FILTROS_MS)
 
-  useEffect(() => {
-    const t = setTimeout(() => setFiltrosDebounced(filtros), 400)
-    return () => clearTimeout(t)
-  }, [filtros])
+  useEffect(() => { setPage(1) }, [qDebounced])
 
   function setFiltro<K extends keyof typeof filtros>(key: K, value: string) {
     setFiltros(f => ({ ...f, [key]: value }))

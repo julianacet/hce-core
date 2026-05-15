@@ -12,6 +12,7 @@ import { useCamposClinicosActivos } from '../../api/campos_clinicos'
 import { useFormulas, type FormulaGuardada } from '../../api/formulas'
 import { useNotasEncuentro, useCrearNotaEncuentro } from '../../api/notas_encuentro'
 import AntecedentesTab from '../../components/AntecedentesTab'
+import { nombreCompleto } from '../../utils/paciente'
 
 type Tab = 'motivo' | 'signos' | 'revision' | 'examen' | 'diagnosticos' | 'antecedentes' | 'formula'
 
@@ -27,7 +28,7 @@ const TABS: { key: Tab; label: string }[] = [
 
 const ALL_TAB_KEYS = TABS.map(t => t.key) as readonly Tab[]
 
-const colorAccion: Record<string, string> = {
+const colorAccion: Record<'INSERT' | 'UPDATE' | 'DELETE', string> = {
   INSERT: 'bg-green-100 text-green-700',
   UPDATE: 'bg-yellow-100 text-yellow-700',
   DELETE: 'bg-red-100 text-red-700',
@@ -53,10 +54,7 @@ export default function DetalleEncuentro() {
   if (isError || !e) return <div className="p-6 text-sm text-red-500">Error al cargar el encuentro.</div>
 
   const diagnostico = [e.codigo_diagnostico_principal, e.descripcion_diagnostico].filter(Boolean).join(' - ')
-  const pacienteNombre = paciente
-    ? [paciente.nombre_primero, paciente.nombre_segundo, paciente.apellido_primero, paciente.apellido_segundo]
-        .filter(Boolean).join(' ')
-    : id ?? ''
+  const pacienteNombre = paciente ? nombreCompleto(paciente) : id ?? ''
 
   async function handleReimprimirFormula(formula: FormulaGuardada) {
     setImprimiendoFormulaId(formula.id)

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { X, Plus, FileText } from 'lucide-react'
 import { useBuscarDiagnosticos } from '../api/diagnosticos'
 import type { DiagnosticoItem } from '../api/encuentros'
+import { DEBOUNCE_MS } from '../utils/constants'
 
 interface Props {
   value: DiagnosticoItem[]
@@ -33,7 +34,7 @@ export default function DiagnosticoSearch({ value, onChange, disabled }: Props) 
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    const t = setTimeout(() => setDebouncedQuery(query), 300)
+    const t = setTimeout(() => setDebouncedQuery(query), DEBOUNCE_MS)
     return () => clearTimeout(t)
   }, [query])
 

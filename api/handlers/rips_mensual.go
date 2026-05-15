@@ -18,6 +18,15 @@ type RipsHandler struct {
 	db *pgxpool.Pool
 }
 
+// cupsPorFinalidad mapea finalidad_consulta → código CUPS de consulta por defecto.
+// Solo cubre consultas (finalidades 10, 11, 12). Procedimientos (otras finalidades)
+// requieren consultar factura_item — pendiente implementar (B4).
+var cupsPorFinalidad = map[string]string{
+	"10": "890101",
+	"11": "890201",
+	"12": "890301",
+}
+
 func RipsMensualRouter(db *pgxpool.Pool) http.Handler {
 	h := &RipsHandler{db: db}
 	r := chi.NewRouter()
@@ -182,13 +191,6 @@ func (h *RipsHandler) generarMensual(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// CUPS por defecto según finalidad
-	cupsDefault := map[string]string{
-		"10": "890101",
-		"11": "890201",
-		"12": "890301",
-	}
-
 	// 3. Construir el JSON RIPS
 	usuarios := make([]models.RipsUsuario, 0, len(patientOrder))
 	for idx, doc := range patientOrder {
@@ -201,7 +203,7 @@ func (h *RipsHandler) generarMensual(w http.ResponseWriter, r *http.Request) {
 
 		for _, enc := range encs {
 			fechaStr := enc.FechaAtencion.Format("2006-01-02T15:04:05")
-			cups := cupsDefault[enc.FinalidadConsulta]
+			cups := cupsPorFinalidad[enc.FinalidadConsulta]
 			if cups == "" {
 				cups = "890101"
 			}

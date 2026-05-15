@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight, X } from 'lucide-react'
 import { useEncuentros, type DiagnosticoItem, type ValorNormalNotas, type EncuentroInput } from '../api/encuentros'
 import { useCamposClinicosActivos } from '../api/campos_clinicos'
 import { useBuscarDiagnosticos } from '../api/diagnosticos'
+import { DEBOUNCE_MS } from '../utils/constants'
 import DiagnosticoSearch from './DiagnosticoSearch'
 import { SignosVitalesForm, ExamenFisicoForm, RevisionSistemasForm } from './CampoClinicoForm'
 import AntecedentesTab from './AntecedentesTab'
@@ -77,7 +78,7 @@ function ImpresionPicker({
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    const t = setTimeout(() => setQD(q), 300)
+    const t = setTimeout(() => setQD(q), DEBOUNCE_MS)
     return () => clearTimeout(t)
   }, [q])
 

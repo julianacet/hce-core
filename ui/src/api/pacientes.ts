@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiFetch } from './client'
+import { PACIENTES_KEY, PACIENTES_PAGINADOS_KEY } from './keys'
 
 export type Paciente = {
   id: string
@@ -69,7 +70,7 @@ type PaginadosParams = {
 
 export function usePacientesPaginados(params: PaginadosParams) {
   return useQuery({
-    queryKey: ['pacientes-paginados', params],
+    queryKey: [...PACIENTES_PAGINADOS_KEY, params],
     queryFn: () => {
       const p = new URLSearchParams({
         page: String(params.page),
@@ -93,7 +94,7 @@ export function usePacientesPaginados(params: PaginadosParams) {
 
 export function usePacientes(q?: string) {
   return useQuery({
-    queryKey: ['pacientes', q],
+    queryKey: [...PACIENTES_KEY, q],
     queryFn: () => {
       const params = q ? `?q=${encodeURIComponent(q)}` : ''
       return apiFetch<Paciente[]>(`/pacientes${params}`)
@@ -103,7 +104,7 @@ export function usePacientes(q?: string) {
 
 export function usePaciente(documento: string) {
   return useQuery({
-    queryKey: ['pacientes', documento],
+    queryKey: [...PACIENTES_KEY, documento],
     queryFn: () => apiFetch<Paciente>(`/pacientes/${documento}`),
     enabled: !!documento,
   })
@@ -114,7 +115,10 @@ export function useCrearPaciente() {
   return useMutation({
     mutationFn: (data: PacienteInput) =>
       apiFetch<Paciente>('/pacientes', { method: 'POST', body: JSON.stringify(data) }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['pacientes'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: PACIENTES_KEY })
+      qc.invalidateQueries({ queryKey: PACIENTES_PAGINADOS_KEY })
+    },
   })
 }
 
@@ -123,7 +127,10 @@ export function useActualizarPaciente(documento: string) {
   return useMutation({
     mutationFn: (data: Partial<PacienteInput>) =>
       apiFetch<Paciente>(`/pacientes/${documento}`, { method: 'PUT', body: JSON.stringify(data) }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['pacientes'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: PACIENTES_KEY })
+      qc.invalidateQueries({ queryKey: PACIENTES_PAGINADOS_KEY })
+    },
   })
 }
 

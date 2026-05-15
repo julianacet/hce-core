@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -61,7 +62,7 @@ const columnasEncuentro = `
 	motivo_consulta, descripcion_ingreso,
 	signos_vitales, examen_fisico, revision_sistemas,
 	COALESCE(codigo_diagnostico_principal, ''), descripcion_diagnostico, plan_manejo,
-	hash_integridad, fecha_creacion, creado_por, id_sistema_anterior,
+	fecha_creacion, creado_por, id_sistema_anterior,
 	CASE finalidad_consulta WHEN '10' THEN 'Consulta de primera vez' WHEN '11' THEN 'Consulta de control o seguimiento' WHEN '12' THEN 'Urgencias' ELSE finalidad_consulta END AS finalidad_consulta_nombre,
 	CASE causa_externa WHEN '13' THEN 'Enfermedad general' WHEN '01' THEN 'Accidente de trabajo' WHEN '02' THEN 'Accidente de tránsito' WHEN '03' THEN 'Otro accidente' WHEN '04' THEN 'Lesión por agresión' WHEN '05' THEN 'Lesión autoinfligida' WHEN '06' THEN 'Evento catastrófico' ELSE causa_externa END AS causa_externa_nombre,
 	CASE via_ingreso WHEN '01' THEN 'Urgencias' WHEN '02' THEN 'Consulta externa' WHEN '03' THEN 'Hospitalización' ELSE via_ingreso END AS via_ingreso_nombre`
@@ -75,33 +76,29 @@ func (h *EncuentroHandler) listar(w http.ResponseWriter, r *http.Request) {
 	diagnostico := strings.TrimSpace(r.URL.Query().Get("diagnostico"))
 	estado := strings.TrimSpace(r.URL.Query().Get("estado"))
 
+	args := argList{documento}
 	query := `SELECT` + columnasEncuentro + `
 		FROM encuentro_clinico
 		WHERE paciente_documento = $1 AND es_ultima_version = TRUE AND esta_activo = TRUE`
-	args := []any{documento}
 
 	if desde != "" {
-		args = append(args, desde)
-		query += ` AND fecha_atencion >= $` + fmt.Sprintf("%d", len(args))
+		query += ` AND fecha_atencion >= ` + args.Add(desde)
 	}
 	if hasta != "" {
-		args = append(args, hasta+" 23:59:59")
-		query += ` AND fecha_atencion <= $` + fmt.Sprintf("%d", len(args))
+		query += ` AND fecha_atencion <= ` + args.Add(hasta+" 23:59:59")
 	}
 	if estado != "" {
-		args = append(args, estado)
-		query += ` AND estado = $` + fmt.Sprintf("%d", len(args))
+		query += ` AND estado = ` + args.Add(estado)
 	}
 	if diagnostico != "" {
-		args = append(args, "%"+strings.ToLower(diagnostico)+"%")
-		idx := fmt.Sprintf("%d", len(args))
-		query += ` AND (LOWER(COALESCE(codigo_diagnostico_principal,'')) LIKE $` + idx +
-			` OR LOWER(COALESCE(descripcion_diagnostico,'')) LIKE $` + idx +
-			` OR EXISTS (SELECT 1 FROM encuentro_diagnostico ed WHERE ed.encuentro_clinico_id = encuentro_clinico.id AND (LOWER(COALESCE(ed.codigo,'')) LIKE $` + idx + ` OR LOWER(ed.descripcion) LIKE $` + idx + `)))`
+		p := args.Add("%" + strings.ToLower(diagnostico) + "%")
+		query += ` AND (LOWER(COALESCE(codigo_diagnostico_principal,'')) LIKE ` + p +
+			` OR LOWER(COALESCE(descripcion_diagnostico,'')) LIKE ` + p +
+			` OR EXISTS (SELECT 1 FROM encuentro_diagnostico ed WHERE ed.encuentro_clinico_id = encuentro_clinico.id AND (LOWER(COALESCE(ed.codigo,'')) LIKE ` + p + ` OR LOWER(ed.descripcion) LIKE ` + p + `)))`
 	}
 	query += ` ORDER BY fecha_atencion DESC`
 
-	rows, err := h.db.Query(r.Context(), query, args...)
+	rows, err := h.db.Query(r.Context(), query, args.Slice()...)
 	if err != nil {
 		log.Printf("listar encuentros: %v", err)
 		responderError(w, http.StatusInternalServerError, "error al consultar encuentros")
@@ -142,12 +139,23 @@ func (h *EncuentroHandler) obtener(w http.ResponseWriter, r *http.Request) {
 
 	e, err := escanearEncuentro(row)
 	if err != nil {
-		responderError(w, http.StatusNotFound, "encuentro no encontrado")
+		if errors.Is(err, pgx.ErrNoRows) {
+			responderError(w, http.StatusNotFound, "encuentro no encontrado")
+		} else {
+			log.Printf("obtener encuentro %s: %v", encuentroID, err)
+			responderError(w, http.StatusInternalServerError, "error al leer encuentro")
+		}
 		return
 	}
 
 	// Cargar diagnósticos completos
-	e.Diagnosticos = cargarDiagnosticos(r.Context(), h.db, e.ID)
+	diags, err := cargarDiagnosticos(r.Context(), h.db, e.ID)
+	if err != nil {
+		log.Printf("cargarDiagnosticos %s: %v", e.ID, err)
+		responderError(w, http.StatusInternalServerError, "error al leer diagnósticos")
+		return
+	}
+	e.Diagnosticos = diags
 
 	if e.FinalidadConsulta == "11" && e.EncuentroPadreID != nil {
 		e.EsPrimerControl = esPrimerControl(r.Context(), h.db, *e.EncuentroPadreID, e.EncuentroID)
@@ -242,7 +250,7 @@ func escanearEncuentro(row scanner) (models.Encuentro, error) {
 		&e.MotivoConsulta, &e.DescripcionIngreso,
 		&svRaw, &efRaw, &rsRaw,
 		&e.CodigoDiagnosticoPrincipal, &e.DescripcionDiagnostico, &e.PlanManejo,
-		&e.HashIntegridad, &e.FechaCreacion, &e.CreadoPor, &e.IDSistemaAnterior,
+		&e.FechaCreacion, &e.CreadoPor, &e.IDSistemaAnterior,
 		&e.FinalidadConsultaNombre, &e.CausaExternaNombre, &e.ViaIngresoNombre,
 	)
 	if err != nil {
@@ -330,7 +338,7 @@ func insertarEncuentro(ctx context.Context, db encuentroQuerier, encuentroID str
 	return e, nil
 }
 
-func cargarDiagnosticos(ctx context.Context, db *pgxpool.Pool, encuentroClinicID string) []models.EncuentroDiagnostico {
+func cargarDiagnosticos(ctx context.Context, db *pgxpool.Pool, encuentroClinicID string) ([]models.EncuentroDiagnostico, error) {
 	rows, err := db.Query(ctx,
 		`SELECT id, tipo, codigo, descripcion, orden
 		 FROM encuentro_diagnostico
@@ -339,7 +347,7 @@ func cargarDiagnosticos(ctx context.Context, db *pgxpool.Pool, encuentroClinicID
 		encuentroClinicID,
 	)
 	if err != nil {
-		return nil
+		return nil, err
 	}
 	defer rows.Close()
 
@@ -347,11 +355,11 @@ func cargarDiagnosticos(ctx context.Context, db *pgxpool.Pool, encuentroClinicID
 	for rows.Next() {
 		var d models.EncuentroDiagnostico
 		if err := rows.Scan(&d.ID, &d.Tipo, &d.Codigo, &d.Descripcion, &d.Orden); err != nil {
-			continue
+			return nil, err
 		}
 		diags = append(diags, d)
 	}
-	return diags
+	return diags, rows.Err()
 }
 
 // ── Listado global de encuentros ─────────────────────────────────────────────
@@ -406,35 +414,31 @@ func (h *EncuentroHandler) listarGlobal(w http.ResponseWriter, r *http.Request) 
 	}
 	offset := (page - 1) * limit
 
+	var args argList
 	where := `ec.es_ultima_version = TRUE AND ec.esta_activo = TRUE`
-	args := []any{}
 
 	if q != "" {
-		args = append(args, "%"+strings.ToLower(q)+"%")
-		idx := fmt.Sprintf("%d", len(args))
+		p := args.Add("%" + strings.ToLower(q) + "%")
 		where += ` AND (
-			LOWER(ec.paciente_documento) LIKE $` + idx + `
-			OR LOWER(p.nombre_primero || ' ' || COALESCE(p.nombre_segundo,'') || ' ' || p.apellido_primero || ' ' || COALESCE(p.apellido_segundo,'')) LIKE $` + idx + `
-			OR LOWER(p.apellido_primero || ' ' || COALESCE(p.apellido_segundo,'')) LIKE $` + idx + `
+			LOWER(ec.paciente_documento) LIKE ` + p + `
+			OR LOWER(p.nombre_primero || ' ' || COALESCE(p.nombre_segundo,'') || ' ' || p.apellido_primero || ' ' || COALESCE(p.apellido_segundo,'')) LIKE ` + p + `
+			OR LOWER(p.apellido_primero || ' ' || COALESCE(p.apellido_segundo,'')) LIKE ` + p + `
 		)`
 	}
 	if desde != "" {
-		args = append(args, desde)
-		where += ` AND ec.fecha_atencion >= $` + fmt.Sprintf("%d", len(args))
+		where += ` AND ec.fecha_atencion >= ` + args.Add(desde)
 	}
 	if hasta != "" {
-		args = append(args, hasta+" 23:59:59")
-		where += ` AND ec.fecha_atencion <= $` + fmt.Sprintf("%d", len(args))
+		where += ` AND ec.fecha_atencion <= ` + args.Add(hasta+" 23:59:59")
 	}
 	if finalidad != "" {
-		args = append(args, finalidad)
-		where += ` AND ec.finalidad_consulta = $` + fmt.Sprintf("%d", len(args))
+		where += ` AND ec.finalidad_consulta = ` + args.Add(finalidad)
 	}
 	if estado != "" {
-		args = append(args, estado)
-		where += ` AND ec.estado = $` + fmt.Sprintf("%d", len(args))
+		where += ` AND ec.estado = ` + args.Add(estado)
 	}
 
+	// Labels unificados con columnasEncuentro (B3)
 	baseQuery := `
 		SELECT
 			ec.encuentro_id,
@@ -442,8 +446,8 @@ func (h *EncuentroHandler) listarGlobal(w http.ResponseWriter, r *http.Request) 
 			ec.estado,
 			ec.finalidad_consulta,
 			CASE ec.finalidad_consulta
-				WHEN '10' THEN 'Primera vez'
-				WHEN '11' THEN 'Control'
+				WHEN '10' THEN 'Consulta de primera vez'
+				WHEN '11' THEN 'Consulta de control o seguimiento'
 				WHEN '12' THEN 'Urgencias'
 				ELSE ec.finalidad_consulta
 			END,
@@ -461,17 +465,12 @@ func (h *EncuentroHandler) listarGlobal(w http.ResponseWriter, r *http.Request) 
 		ORDER BY ec.fecha_atencion DESC`
 
 	var query string
-	var queryArgs []any
 	if exportar {
 		query = baseQuery
-		queryArgs = args
 	} else {
-		argsCount := append(args, limit, offset)
-		idxLimit := fmt.Sprintf("%d", len(argsCount)-1)
-		idxOffset := fmt.Sprintf("%d", len(argsCount))
-		query = baseQuery + ` LIMIT $` + idxLimit + ` OFFSET $` + idxOffset
-		queryArgs = argsCount
+		query = baseQuery + ` LIMIT ` + args.Add(limit) + ` OFFSET ` + args.Add(offset)
 	}
+	queryArgs := args.Slice()
 
 	rows, err := h.db.Query(r.Context(), query, queryArgs...)
 	if err != nil {
@@ -516,31 +515,26 @@ func tieneDiagnosticoPrincipal(diags []models.DiagnosticoInput) bool {
 	return false
 }
 
-// esPrimerControl devuelve true si no existen controles previos para el mismo
-// encuentro padre, siempre que primer_control_gratis esté activo en configuración.
+// esPrimerControl devuelve true si primer_control_gratis está activo en configuración
+// y no existen controles previos para el mismo encuentro padre.
 func esPrimerControl(ctx context.Context, db *pgxpool.Pool, padreID string, propioEncuentroID string) *bool {
-	var primerControlGratis bool
-	err := db.QueryRow(ctx,
-		`SELECT COALESCE((medico->>'primer_control_gratis')::boolean, true)
-		 FROM configuracion_sistema WHERE id = 1`,
-	).Scan(&primerControlGratis)
-	if err != nil || !primerControlGratis {
-		f := false
-		return &f
-	}
-
-	var count int
-	db.QueryRow(ctx, `
-		SELECT COUNT(*)
-		FROM encuentro_clinico
-		WHERE encuentro_padre_id = $1
-		  AND finalidad_consulta = '11'
-		  AND es_ultima_version = TRUE AND esta_activo = TRUE
-		  AND encuentro_id != $2`,
+	var result bool
+	err := db.QueryRow(ctx, `
+		SELECT
+			COALESCE((medico->>'primer_control_gratis')::boolean, true)
+			AND NOT EXISTS (
+				SELECT 1 FROM encuentro_clinico
+				WHERE encuentro_padre_id = $1
+				  AND finalidad_consulta = '11'
+				  AND es_ultima_version = TRUE AND esta_activo = TRUE
+				  AND encuentro_id != $2
+			)
+		FROM configuracion_sistema WHERE id = 1`,
 		padreID, propioEncuentroID,
-	).Scan(&count)
-
-	result := count == 0
+	).Scan(&result)
+	if err != nil {
+		return nil
+	}
 	return &result
 }
 

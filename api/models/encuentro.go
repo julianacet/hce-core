@@ -27,7 +27,6 @@ type Encuentro struct {
 	CodigoDiagnosticoPrincipal string          `json:"codigo_diagnostico_principal"`
 	DescripcionDiagnostico     *string         `json:"descripcion_diagnostico"`
 	PlanManejo                 *string         `json:"plan_manejo"`
-	HashIntegridad             *string         `json:"hash_integridad"`
 	FechaCreacion              time.Time       `json:"fecha_creacion"`
 	CreadoPor                  string          `json:"creado_por"`
 	IDSistemaAnterior          *string         `json:"id_sistema_anterior"`

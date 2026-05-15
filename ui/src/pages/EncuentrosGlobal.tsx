@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react'
+import { useDebounced } from '../hooks/useDebounced'
+import { DEBOUNCE_FILTROS_MS } from '../utils/constants'
 import { useNavigate } from 'react-router'
 import {
   Search, Plus, Filter, Trash2, ChevronLeft, ChevronRight, ClipboardList, Download,
@@ -25,23 +27,16 @@ export default function EncuentrosGlobal() {
   const navigate = useNavigate()
 
   const [q, setQ] = useState('')
-  const [qDebounced, setQDebounced] = useState('')
   const [page, setPage] = useState(1)
   const [filtrosAbiertos, setFiltrosAbiertos] = useState(false)
   const [filtros, setFiltros] = useState({
     desde: '', hasta: '', finalidad: '',
   })
-  const [filtrosDebounced, setFiltrosDebounced] = useState(filtros)
 
-  useEffect(() => {
-    const t = setTimeout(() => { setQDebounced(q); setPage(1) }, 300)
-    return () => clearTimeout(t)
-  }, [q])
+  const qDebounced = useDebounced(q)
+  const filtrosDebounced = useDebounced(filtros, DEBOUNCE_FILTROS_MS)
 
-  useEffect(() => {
-    const t = setTimeout(() => { setFiltrosDebounced(filtros); setPage(1) }, 400)
-    return () => clearTimeout(t)
-  }, [filtros])
+  useEffect(() => { setPage(1) }, [qDebounced, filtrosDebounced])
 
   function setFiltro<K extends keyof typeof filtros>(key: K, value: string) {
     setFiltros(f => ({ ...f, [key]: value }))
@@ -266,16 +261,10 @@ export default function EncuentrosGlobal() {
               {encuentros.map(e => (
                 <tr
                   key={e.encuentro_id}
-                  className="transition-colors cursor-pointer"
+                  className="transition-colors cursor-pointer hover:bg-[var(--hce-bg)]"
                   style={{ color: 'var(--hce-text)' }}
                   onClick={() =>
                     navigate(`/pacientes/${e.paciente_documento}/encuentros/${e.encuentro_id}`)
-                  }
-                  onMouseEnter={el =>
-                    (el.currentTarget.style.background = 'var(--hce-bg)')
-                  }
-                  onMouseLeave={el =>
-                    (el.currentTarget.style.background = '')
                   }
                 >
                   <td className="px-5 py-3">

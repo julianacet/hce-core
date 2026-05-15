@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiFetch } from './client'
+import { MEDICAMENTOS_KEY } from './keys'
 
 export type MedicamentoPredefinido = {
   id: string
@@ -19,11 +20,10 @@ export type MedicamentoInput = {
   tipo: 'pos' | 'no_pos'
 }
 
-const MED_KEY = ['medicamentos-predefinidos']
 
 export function useMedicamentosPredefinidos(tipo: 'pos' | 'no_pos', q: string) {
   return useQuery({
-    queryKey: [...MED_KEY, tipo, q],
+    queryKey: [...MEDICAMENTOS_KEY, tipo, q],
     queryFn: () => {
       const params = new URLSearchParams({ tipo })
       if (q) params.set('q', q)
@@ -35,7 +35,7 @@ export function useMedicamentosPredefinidos(tipo: 'pos' | 'no_pos', q: string) {
 
 export function useMedicamentosAdmin(tipo: 'pos' | 'no_pos' | '', q: string) {
   return useQuery({
-    queryKey: [...MED_KEY, 'admin', tipo, q],
+    queryKey: [...MEDICAMENTOS_KEY, 'admin', tipo, q],
     queryFn: () => {
       const params = new URLSearchParams({ todos: '1' })
       if (tipo) params.set('tipo', tipo)
@@ -49,7 +49,7 @@ function patchMeds(
   qc: ReturnType<typeof useQueryClient>,
   updater: (old: MedicamentoPredefinido[]) => MedicamentoPredefinido[],
 ) {
-  qc.setQueriesData<MedicamentoPredefinido[]>({ queryKey: MED_KEY }, (old) => (old ? updater(old) : old))
+  qc.setQueriesData<MedicamentoPredefinido[]>({ queryKey: MEDICAMENTOS_KEY }, (old) => (old ? updater(old) : old))
 }
 
 export function useCrearMedicamento() {
@@ -57,7 +57,7 @@ export function useCrearMedicamento() {
   return useMutation<MedicamentoPredefinido, Error, MedicamentoInput>({
     mutationFn: (input) =>
       apiFetch('/medicamentos-predefinidos', { method: 'POST', body: JSON.stringify(input) }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: MED_KEY }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: MEDICAMENTOS_KEY }),
   })
 }
 

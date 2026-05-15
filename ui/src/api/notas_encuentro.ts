@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiFetch } from './client'
+import { NOTAS_ENCUENTRO_KEY } from './keys'
 
 export type NotaEncuentro = {
   id: string
@@ -11,7 +12,7 @@ export type NotaEncuentro = {
 
 export function useNotasEncuentro(docId: string, encId: string) {
   return useQuery({
-    queryKey: ['notas-encuentro', encId],
+    queryKey: [...NOTAS_ENCUENTRO_KEY, encId],
     queryFn: () => apiFetch<NotaEncuentro[]>(`/pacientes/${docId}/encuentros/${encId}/notas`),
     enabled: !!docId && !!encId,
   })
@@ -25,6 +26,6 @@ export function useCrearNotaEncuentro(docId: string, encId: string) {
         method: 'POST',
         body: JSON.stringify({ texto }),
       }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['notas-encuentro', encId] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: [...NOTAS_ENCUENTRO_KEY, encId] }),
   })
 }

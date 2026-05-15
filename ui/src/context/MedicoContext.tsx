@@ -33,7 +33,7 @@ const DEFAULTS: DatosMedico = {
 
 type MedicoContextType = {
   medico: DatosMedico
-  guardar: (datos: DatosMedico) => void
+  guardar: (datos: DatosMedico) => Promise<void>
 }
 
 const MedicoContext = createContext<MedicoContextType | null>(null)
@@ -63,11 +63,10 @@ export function MedicoProvider({ children }: { children: ReactNode }) {
       })
   }, [])
 
-  function guardar(datos: DatosMedico) {
+  async function guardar(datos: DatosMedico): Promise<void> {
     setMedico(datos)
     localStorage.setItem('hce_medico', JSON.stringify(datos))
-    apiFetch('/configuracion/medico', { method: 'PUT', body: JSON.stringify(datos) })
-      .catch(err => console.error('Error al guardar datos del médico:', err))
+    await apiFetch('/configuracion/medico', { method: 'PUT', body: JSON.stringify(datos) })
   }
 
   return (

@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"strings"
 
@@ -49,7 +50,8 @@ func (h *insumosHandler) listar(w http.ResponseWriter, r *http.Request) {
 
 	rows, err := h.db.Query(r.Context(), query, args...)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Printf("listar insumos: %v", err)
+		responderError(w, http.StatusInternalServerError, "error al consultar insumos")
 		return
 	}
 	defer rows.Close()
@@ -60,14 +62,14 @@ func (h *insumosHandler) listar(w http.ResponseWriter, r *http.Request) {
 		if err := rows.Scan(&i.ID, &i.Nombre, &i.Descripcion, &i.Unidad,
 			&i.StockActual, &i.StockMinimo, &i.EstaActivo, &i.FechaCreacion, &i.CreadoPor,
 		); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			log.Printf("escanear insumo: %v", err)
+			responderError(w, http.StatusInternalServerError, "error al leer insumo")
 			return
 		}
 		insumos = append(insumos, i)
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(insumos)
+	responderJSON(w, http.StatusOK, insumos)
 }
 
 func (h *insumosHandler) crear(w http.ResponseWriter, r *http.Request) {
@@ -75,11 +77,11 @@ func (h *insumosHandler) crear(w http.ResponseWriter, r *http.Request) {
 
 	var input models.InsumoInput
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		http.Error(w, "cuerpo inválido", http.StatusBadRequest)
+		responderError(w, http.StatusBadRequest, "cuerpo inválido")
 		return
 	}
 	if strings.TrimSpace(input.Nombre) == "" || strings.TrimSpace(input.Unidad) == "" {
-		http.Error(w, "nombre y unidad son obligatorios", http.StatusBadRequest)
+		responderError(w, http.StatusBadRequest, "nombre y unidad son obligatorios")
 		return
 	}
 
@@ -93,13 +95,12 @@ func (h *insumosHandler) crear(w http.ResponseWriter, r *http.Request) {
 	).Scan(&i.ID, &i.Nombre, &i.Descripcion, &i.Unidad,
 		&i.StockActual, &i.StockMinimo, &i.EstaActivo, &i.FechaCreacion, &i.CreadoPor)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Printf("crear insumo: %v", err)
+		responderError(w, http.StatusInternalServerError, "error al crear insumo")
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(i)
+	responderJSON(w, http.StatusCreated, i)
 }
 
 func (h *insumosHandler) actualizar(w http.ResponseWriter, r *http.Request) {
@@ -107,7 +108,7 @@ func (h *insumosHandler) actualizar(w http.ResponseWriter, r *http.Request) {
 
 	var input models.InsumoInput
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		http.Error(w, "cuerpo inválido", http.StatusBadRequest)
+		responderError(w, http.StatusBadRequest, "cuerpo inválido")
 		return
 	}
 
@@ -121,12 +122,11 @@ func (h *insumosHandler) actualizar(w http.ResponseWriter, r *http.Request) {
 	).Scan(&i.ID, &i.Nombre, &i.Descripcion, &i.Unidad,
 		&i.StockActual, &i.StockMinimo, &i.EstaActivo, &i.FechaCreacion, &i.CreadoPor)
 	if err != nil {
-		http.Error(w, "insumo no encontrado", http.StatusNotFound)
+		responderError(w, http.StatusNotFound, "insumo no encontrado")
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(i)
+	responderJSON(w, http.StatusOK, i)
 }
 
 func (h *insumosHandler) toggle(w http.ResponseWriter, r *http.Request) {
@@ -136,27 +136,27 @@ func (h *insumosHandler) toggle(w http.ResponseWriter, r *http.Request) {
 		`UPDATE insumo SET esta_activo = NOT esta_activo WHERE id=$1 RETURNING esta_activo`, insumoID,
 	).Scan(&activo)
 	if err != nil {
-		http.Error(w, "insumo no encontrado", http.StatusNotFound)
+		responderError(w, http.StatusNotFound, "insumo no encontrado")
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]bool{"esta_activo": activo})
+	responderJSON(w, http.StatusOK, map[string]bool{"esta_activo": activo})
 }
 
 func (h *insumosHandler) eliminar(w http.ResponseWriter, r *http.Request) {
 	u := appmiddleware.UsuarioDesdeContexto(r.Context())
 	if u.Rol != "admin" {
-		http.Error(w, "solo el administrador puede eliminar insumos", http.StatusForbidden)
+		responderError(w, http.StatusForbidden, "solo el administrador puede eliminar insumos")
 		return
 	}
 	insumoID := chi.URLParam(r, "insumoId")
 	tag, err := h.db.Exec(r.Context(), `DELETE FROM insumo WHERE id=$1`, insumoID)
 	if err != nil {
-		http.Error(w, "error al eliminar insumo", http.StatusInternalServerError)
+		log.Printf("eliminar insumo: %v", err)
+		responderError(w, http.StatusInternalServerError, "error al eliminar insumo")
 		return
 	}
 	if tag.RowsAffected() == 0 {
-		http.Error(w, "insumo no encontrado", http.StatusNotFound)
+		responderError(w, http.StatusNotFound, "insumo no encontrado")
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -172,7 +172,8 @@ func (h *insumosHandler) listarMovimientos(w http.ResponseWriter, r *http.Reques
 		ORDER BY fecha_movimiento DESC
 		LIMIT 50`, insumoID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Printf("listar movimientos: %v", err)
+		responderError(w, http.StatusInternalServerError, "error al consultar movimientos")
 		return
 	}
 	defer rows.Close()
@@ -183,14 +184,14 @@ func (h *insumosHandler) listarMovimientos(w http.ResponseWriter, r *http.Reques
 		if err := rows.Scan(&m.ID, &m.InsumoID, &m.Tipo, &m.Cantidad,
 			&m.StockResultante, &m.Notas, &m.FechaMovimiento, &m.CreadoPor,
 		); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			log.Printf("escanear movimiento: %v", err)
+			responderError(w, http.StatusInternalServerError, "error al leer movimiento")
 			return
 		}
 		movimientos = append(movimientos, m)
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(movimientos)
+	responderJSON(w, http.StatusOK, movimientos)
 }
 
 func (h *insumosHandler) registrarMovimiento(w http.ResponseWriter, r *http.Request) {
@@ -199,33 +200,33 @@ func (h *insumosHandler) registrarMovimiento(w http.ResponseWriter, r *http.Requ
 
 	var input models.MovimientoInput
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		http.Error(w, "cuerpo inválido", http.StatusBadRequest)
+		responderError(w, http.StatusBadRequest, "cuerpo inválido")
 		return
 	}
 	if input.Tipo != "entrada" && input.Tipo != "salida" && input.Tipo != "ajuste" {
-		http.Error(w, "tipo debe ser entrada, salida o ajuste", http.StatusBadRequest)
+		responderError(w, http.StatusBadRequest, "tipo debe ser entrada, salida o ajuste")
 		return
 	}
 	if input.Cantidad <= 0 {
-		http.Error(w, "la cantidad debe ser mayor a 0", http.StatusBadRequest)
+		responderError(w, http.StatusBadRequest, "la cantidad debe ser mayor a 0")
 		return
 	}
 
 	tx, err := h.db.Begin(r.Context())
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Printf("iniciar tx movimiento: %v", err)
+		responderError(w, http.StatusInternalServerError, "error al iniciar transacción")
 		return
 	}
 	defer tx.Rollback(r.Context())
 
-	// Calcular nuevo stock según tipo
 	var nuevoStock float64
 	var stockActual float64
 	if err := tx.QueryRow(r.Context(),
 		`SELECT stock_actual FROM insumo WHERE id=$1 AND esta_activo=TRUE FOR UPDATE`,
 		insumoID,
 	).Scan(&stockActual); err != nil {
-		http.Error(w, "insumo no encontrado", http.StatusNotFound)
+		responderError(w, http.StatusNotFound, "insumo no encontrado")
 		return
 	}
 
@@ -235,22 +236,21 @@ func (h *insumosHandler) registrarMovimiento(w http.ResponseWriter, r *http.Requ
 	case "salida":
 		nuevoStock = stockActual - input.Cantidad
 		if nuevoStock < 0 {
-			http.Error(w, "existencias insuficientes para registrar la salida", http.StatusBadRequest)
+			responderError(w, http.StatusBadRequest, "existencias insuficientes para registrar la salida")
 			return
 		}
 	case "ajuste":
-		nuevoStock = input.Cantidad // ajuste establece el valor absoluto
+		nuevoStock = input.Cantidad
 	}
 
-	// Actualizar stock en insumo
 	if _, err := tx.Exec(r.Context(),
 		`UPDATE insumo SET stock_actual=$1 WHERE id=$2`, nuevoStock, insumoID,
 	); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Printf("actualizar stock: %v", err)
+		responderError(w, http.StatusInternalServerError, "error al actualizar stock")
 		return
 	}
 
-	// Registrar movimiento
 	var m models.Movimiento
 	if err := tx.QueryRow(r.Context(), `
 		INSERT INTO insumo_movimiento
@@ -261,16 +261,16 @@ func (h *insumosHandler) registrarMovimiento(w http.ResponseWriter, r *http.Requ
 	).Scan(&m.ID, &m.InsumoID, &m.Tipo, &m.Cantidad,
 		&m.StockResultante, &m.Notas, &m.FechaMovimiento, &m.CreadoPor,
 	); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Printf("insertar movimiento: %v", err)
+		responderError(w, http.StatusInternalServerError, "error al registrar movimiento")
 		return
 	}
 
 	if err := tx.Commit(r.Context()); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Printf("commit movimiento: %v", err)
+		responderError(w, http.StatusInternalServerError, "error al confirmar transacción")
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(m)
+	responderJSON(w, http.StatusCreated, m)
 }

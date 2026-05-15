@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router'
 import { Plus, Search, Receipt } from 'lucide-react'
 import { useFacturas } from '../api/facturas'
+import { DEBOUNCE_MS } from '../utils/constants'
 
 function formatCOP(valor: number) {
   return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(valor)
@@ -13,7 +14,7 @@ export default function Facturas() {
   const [query, setQuery] = useState<string | undefined>(undefined)
 
   useEffect(() => {
-    const t = setTimeout(() => setQuery(busqueda.trim() || undefined), 300)
+    const t = setTimeout(() => setQuery(busqueda.trim() || undefined), DEBOUNCE_MS)
     return () => clearTimeout(t)
   }, [busqueda])
 

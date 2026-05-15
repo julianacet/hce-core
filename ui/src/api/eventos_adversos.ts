@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiFetch } from './client'
+import { TIPOS_EA_KEY, EVENTOS_ADVERSOS_KEY } from './keys'
 
 export type TipoEventoAdverso = {
   id: string
@@ -80,13 +81,13 @@ export type SeguimientoInput = {
 
 export function useTiposEventoAdverso(todos = false) {
   return useQuery<TipoEventoAdverso[]>({
-    queryKey: ['tipos-ea', todos],
+    queryKey: [...TIPOS_EA_KEY, todos],
     queryFn: () => apiFetch(`/tipos-evento-adverso${todos ? '?todos=1' : ''}`),
   })
 }
 
 function patchTipos(qc: ReturnType<typeof useQueryClient>, updater: (old: TipoEventoAdverso[]) => TipoEventoAdverso[]) {
-  qc.setQueriesData<TipoEventoAdverso[]>({ queryKey: ['tipos-ea'] }, (old) => old ? updater(old) : old)
+  qc.setQueriesData<TipoEventoAdverso[]>({ queryKey: TIPOS_EA_KEY }, (old) => old ? updater(old) : old)
 }
 
 export function useCrearTipo() {
@@ -133,21 +134,21 @@ export function useEventosAdversos(filters?: { estado?: string; tipo_id?: string
   if (filters?.tipo_id) params.set('tipo_id', filters.tipo_id)
   const qs = params.toString()
   return useQuery<EventoAdverso[]>({
-    queryKey: ['eventos-adversos', filters],
+    queryKey: [...EVENTOS_ADVERSOS_KEY, filters],
     queryFn: () => apiFetch(`/eventos-adversos${qs ? '?' + qs : ''}`),
   })
 }
 
 export function useEventoAdverso(id: string) {
   return useQuery<EventoAdverso>({
-    queryKey: ['eventos-adversos', id],
+    queryKey: [...EVENTOS_ADVERSOS_KEY, id],
     queryFn: () => apiFetch(`/eventos-adversos/${id}`),
     enabled: !!id,
   })
 }
 
 function patchEventos(qc: ReturnType<typeof useQueryClient>, updater: (old: EventoAdverso[]) => EventoAdverso[]) {
-  qc.setQueriesData<EventoAdverso[]>({ queryKey: ['eventos-adversos'] }, (old) => old ? updater(old) : old)
+  qc.setQueriesData<EventoAdverso[]>({ queryKey: EVENTOS_ADVERSOS_KEY }, (old) => old ? updater(old) : old)
 }
 
 export function useCrearEventoAdverso() {

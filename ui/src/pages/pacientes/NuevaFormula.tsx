@@ -9,6 +9,7 @@ import { usePaciente } from '../../api/pacientes'
 import { useEncuentro } from '../../api/encuentros'
 import { useCrearFormula } from '../../api/formulas'
 import { useMedicamentosPredefinidos, type MedicamentoPredefinido } from '../../api/medicamentos_predefinidos'
+import { nombreCompleto } from '../../utils/paciente'
 
 const medVacio: Medicamento = {
   nombre: '',
@@ -99,7 +100,7 @@ export default function NuevaFormula() {
   const { data: encuentroData, isLoading: cargandoEncuentro } = useEncuentro(id ?? '', encId ?? '')
 
   const paciente = pacienteData ? {
-    nombre: [pacienteData.nombre_primero, pacienteData.nombre_segundo, pacienteData.apellido_primero, pacienteData.apellido_segundo].filter(Boolean).join(' '),
+    nombre: nombreCompleto(pacienteData),
     documento: pacienteData.numero_documento,
     tipoDocumento: pacienteData.tipo_documento,
     fechaNacimiento: new Date(pacienteData.fecha_nacimiento).toLocaleDateString('es-CO'),
@@ -125,6 +126,7 @@ export default function NuevaFormula() {
   }, [medico.firmaBase64])
   const [imprimiendo, setImprimiendo] = useState(false)
   const [descargando, setDescargando] = useState(false)
+  const [errorGuardado, setErrorGuardado] = useState<string | null>(null)
 
   const meds = tab === 'pos' ? medsPos : medsNoPos
   const setMeds = tab === 'pos' ? setMedsPos : setMedsNoPos
@@ -163,6 +165,7 @@ export default function NuevaFormula() {
 
   async function guardarEnBD(): Promise<void> {
     if (guardadaId || crearFormula.isPending) return
+    setErrorGuardado(null)
     try {
       const result = await crearFormula.mutateAsync({
         tipo: tab,
@@ -178,7 +181,9 @@ export default function NuevaFormula() {
         })),
       })
       setGuardadaId(result.id)
-    } catch { /* no bloqueamos la impresión */ }
+    } catch (err) {
+      setErrorGuardado((err as Error)?.message ?? 'No se pudo guardar la fórmula en BD.')
+    }
   }
 
   async function imprimir() {
@@ -222,9 +227,7 @@ export default function NuevaFormula() {
 
         <div className="flex items-center gap-3">
           <button onClick={() => navigate(`/pacientes/${id}/encuentros/${encId}`)}
-            className="transition-colors" style={{ color: 'var(--hce-text-muted)' }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--hce-text)')}
-            onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--hce-text-muted)')}>
+            className="transition-colors text-[var(--hce-text-muted)] hover:text-[var(--hce-text)]">
             <ChevronLeft size={20} />
           </button>
           <div>
@@ -307,6 +310,12 @@ export default function NuevaFormula() {
               <button onClick={() => navigate('/configuracion')} className="underline font-medium">
                 Completar en Configuración
               </button>
+            </div>
+          )}
+
+          {errorGuardado && (
+            <div className="rounded-lg px-4 py-3 text-sm bg-red-50 text-red-700 border border-red-200">
+              La fórmula se imprimió pero no se pudo guardar en BD: {errorGuardado}
             </div>
           )}
 

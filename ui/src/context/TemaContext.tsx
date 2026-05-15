@@ -37,7 +37,7 @@ export const DEFAULTS: Tema = {
 
 type TemaContextType = {
   tema: Tema
-  guardarTema: (t: Tema) => void
+  guardarTema: (t: Tema) => Promise<void>
 }
 
 const TemaContext = createContext<TemaContextType | null>(null)
@@ -89,11 +89,10 @@ export function TemaProvider({ children }: { children: ReactNode }) {
       })
   }, [])
 
-  function guardarTema(t: Tema) {
+  async function guardarTema(t: Tema): Promise<void> {
     setTema(t)
     localStorage.setItem('hce_tema', JSON.stringify(t))
-    apiFetch('/configuracion/tema', { method: 'PUT', body: JSON.stringify(t) })
-      .catch(err => console.error('Error al guardar tema:', err))
+    await apiFetch('/configuracion/tema', { method: 'PUT', body: JSON.stringify(t) })
   }
 
   return (

@@ -2,9 +2,9 @@ package handlers
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -34,7 +34,8 @@ func (h *usuariosHandler) listar(w http.ResponseWriter, r *http.Request) {
 		FROM usuario
 		ORDER BY nombre_completo ASC`)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Printf("listar usuarios: %v", err)
+		responderError(w, http.StatusInternalServerError, "error al consultar usuarios")
 		return
 	}
 	defer rows.Close()
@@ -43,38 +44,39 @@ func (h *usuariosHandler) listar(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var u models.Usuario
 		if err := rows.Scan(&u.ID, &u.NombreUsuario, &u.NombreCompleto, &u.Rol, &u.EstaActivo, &u.FechaCreacion); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			log.Printf("escanear usuario: %v", err)
+			responderError(w, http.StatusInternalServerError, "error al leer usuario")
 			return
 		}
 		usuarios = append(usuarios, u)
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(usuarios)
+	responderJSON(w, http.StatusOK, usuarios)
 }
 
 func (h *usuariosHandler) crear(w http.ResponseWriter, r *http.Request) {
 	var input models.UsuarioInput
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		http.Error(w, "cuerpo inválido", http.StatusBadRequest)
+		responderError(w, http.StatusBadRequest, "body inválido")
 		return
 	}
 	if strings.TrimSpace(input.NombreUsuario) == "" || strings.TrimSpace(input.NombreCompleto) == "" {
-		http.Error(w, "nombre_usuario y nombre_completo son obligatorios", http.StatusBadRequest)
+		responderError(w, http.StatusBadRequest, "nombre_usuario y nombre_completo son obligatorios")
 		return
 	}
 	if input.Contrasena == "" {
-		http.Error(w, "la contraseña es obligatoria al crear un usuario", http.StatusBadRequest)
+		responderError(w, http.StatusBadRequest, "la contraseña es obligatoria al crear un usuario")
 		return
 	}
 	if input.Rol != "admin" && input.Rol != "medico" && input.Rol != "auxiliar" {
-		http.Error(w, "rol debe ser admin, medico o auxiliar", http.StatusBadRequest)
+		responderError(w, http.StatusBadRequest, "rol debe ser admin, medico o auxiliar")
 		return
 	}
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(input.Contrasena), bcrypt.DefaultCost)
 	if err != nil {
-		http.Error(w, "error al procesar contraseña", http.StatusInternalServerError)
+		log.Printf("bcrypt crear usuario: %v", err)
+		responderError(w, http.StatusInternalServerError, "error al procesar contraseña")
 		return
 	}
 
@@ -88,16 +90,15 @@ func (h *usuariosHandler) crear(w http.ResponseWriter, r *http.Request) {
 	).Scan(&u.ID, &u.NombreUsuario, &u.NombreCompleto, &u.Rol, &u.EstaActivo, &u.FechaCreacion)
 	if err != nil {
 		if strings.Contains(err.Error(), "unique") {
-			http.Error(w, "ese nombre de usuario ya existe", http.StatusConflict)
+			responderError(w, http.StatusConflict, "ese nombre de usuario ya existe")
 			return
 		}
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Printf("crear usuario: %v", err)
+		responderError(w, http.StatusInternalServerError, "error al crear usuario")
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(u)
+	responderJSON(w, http.StatusCreated, u)
 }
 
 func (h *usuariosHandler) actualizar(w http.ResponseWriter, r *http.Request) {
@@ -105,21 +106,21 @@ func (h *usuariosHandler) actualizar(w http.ResponseWriter, r *http.Request) {
 
 	var input models.UsuarioInput
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		http.Error(w, "cuerpo inválido", http.StatusBadRequest)
+		responderError(w, http.StatusBadRequest, "body inválido")
 		return
 	}
 	if input.Rol != "admin" && input.Rol != "medico" && input.Rol != "auxiliar" {
-		http.Error(w, "rol debe ser admin, medico o auxiliar", http.StatusBadRequest)
+		responderError(w, http.StatusBadRequest, "rol debe ser admin, medico o auxiliar")
 		return
 	}
 
 	var u models.Usuario
 
 	if input.Contrasena != "" {
-		// Cambiar también la contraseña
 		hash, err := bcrypt.GenerateFromPassword([]byte(input.Contrasena), bcrypt.DefaultCost)
 		if err != nil {
-			http.Error(w, "error al procesar contraseña", http.StatusInternalServerError)
+			log.Printf("bcrypt actualizar usuario: %v", err)
+			responderError(w, http.StatusInternalServerError, "error al procesar contraseña")
 			return
 		}
 		err = h.db.QueryRow(r.Context(), `
@@ -130,11 +131,10 @@ func (h *usuariosHandler) actualizar(w http.ResponseWriter, r *http.Request) {
 			strings.TrimSpace(input.NombreCompleto), input.Rol, string(hash), usuarioID,
 		).Scan(&u.ID, &u.NombreUsuario, &u.NombreCompleto, &u.Rol, &u.EstaActivo, &u.FechaCreacion)
 		if err != nil {
-			http.Error(w, "usuario no encontrado", http.StatusNotFound)
+			responderError(w, http.StatusNotFound, "usuario no encontrado")
 			return
 		}
 	} else {
-		// Solo actualizar datos, sin tocar contraseña
 		err := h.db.QueryRow(r.Context(), `
 			UPDATE usuario
 			SET nombre_completo=$1, rol=$2
@@ -143,13 +143,12 @@ func (h *usuariosHandler) actualizar(w http.ResponseWriter, r *http.Request) {
 			strings.TrimSpace(input.NombreCompleto), input.Rol, usuarioID,
 		).Scan(&u.ID, &u.NombreUsuario, &u.NombreCompleto, &u.Rol, &u.EstaActivo, &u.FechaCreacion)
 		if err != nil {
-			http.Error(w, "usuario no encontrado", http.StatusNotFound)
+			responderError(w, http.StatusNotFound, "usuario no encontrado")
 			return
 		}
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(u)
+	responderJSON(w, http.StatusOK, u)
 }
 
 func (h *usuariosHandler) toggle(w http.ResponseWriter, r *http.Request) {
@@ -159,27 +158,24 @@ func (h *usuariosHandler) toggle(w http.ResponseWriter, r *http.Request) {
 		`UPDATE usuario SET esta_activo = NOT esta_activo WHERE id=$1 RETURNING esta_activo`, usuarioID,
 	).Scan(&activo)
 	if err != nil {
-		http.Error(w, "usuario no encontrado", http.StatusNotFound)
+		responderError(w, http.StatusNotFound, "usuario no encontrado")
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]bool{"esta_activo": activo})
+	responderJSON(w, http.StatusOK, map[string]bool{"esta_activo": activo})
 }
 
 func (h *usuariosHandler) eliminar(w http.ResponseWriter, r *http.Request) {
 	usuarioID := chi.URLParam(r, "usuarioId")
 
-	// Obtener nombre_usuario para buscar actividad clínica
 	var nombreUsuario string
 	err := h.db.QueryRow(r.Context(),
 		`SELECT nombre_usuario FROM usuario WHERE id=$1`, usuarioID,
 	).Scan(&nombreUsuario)
 	if err != nil {
-		http.Error(w, "usuario no encontrado", http.StatusNotFound)
+		responderError(w, http.StatusNotFound, "usuario no encontrado")
 		return
 	}
 
-	// Contar registros clínicos asociados al usuario
 	var total int
 	err = h.db.QueryRow(r.Context(), `
 		SELECT (
@@ -193,13 +189,12 @@ func (h *usuariosHandler) eliminar(w http.ResponseWriter, r *http.Request) {
 		)`, nombreUsuario,
 	).Scan(&total)
 	if err != nil {
-		http.Error(w, "error al verificar actividad del usuario", http.StatusInternalServerError)
+		log.Printf("verificar actividad usuario: %v", err)
+		responderError(w, http.StatusInternalServerError, "error al verificar actividad del usuario")
 		return
 	}
 	if total > 0 {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusConflict)
-		json.NewEncoder(w).Encode(map[string]any{
+		responderJSON(w, http.StatusConflict, map[string]any{
 			"error": "Este usuario tiene registros clínicos y no puede eliminarse. Desactívalo en su lugar.",
 			"total": total,
 		})
@@ -208,15 +203,13 @@ func (h *usuariosHandler) eliminar(w http.ResponseWriter, r *http.Request) {
 
 	tag, err := h.db.Exec(r.Context(), `DELETE FROM usuario WHERE id=$1`, usuarioID)
 	if err != nil {
-		http.Error(w, "error al eliminar usuario", http.StatusInternalServerError)
+		log.Printf("eliminar usuario: %v", err)
+		responderError(w, http.StatusInternalServerError, "error al eliminar usuario")
 		return
 	}
 	if tag.RowsAffected() == 0 {
-		http.Error(w, "usuario no encontrado", http.StatusNotFound)
+		responderError(w, http.StatusNotFound, "usuario no encontrado")
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
-
-// Asegurar que el modelo tenga FechaCreacion como time.Time
-var _ = time.Now

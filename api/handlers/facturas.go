@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"log"
+	"math"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -146,14 +147,15 @@ func (h *FacturaHandler) crear(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var subtotal float64
+	var subtotalCentavos int64
 	for _, item := range input.Items {
 		if item.Cantidad <= 0 || item.ValorUnitario < 0 {
 			responderError(w, http.StatusBadRequest, "cantidad y valor_unitario deben ser positivos")
 			return
 		}
-		subtotal += float64(item.Cantidad) * item.ValorUnitario
+		subtotalCentavos += int64(item.Cantidad) * int64(math.Round(item.ValorUnitario*100))
 	}
+	subtotal := float64(subtotalCentavos) / 100
 
 	u := appmiddleware.UsuarioDesdeContexto(r.Context())
 	facturaEntityID := uuid.New().String()
@@ -180,7 +182,7 @@ func (h *FacturaHandler) crear(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for i, item := range input.Items {
-		itemSubtotal := float64(item.Cantidad) * item.ValorUnitario
+		itemSubtotal := float64(int64(item.Cantidad)*int64(math.Round(item.ValorUnitario*100))) / 100
 		_, err = tx.Exec(r.Context(), `
 			INSERT INTO factura_item (factura_id, codigo_cups, descripcion, valor_unitario, cantidad, subtotal, orden)
 			VALUES ($1, $2, $3, $4, $5, $6, $7)`,
@@ -244,14 +246,15 @@ func (h *FacturaHandler) actualizar(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var subtotal float64
+	var subtotalCentavos int64
 	for _, item := range input.Items {
 		if item.Cantidad <= 0 || item.ValorUnitario < 0 {
 			responderError(w, http.StatusBadRequest, "cantidad y valor_unitario deben ser positivos")
 			return
 		}
-		subtotal += float64(item.Cantidad) * item.ValorUnitario
+		subtotalCentavos += int64(item.Cantidad) * int64(math.Round(item.ValorUnitario*100))
 	}
+	subtotal := float64(subtotalCentavos) / 100
 
 	tx, err := h.db.Begin(r.Context())
 	if err != nil {
@@ -267,7 +270,7 @@ func (h *FacturaHandler) actualizar(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for i, item := range input.Items {
-		itemSubtotal := float64(item.Cantidad) * item.ValorUnitario
+		itemSubtotal := float64(int64(item.Cantidad)*int64(math.Round(item.ValorUnitario*100))) / 100
 		if _, err = tx.Exec(r.Context(),
 			`INSERT INTO factura_item (factura_id, codigo_cups, descripcion, valor_unitario, cantidad, subtotal, orden)
 			 VALUES ($1,$2,$3,$4,$5,$6,$7)`,

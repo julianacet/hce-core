@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -57,7 +58,8 @@ func CitasRouter(db *pgxpool.Pool) http.Handler {
 
 		rows, err := db.Query(r.Context(), q, args...)
 		if err != nil {
-			http.Error(w, err.Error(), 500)
+			log.Printf("listar citas: %v", err)
+			responderError(w, http.StatusInternalServerError, "error al consultar citas")
 			return
 		}
 		defer rows.Close()
@@ -66,23 +68,24 @@ func CitasRouter(db *pgxpool.Pool) http.Handler {
 		for rows.Next() {
 			c, err := escanearCita(rows)
 			if err != nil {
-				http.Error(w, err.Error(), 500)
+				log.Printf("escanear cita: %v", err)
+				responderError(w, http.StatusInternalServerError, "error al leer cita")
 				return
 			}
 			citas = append(citas, *c)
 		}
-		json.NewEncoder(w).Encode(citas)
+		responderJSON(w, http.StatusOK, citas)
 	})
 
 	r.Post("/", func(w http.ResponseWriter, r *http.Request) {
 		u := appmiddleware.UsuarioDesdeContexto(r.Context())
 		var inp models.CitaInput
 		if err := json.NewDecoder(r.Body).Decode(&inp); err != nil {
-			http.Error(w, "JSON inválido", 400)
+			responderError(w, http.StatusBadRequest, "body inválido")
 			return
 		}
 		if inp.PacienteNombre == "" || inp.Fecha == "" || inp.HoraInicio == "" {
-			http.Error(w, "nombre, fecha y hora son requeridos", 400)
+			responderError(w, http.StatusBadRequest, "nombre, fecha y hora son requeridos")
 			return
 		}
 		if inp.DuracionMinutos <= 0 {
@@ -100,18 +103,18 @@ func CitasRouter(db *pgxpool.Pool) http.Handler {
 		)
 		c, err := escanearCita(row)
 		if err != nil {
-			http.Error(w, err.Error(), 500)
+			log.Printf("crear cita: %v", err)
+			responderError(w, http.StatusInternalServerError, "error al crear cita")
 			return
 		}
-		w.WriteHeader(201)
-		json.NewEncoder(w).Encode(c)
+		responderJSON(w, http.StatusCreated, c)
 	})
 
 	r.Put("/{id}", func(w http.ResponseWriter, r *http.Request) {
 		id := chi.URLParam(r, "id")
 		var inp models.CitaInput
 		if err := json.NewDecoder(r.Body).Decode(&inp); err != nil {
-			http.Error(w, "JSON inválido", 400)
+			responderError(w, http.StatusBadRequest, "body inválido")
 			return
 		}
 		if inp.DuracionMinutos <= 0 {
@@ -129,21 +132,21 @@ func CitasRouter(db *pgxpool.Pool) http.Handler {
 		)
 		c, err := escanearCita(row)
 		if err != nil {
-			http.Error(w, err.Error(), 500)
+			responderError(w, http.StatusNotFound, "cita no encontrada")
 			return
 		}
-		json.NewEncoder(w).Encode(c)
+		responderJSON(w, http.StatusOK, c)
 	})
 
 	r.Patch("/{id}/estado", func(w http.ResponseWriter, r *http.Request) {
 		id := chi.URLParam(r, "id")
 		var inp models.CitaEstadoInput
 		if err := json.NewDecoder(r.Body).Decode(&inp); err != nil {
-			http.Error(w, "JSON inválido", 400)
+			responderError(w, http.StatusBadRequest, "body inválido")
 			return
 		}
 		if !estadosValidos[inp.Estado] {
-			http.Error(w, "estado inválido", 400)
+			responderError(w, http.StatusBadRequest, "estado inválido")
 			return
 		}
 
@@ -153,24 +156,25 @@ func CitasRouter(db *pgxpool.Pool) http.Handler {
 		)
 		c, err := escanearCita(row)
 		if err != nil {
-			http.Error(w, err.Error(), 500)
+			responderError(w, http.StatusNotFound, "cita no encontrada")
 			return
 		}
-		json.NewEncoder(w).Encode(c)
+		responderJSON(w, http.StatusOK, c)
 	})
 
 	r.Delete("/{id}", func(w http.ResponseWriter, r *http.Request) {
 		id := chi.URLParam(r, "id")
 		tag, err := db.Exec(r.Context(), `DELETE FROM cita WHERE id=$1`, id)
 		if err != nil {
-			http.Error(w, err.Error(), 500)
+			log.Printf("eliminar cita: %v", err)
+			responderError(w, http.StatusInternalServerError, "error al eliminar cita")
 			return
 		}
 		if tag.RowsAffected() == 0 {
-			http.Error(w, "cita no encontrada", 404)
+			responderError(w, http.StatusNotFound, "cita no encontrada")
 			return
 		}
-		w.WriteHeader(204)
+		w.WriteHeader(http.StatusNoContent)
 	})
 
 	return r

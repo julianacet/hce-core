@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiFetch } from './client'
+import { PROVEEDORES_KEY } from './keys'
 
 export type Proveedor = {
   id: string
@@ -40,7 +41,7 @@ export function useProveedores(q?: string, tipo?: string) {
   if (tipo) params.set('tipo', tipo)
   const qs = params.toString()
   return useQuery<Proveedor[]>({
-    queryKey: ['proveedores', q, tipo],
+    queryKey: [...PROVEEDORES_KEY, q, tipo],
     queryFn: () => apiFetch(`/proveedores${qs ? '?' + qs : ''}`),
   })
 }
@@ -50,7 +51,7 @@ export function useCrearProveedor() {
   return useMutation<Proveedor, Error, ProveedorInput>({
     mutationFn: (input) =>
       apiFetch('/proveedores', { method: 'POST', body: JSON.stringify(input) }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['proveedores'] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: PROVEEDORES_KEY }),
   })
 }
 
@@ -59,7 +60,7 @@ export function useActualizarProveedor(id: string) {
   return useMutation<Proveedor, Error, ProveedorInput>({
     mutationFn: (input) =>
       apiFetch(`/proveedores/${id}`, { method: 'PUT', body: JSON.stringify(input) }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['proveedores'] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: PROVEEDORES_KEY }),
   })
 }
 
@@ -67,6 +68,6 @@ export function useToggleProveedor(id: string) {
   const qc = useQueryClient()
   return useMutation<{ esta_activo: boolean }, Error, void>({
     mutationFn: () => apiFetch(`/proveedores/${id}/toggle`, { method: 'PATCH' }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['proveedores'] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: PROVEEDORES_KEY }),
   })
 }

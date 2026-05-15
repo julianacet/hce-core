@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiFetch } from './client'
+import { ENCUESTAS_KEY, ENCUESTAS_RESUMEN_KEY } from './keys'
 
 export type EncuestaInput = {
   fecha_atencion: string        // YYYY-MM-DD, ingresada manualmente
@@ -46,14 +47,14 @@ export type EncuestaResumen = {
 
 export function useEncuestas() {
   return useQuery<Encuesta[]>({
-    queryKey: ['encuestas'],
+    queryKey: ENCUESTAS_KEY,
     queryFn: () => apiFetch('/encuestas'),
   })
 }
 
 export function useEncuestaResumen() {
   return useQuery<EncuestaResumen>({
-    queryKey: ['encuestas-resumen'],
+    queryKey: ENCUESTAS_RESUMEN_KEY,
     queryFn: () => apiFetch('/encuestas/resumen'),
   })
 }
@@ -64,8 +65,8 @@ export function useCrearEncuesta() {
     mutationFn: (input) =>
       apiFetch('/encuestas', { method: 'POST', body: JSON.stringify(input) }),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['encuestas'] })
-      qc.invalidateQueries({ queryKey: ['encuestas-resumen'] })
+      qc.invalidateQueries({ queryKey: ENCUESTAS_KEY })
+      qc.invalidateQueries({ queryKey: ENCUESTAS_RESUMEN_KEY })
     },
   })
 }

@@ -212,6 +212,7 @@ CREATE TABLE factura (
     cuv  TEXT,
     cufe TEXT,
 
+    fecha_emision  TIMESTAMPTZ,   -- fecha en que se emitió al paciente; NULL hasta que se emita
     fecha_creacion TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     creado_por     TEXT        NOT NULL
 );
@@ -534,6 +535,26 @@ FOR EACH ROW EXECUTE FUNCTION fn_auditar_cambios();
 CREATE TRIGGER trg_auditoria_factura
 AFTER INSERT OR UPDATE OR DELETE ON factura
 FOR EACH ROW EXECUTE FUNCTION fn_auditar_cambios();
+
+CREATE TRIGGER trg_auditoria_usuario
+    AFTER INSERT OR UPDATE OR DELETE ON usuario
+    FOR EACH ROW EXECUTE FUNCTION fn_auditar_cambios();
+
+CREATE TRIGGER trg_auditoria_cita
+    AFTER INSERT OR UPDATE OR DELETE ON cita
+    FOR EACH ROW EXECUTE FUNCTION fn_auditar_cambios();
+
+CREATE TRIGGER trg_auditoria_evento_adverso
+    AFTER INSERT OR UPDATE OR DELETE ON evento_adverso
+    FOR EACH ROW EXECUTE FUNCTION fn_auditar_cambios();
+
+CREATE TRIGGER trg_auditoria_insumo
+    AFTER INSERT OR UPDATE OR DELETE ON insumo
+    FOR EACH ROW EXECUTE FUNCTION fn_auditar_cambios();
+
+CREATE TRIGGER trg_auditoria_consentimiento
+    AFTER INSERT OR UPDATE OR DELETE ON consentimiento_generado
+    FOR EACH ROW EXECUTE FUNCTION fn_auditar_cambios();
 
 -- ============================================================
 -- 12. Seeds
@@ -986,6 +1007,6 @@ CREATE TABLE IF NOT EXISTS medicamento_predefinido (
     esta_activo        BOOLEAN NOT NULL DEFAULT TRUE
 );
 
-CREATE INDEX IF NOT EXISTS idx_medicamento_predefinido_tipo   ON medicamento_predefinido(tipo);
-CREATE INDEX IF NOT EXISTS idx_medicamento_predefinido_nombre ON medicamento_predefinido
+CREATE INDEX IF NOT EXISTS idx_medicamento_tipo   ON medicamento_predefinido(tipo);
+CREATE INDEX IF NOT EXISTS idx_medicamento_nombre ON medicamento_predefinido
     USING gin(to_tsvector('spanish', nombre));

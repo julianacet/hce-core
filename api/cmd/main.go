@@ -1,10 +1,14 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
+	"time"
 
 	"github.com/joho/godotenv"
 
@@ -74,6 +78,8 @@ func main() {
 
 	// Rutas públicas
 	r.Mount("/auth", handlers.AuthRouter(db, jwtSecreto))
+	// GET /configuracion es intencional sin auth: el frontend lo necesita antes del login
+	// para mostrar el nombre y tema del consultorio. No exponer datos sensibles aquí.
 	r.Get("/configuracion", handlers.GetConfiguracion(db))
 	r.Mount("/divipola", handlers.DivipolaRouter(db))
 	r.Mount("/ocupaciones", handlers.OcupacionesRouter(db))
@@ -107,11 +113,26 @@ func main() {
 
 		// Solo admin
 		r.With(appmiddleware.RequiereRol("admin")).Mount("/usuarios", handlers.UsuariosRouter(db))
-		// r.With(appmiddleware.RequiereRol("admin")).Mount("/cups", handlers.CupsRouter(db))
 	})
 
-	log.Printf("Servidor escuchando en :%s", port)
-	if err := http.ListenAndServe(":"+port, r); err != nil {
-		log.Fatalf("error al iniciar servidor: %v", err)
+	srv := &http.Server{Addr: ":" + port, Handler: r}
+
+	go func() {
+		log.Printf("Servidor escuchando en :%s", port)
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("error al iniciar servidor: %v", err)
+		}
+	}()
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+
+	log.Println("Apagando servidor...")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err := srv.Shutdown(ctx); err != nil {
+		log.Fatalf("error al apagar servidor: %v", err)
 	}
+	log.Println("Servidor detenido.")
 }

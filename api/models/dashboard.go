@@ -9,6 +9,9 @@ type DashboardResumen struct {
 	SatisfaccionPromedio *float64         `json:"satisfaccion_promedio"`
 	InsumosStockBajo     []InsumoAlerta   `json:"insumos_stock_bajo"`
 	UltimosPacientes     []UltimoPaciente `json:"ultimos_pacientes"`
+	// Advertencias lista las métricas que no pudieron cargarse por error de BD.
+	// Nil o vacío significa que todos los datos son completos.
+	Advertencias []string `json:"advertencias,omitempty"`
 }
 
 type InsumoAlerta struct {

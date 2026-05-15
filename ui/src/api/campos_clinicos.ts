@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiFetch } from './client'
+import { CAMPOS_CLINICOS_KEY } from './keys'
 
 export type CampoClinico = {
   id: string
@@ -18,7 +19,7 @@ export type CampoClinicoInput = Omit<CampoClinico, 'id' | 'esta_activo'>
 
 export function useCamposClinicosActivos() {
   return useQuery({
-    queryKey: ['campos-clinicos'],
+    queryKey: CAMPOS_CLINICOS_KEY,
     queryFn: () => apiFetch<CampoClinico[]>('/campos-clinicos'),
     select: (data) => data.filter((c) => c.esta_activo),
     staleTime: 1000 * 60 * 10,
@@ -27,12 +28,11 @@ export function useCamposClinicosActivos() {
 
 export function useTodosCamposClinicos() {
   return useQuery({
-    queryKey: ['campos-clinicos'],
+    queryKey: CAMPOS_CLINICOS_KEY,
     queryFn: () => apiFetch<CampoClinico[]>('/campos-clinicos'),
   })
 }
 
-const CC_KEY = ['campos-clinicos']
 
 export function useCrearCampoClinico() {
   const qc = useQueryClient()
@@ -40,7 +40,7 @@ export function useCrearCampoClinico() {
     mutationFn: (data: CampoClinicoInput) =>
       apiFetch<CampoClinico>('/campos-clinicos', { method: 'POST', body: JSON.stringify(data) }),
     onSuccess: (nuevo) => {
-      qc.setQueryData<CampoClinico[]>(CC_KEY, (old) => [...(old ?? []), nuevo])
+      qc.setQueryData<CampoClinico[]>(CAMPOS_CLINICOS_KEY, (old) => [...(old ?? []), nuevo])
     },
   })
 }
@@ -51,7 +51,7 @@ export function useActualizarCampoClinico(id: string) {
     mutationFn: (data: Partial<CampoClinicoInput>) =>
       apiFetch<CampoClinico>(`/campos-clinicos/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     onSuccess: (actualizado) => {
-      qc.setQueryData<CampoClinico[]>(CC_KEY, (old) =>
+      qc.setQueryData<CampoClinico[]>(CAMPOS_CLINICOS_KEY, (old) =>
         old?.map((c) => (c.id === id ? actualizado : c)) ?? []
       )
     },
@@ -64,7 +64,7 @@ export function useToggleCampoClinico(id: string) {
     mutationFn: () =>
       apiFetch<CampoClinico>(`/campos-clinicos/${id}/toggle`, { method: 'PATCH' }),
     onSuccess: (actualizado) => {
-      qc.setQueryData<CampoClinico[]>(CC_KEY, (old) =>
+      qc.setQueryData<CampoClinico[]>(CAMPOS_CLINICOS_KEY, (old) =>
         old?.map((c) => (c.id === id ? actualizado : c)) ?? []
       )
     },
@@ -76,7 +76,7 @@ export function useEliminarCampoClinico() {
   return useMutation<void, Error, string>({
     mutationFn: (id) => apiFetch(`/campos-clinicos/${id}`, { method: 'DELETE' }),
     onSuccess: (_, id) => {
-      qc.setQueryData<CampoClinico[]>(CC_KEY, (old) => old?.filter((c) => c.id !== id) ?? [])
+      qc.setQueryData<CampoClinico[]>(CAMPOS_CLINICOS_KEY, (old) => old?.filter((c) => c.id !== id) ?? [])
     },
   })
 }

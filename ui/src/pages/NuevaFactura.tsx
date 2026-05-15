@@ -3,7 +3,9 @@ import { useNavigate } from 'react-router'
 import { Search, Plus, Trash2, X } from 'lucide-react'
 import { usePacientes, type Paciente } from '../api/pacientes'
 import { useCups, type CupsCodigo } from '../api/cups'
+import { DEBOUNCE_MS } from '../utils/constants'
 import { useCrearFactura, type FacturaItemInput } from '../api/facturas'
+import { nombreCompleto } from '../utils/paciente'
 
 type ItemFormulario = FacturaItemInput & { _key: number }
 
@@ -11,11 +13,6 @@ let nextKey = 1
 
 function formatCOP(valor: number) {
   return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(valor)
-}
-
-function nombreCompleto(p: Paciente) {
-  return [p.nombre_primero, p.nombre_segundo, p.apellido_primero, p.apellido_segundo]
-    .filter(Boolean).join(' ')
 }
 
 export default function NuevaFactura() {
@@ -30,7 +27,7 @@ export default function NuevaFactura() {
   const [items, setItems] = useState<ItemFormulario[]>([])
 
   useEffect(() => {
-    const t = setTimeout(() => setQueryPaciente(busquedaPaciente.trim() || undefined), 300)
+    const t = setTimeout(() => setQueryPaciente(busquedaPaciente.trim() || undefined), DEBOUNCE_MS)
     return () => clearTimeout(t)
   }, [busquedaPaciente])
 
