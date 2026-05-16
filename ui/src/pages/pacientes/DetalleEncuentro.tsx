@@ -50,8 +50,8 @@ export default function DetalleEncuentro() {
   const { data: notas = [] } = useNotasEncuentro(id ?? '', encId ?? '')
   const crearNota = useCrearNotaEncuentro(id ?? '', encId ?? '')
 
-  if (isLoading) return <div className="p-6 text-sm text-slate-400">Cargando encuentro...</div>
-  if (isError || !e) return <div className="p-6 text-sm text-red-500">Error al cargar el encuentro.</div>
+  if (isLoading) return <div className="p-6 text-sm text-slate-400">Cargando consulta...</div>
+  if (isError || !e) return <div className="p-6 text-sm text-red-500">Error al cargar la consulta.</div>
 
   const diagnostico = [e.codigo_diagnostico_principal, e.descripcion_diagnostico].filter(Boolean).join(' - ')
   const pacienteNombre = paciente ? nombreCompleto(paciente) : id ?? ''
@@ -186,7 +186,7 @@ export default function DetalleEncuentro() {
 
         {notas.length === 0 && !notaAbierta && (
           <p className="text-xs text-slate-400">
-            Sin notas. Usá esta sección para aclaraciones o correcciones sobre el encuentro.
+            Sin notas. Usá esta sección para aclaraciones o correcciones sobre la consulta.
           </p>
         )}
 
@@ -435,7 +435,7 @@ export default function DetalleEncuentro() {
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-slate-400">Sin fórmulas emitidas para este encuentro.</p>
+              <p className="text-sm text-slate-400">Sin fórmulas emitidas para esta consulta.</p>
             )
           )}
 

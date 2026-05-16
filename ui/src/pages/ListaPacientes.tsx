@@ -2,14 +2,15 @@ import { useState, useEffect } from 'react'
 import { useDebounced } from '../hooks/useDebounced'
 import { DEBOUNCE_FILTROS_MS } from '../utils/constants'
 import { useNavigate } from 'react-router'
-import {
-  Search, UserPlus, ChevronUp, ChevronDown, ArrowUpDown,
-  ChevronLeft, ChevronRight, Filter, Trash2, Download,
-} from 'lucide-react'
+import { Search, UserPlus, Filter, Trash2, ChevronRight } from 'lucide-react'
+import { SortButton } from '../components/SortButton'
 import { usePacientesPaginados, exportarPacientes } from '../api/pacientes'
 import { SelectorEps } from '../components/SelectorEps'
 import { descargarCSV, descargarXLSX } from '../utils/csv'
 import { nombreCompleto } from '../utils/paciente'
+import { PaginationFooter } from '../components/PaginationFooter'
+import { TableEmptyState } from '../components/TableEmptyState'
+import { ExportButtons } from '../components/ExportButtons'
 
 const TIPOS_USUARIO = [
   { value: '', label: 'Todos los tipos' },
@@ -30,12 +31,6 @@ function formatFecha(iso: string) {
   return new Date(iso).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
-function SortIcon({ activo, dir }: { activo: boolean; dir: Dir }) {
-  if (!activo) return <ArrowUpDown size={12} className="text-slate-300 shrink-0" />
-  return dir === 'asc'
-    ? <ChevronUp size={12} className="text-slate-600 shrink-0" />
-    : <ChevronDown size={12} className="text-slate-600 shrink-0" />
-}
 
 export default function ListaPacientes() {
   const navigate = useNavigate()
@@ -99,8 +94,6 @@ export default function ListaPacientes() {
   const pacientes = data?.pacientes ?? []
   const total = data?.total ?? 0
   const totalPages = Math.max(1, Math.ceil(total / LIMIT))
-  const desde = total === 0 ? 0 : (page - 1) * LIMIT + 1
-  const hasta = Math.min(page * LIMIT, total)
   const hayFiltros = Object.values(filtros).some(v => v !== '')
   const [descargando, setDescargando] = useState<'csv' | 'xlsx' | null>(null)
 
@@ -144,22 +137,12 @@ export default function ListaPacientes() {
           <p className="page-desc">Listado general de pacientes registrados</p>
         </div>
         <div className="flex gap-2">
-          <button
-            onClick={descargarCsv}
-            disabled={descargando !== null || total === 0}
-            className="btn-secondary flex items-center gap-1.5 disabled:opacity-40"
-          >
-            <Download size={14} />
-            {descargando === 'csv' ? 'Generando…' : 'CSV'}
-          </button>
-          <button
-            onClick={descargarExcel}
-            disabled={descargando !== null || total === 0}
-            className="btn-secondary flex items-center gap-1.5 disabled:opacity-40"
-          >
-            <Download size={14} />
-            {descargando === 'xlsx' ? 'Generando…' : 'Excel'}
-          </button>
+          <ExportButtons
+            onCsv={descargarCsv}
+            onExcel={descargarExcel}
+            descargando={descargando}
+            disabled={total === 0}
+          />
           <button onClick={() => navigate('/pacientes/nuevo')} className="btn-primary">
             <UserPlus size={15} />
             Nuevo paciente
@@ -189,7 +172,7 @@ export default function ListaPacientes() {
               className={`btn-secondary flex items-center gap-1.5 shrink-0 ${filtrosAbiertos ? 'bg-slate-100' : ''}`}
             >
               <Filter size={14} />
-              {filtrosAbiertos ? 'Búsqueda simple' : 'Filtros avanzados'}
+              Filtros
               {hayFiltros && <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0" />}
             </button>
           </div>
@@ -260,67 +243,35 @@ export default function ListaPacientes() {
             <thead>
               <tr className="border-b" style={{ borderColor: 'var(--hce-border)', background: 'var(--hce-fondo)' }}>
                 <th className="px-5 py-3 text-left">
-                  <button
-                    className="flex items-center gap-1 text-xs font-medium uppercase tracking-wide text-slate-500 hover:text-slate-700"
-                    onClick={() => ordenarPor('nombre')}
-                  >
-                    Paciente <SortIcon activo={orden === 'nombre'} dir={dir} />
-                  </button>
+                  <SortButton activo={orden === 'nombre'} dir={dir} onClick={() => ordenarPor('nombre')}>Paciente</SortButton>
                 </th>
                 <th className="px-4 py-3 text-left">
-                  <button
-                    className="flex items-center gap-1 text-xs font-medium uppercase tracking-wide text-slate-500 hover:text-slate-700"
-                    onClick={() => ordenarPor('edad')}
-                  >
-                    Edad <SortIcon activo={orden === 'edad'} dir={dir} />
-                  </button>
+                  <SortButton activo={orden === 'edad'} dir={dir} onClick={() => ordenarPor('edad')}>Edad</SortButton>
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-slate-500">Teléfono</th>
                 <th className="px-4 py-3 text-left">
-                  <button
-                    className="flex items-center gap-1 text-xs font-medium uppercase tracking-wide text-slate-500 hover:text-slate-700"
-                    onClick={() => ordenarPor('tipoUsuario')}
-                  >
-                    Tipo <SortIcon activo={orden === 'tipoUsuario'} dir={dir} />
-                  </button>
+                  <SortButton activo={orden === 'tipoUsuario'} dir={dir} onClick={() => ordenarPor('tipoUsuario')}>Tipo</SortButton>
                 </th>
                 <th className="px-4 py-3 text-left">
-                  <button
-                    className="flex items-center gap-1 text-xs font-medium uppercase tracking-wide text-slate-500 hover:text-slate-700"
-                    onClick={() => ordenarPor('ultima_atencion')}
-                  >
-                    Última atención <SortIcon activo={orden === 'ultima_atencion'} dir={dir} />
-                  </button>
+                  <SortButton activo={orden === 'ultima_atencion'} dir={dir} onClick={() => ordenarPor('ultima_atencion')}>Última atención</SortButton>
                 </th>
                 <th className="px-4 py-3 text-left">
-                  <button
-                    className="flex items-center gap-1 text-xs font-medium uppercase tracking-wide text-slate-500 hover:text-slate-700"
-                    onClick={() => ordenarPor('fecha')}
-                  >
-                    Registrado <SortIcon activo={orden === 'fecha'} dir={dir} />
-                  </button>
+                  <SortButton activo={orden === 'fecha'} dir={dir} onClick={() => ordenarPor('fecha')}>Registrado</SortButton>
                 </th>
                 <th className="w-8" />
               </tr>
             </thead>
             <tbody className="divide-y" style={{ borderColor: 'var(--hce-border)' }}>
-              {isLoading && (
-                <tr>
-                  <td colSpan={7} className="px-5 py-10 text-center text-sm text-slate-400">Cargando...</td>
-                </tr>
-              )}
-              {isError && (
-                <tr>
-                  <td colSpan={7} className="px-5 py-10 text-center text-sm text-red-500">Error al cargar pacientes.</td>
-                </tr>
-              )}
-              {!isLoading && !isError && pacientes.length === 0 && (
-                <tr>
-                  <td colSpan={7} className="px-5 py-10 text-center text-sm text-slate-400">
-                    {q || hayFiltros ? 'No se encontraron pacientes con ese criterio.' : 'Aún no hay pacientes registrados.'}
-                  </td>
-                </tr>
-              )}
+              <TableEmptyState
+                isLoading={isLoading}
+                isError={isError}
+                isEmpty={pacientes.length === 0}
+                colSpan={7}
+                hayBusqueda={!!(q || hayFiltros)}
+                textoVacio="Aún no hay pacientes registrados."
+                textoSinResultados="No se encontraron pacientes con ese criterio."
+                textoError="Error al cargar pacientes."
+              />
               {pacientes.map((p) => (
                 <tr
                   key={p.numero_documento}
@@ -351,35 +302,16 @@ export default function ListaPacientes() {
           </table>
         </div>
 
-        {/* Paginación */}
-        <div className="px-5 py-3 border-t flex items-center justify-between" style={{ borderColor: 'var(--hce-border)' }}>
-          <p className="text-xs text-slate-400">
-            {total > 0
-              ? `Mostrando ${desde}–${hasta} de ${total} pacientes`
-              : isLoading ? '' : 'Sin resultados'}
-          </p>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setPage(p => Math.max(1, p - 1))}
-              disabled={page === 1 || isLoading}
-              className="p-1.5 rounded border text-slate-500 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
-              style={{ borderColor: 'var(--hce-border)' }}
-            >
-              <ChevronLeft size={15} />
-            </button>
-            <span className="text-xs text-slate-500 min-w-[90px] text-center">
-              Página {page} de {totalPages}
-            </span>
-            <button
-              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-              disabled={page === totalPages || isLoading}
-              className="p-1.5 rounded border text-slate-500 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
-              style={{ borderColor: 'var(--hce-border)' }}
-            >
-              <ChevronRight size={15} />
-            </button>
-          </div>
-        </div>
+        <PaginationFooter
+          page={page}
+          totalPages={totalPages}
+          total={total}
+          limit={LIMIT}
+          isLoading={isLoading}
+          isFetching={isFetching}
+          onPageChange={setPage}
+          entityLabel="pacientes"
+        />
       </div>
     </div>
   )

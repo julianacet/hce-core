@@ -130,10 +130,10 @@ export function RevisionSistemasForm({ campos, values, onChange, disabled }: Rev
     <div>
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-slate-200">
-            <th className="text-left font-medium text-slate-500 py-2 pr-4 w-56">Síntoma</th>
-            <th className="text-left font-medium text-slate-500 py-2 pr-4 w-44">Estado</th>
-            <th className="text-left font-medium text-slate-500 py-2">Detalle</th>
+          <tr className="border-b" style={{ borderColor: 'var(--hce-border)', background: 'var(--hce-fondo)' }}>
+            <th className="text-left text-xs font-medium uppercase tracking-wide text-slate-500 py-2.5 pr-4 w-56">Síntoma</th>
+            <th className="text-left text-xs font-medium uppercase tracking-wide text-slate-500 py-2.5 pr-4 w-44">Estado</th>
+            <th className="text-left text-xs font-medium uppercase tracking-wide text-slate-500 py-2.5">Detalle</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-100">
@@ -259,10 +259,10 @@ export function ExamenFisicoForm({ campos, values, onChange, disabled }: ExamenP
       {camposTabla.length > 0 && (
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-slate-200">
-              <th className="text-left font-medium text-slate-500 py-2 pr-4 w-56">Segmento</th>
-              <th className="text-left font-medium text-slate-500 py-2 pr-4 w-44">Estado</th>
-              <th className="text-left font-medium text-slate-500 py-2">Detalle / Hallazgo</th>
+            <tr className="border-b" style={{ borderColor: 'var(--hce-border)', background: 'var(--hce-fondo)' }}>
+              <th className="text-left text-xs font-medium uppercase tracking-wide text-slate-500 py-2.5 pr-4 w-56">Segmento</th>
+              <th className="text-left text-xs font-medium uppercase tracking-wide text-slate-500 py-2.5 pr-4 w-44">Estado</th>
+              <th className="text-left text-xs font-medium uppercase tracking-wide text-slate-500 py-2.5">Detalle / Hallazgo</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">

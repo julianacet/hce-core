@@ -6,6 +6,8 @@ import (
 	"log"
 	"math"
 	"net/http"
+	"strconv"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -35,44 +37,45 @@ func FacturasRouter(db *pgxpool.Pool) http.Handler {
 	return r
 }
 
-// GET /facturas?q=
+// GET /facturas?q=  (legacy — retorna array, límite 100)
+// GET /facturas?page=1&limit=25&q=&estado=&desde=&hasta=  (paginado, retorna {facturas, total})
 func (h *FacturaHandler) listar(w http.ResponseWriter, r *http.Request) {
-	q := r.URL.Query().Get("q")
+	if r.URL.Query().Get("page") != "" {
+		h.listarPaginado(w, r)
+		return
+	}
 
 	type FacturaResumen struct {
 		models.Factura
 		PacienteNombre string `json:"paciente_nombre"`
 	}
 
-	var rows interface{ Next() bool; Scan(...any) error; Close() }
-	var err error
-
+	q := r.URL.Query().Get("q")
+	var param string
+	whereExtra := ""
 	if q != "" {
-		param := "%" + q + "%"
-		rows, err = h.db.Query(r.Context(), `
-			SELECT f.id, f.factura_id, f.numero_version, f.paciente_documento,
-			       f.estado, f.subtotal, f.total, f.fecha_creacion, f.creado_por,
-			       CONCAT_WS(' ', p.nombre_primero, p.nombre_segundo, p.apellido_primero, p.apellido_segundo) AS paciente_nombre
-			FROM factura f
-			LEFT JOIN paciente p ON p.numero_documento = f.paciente_documento
-			  AND p.es_ultima_version = TRUE AND p.esta_activo = TRUE
-			WHERE f.es_ultima_version = TRUE AND f.esta_activo = TRUE
-			  AND (p.numero_documento ILIKE $1
+		param = "%" + q + "%"
+		whereExtra = ` AND (f.paciente_documento ILIKE $1
 			       OR p.nombre_primero ILIKE $1 OR p.nombre_segundo ILIKE $1
-			       OR p.apellido_primero ILIKE $1 OR p.apellido_segundo ILIKE $1)
-			ORDER BY f.fecha_creacion DESC
-			LIMIT 100`, param)
+			       OR p.apellido_primero ILIKE $1 OR p.apellido_segundo ILIKE $1)`
+	}
+
+	baseSQL := `
+		SELECT f.id, f.factura_id, f.numero_version, f.paciente_documento,
+		       f.estado, f.subtotal, f.total, f.fecha_creacion, f.creado_por,
+		       CONCAT_WS(' ', p.nombre_primero, p.nombre_segundo, p.apellido_primero, p.apellido_segundo) AS paciente_nombre
+		FROM factura f
+		LEFT JOIN paciente p ON p.numero_documento = f.paciente_documento
+		  AND p.es_ultima_version = TRUE AND p.esta_activo = TRUE
+		WHERE f.es_ultima_version = TRUE AND f.esta_activo = TRUE` +
+		whereExtra + ` ORDER BY f.fecha_creacion DESC LIMIT 100`
+
+	var rows pgx.Rows
+	var err error
+	if q != "" {
+		rows, err = h.db.Query(r.Context(), baseSQL, param)
 	} else {
-		rows, err = h.db.Query(r.Context(), `
-			SELECT f.id, f.factura_id, f.numero_version, f.paciente_documento,
-			       f.estado, f.subtotal, f.total, f.fecha_creacion, f.creado_por,
-			       CONCAT_WS(' ', p.nombre_primero, p.nombre_segundo, p.apellido_primero, p.apellido_segundo) AS paciente_nombre
-			FROM factura f
-			LEFT JOIN paciente p ON p.numero_documento = f.paciente_documento
-			  AND p.es_ultima_version = TRUE AND p.esta_activo = TRUE
-			WHERE f.es_ultima_version = TRUE AND f.esta_activo = TRUE
-			ORDER BY f.fecha_creacion DESC
-			LIMIT 100`)
+		rows, err = h.db.Query(r.Context(), baseSQL)
 	}
 	if err != nil {
 		log.Printf("listar facturas: %v", err)
@@ -97,6 +100,120 @@ func (h *FacturaHandler) listar(w http.ResponseWriter, r *http.Request) {
 	}
 
 	responderJSON(w, http.StatusOK, facturas)
+}
+
+func (h *FacturaHandler) listarPaginado(w http.ResponseWriter, r *http.Request) {
+	q := strings.TrimSpace(r.URL.Query().Get("q"))
+	estado := strings.TrimSpace(r.URL.Query().Get("estado"))
+	desde := strings.TrimSpace(r.URL.Query().Get("desde"))
+	hasta := strings.TrimSpace(r.URL.Query().Get("hasta"))
+	exportar := r.URL.Query().Get("export") == "1"
+
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	if page < 1 {
+		page = 1
+	}
+	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
+	if limit < 1 || limit > 100 {
+		limit = 25
+	}
+	offset := (page - 1) * limit
+
+	const joinSQL = `
+		FROM factura f
+		LEFT JOIN paciente p ON p.numero_documento = f.paciente_documento
+		  AND p.es_ultima_version = TRUE AND p.esta_activo = TRUE`
+
+	var args argList
+	where := "WHERE f.es_ultima_version = TRUE AND f.esta_activo = TRUE"
+
+	if q != "" {
+		like := "%" + strings.ToLower(q) + "%"
+		ph := args.Add(like)
+		where += ` AND (f.paciente_documento ILIKE ` + ph +
+			` OR LOWER(CONCAT_WS(' ', p.nombre_primero, p.nombre_segundo, p.apellido_primero, p.apellido_segundo)) LIKE ` + ph + `)`
+	}
+	if estado != "" {
+		where += ` AND f.estado = ` + args.Add(estado)
+	}
+	if desde != "" {
+		where += ` AND f.fecha_creacion::date >= ` + args.Add(desde) + `::date`
+	}
+	if hasta != "" {
+		where += ` AND f.fecha_creacion::date <= ` + args.Add(hasta) + `::date`
+	}
+
+	var total int
+	if err := h.db.QueryRow(r.Context(),
+		`SELECT COUNT(*) `+joinSQL+` `+where, args.Slice()...,
+	).Scan(&total); err != nil {
+		log.Printf("listarPaginado facturas count: %v", err)
+		responderError(w, http.StatusInternalServerError, "error al contar facturas")
+		return
+	}
+
+	orderDir := "DESC"
+	if strings.ToLower(strings.TrimSpace(r.URL.Query().Get("dir"))) == "asc" {
+		orderDir = "ASC"
+	}
+	var orderByClause string
+	switch strings.TrimSpace(r.URL.Query().Get("orden")) {
+	case "paciente":
+		orderByClause = "p.nombre_primero " + orderDir + ", p.apellido_primero " + orderDir
+	case "total":
+		orderByClause = "f.total " + orderDir
+	case "estado":
+		orderByClause = "f.estado " + orderDir
+	default:
+		orderByClause = "f.fecha_creacion " + orderDir
+	}
+
+	selectSQL := `
+		SELECT f.id, f.factura_id, f.numero_version, f.paciente_documento,
+		       f.estado, f.subtotal, f.total, f.fecha_creacion, f.creado_por,
+		       CONCAT_WS(' ', p.nombre_primero, p.nombre_segundo, p.apellido_primero, p.apellido_segundo) AS paciente_nombre` +
+		joinSQL + ` ` + where + ` ORDER BY ` + orderByClause
+
+	var queryArgs []any
+	if exportar {
+		queryArgs = args.Slice()
+	} else {
+		selectSQL += ` LIMIT ` + args.Add(limit) + ` OFFSET ` + args.Add(offset)
+		queryArgs = args.Slice()
+	}
+
+	rows, err := h.db.Query(r.Context(), selectSQL, queryArgs...)
+	if err != nil {
+		log.Printf("listarPaginado facturas query: %v", err)
+		responderError(w, http.StatusInternalServerError, "error al consultar facturas")
+		return
+	}
+	defer rows.Close()
+
+	type FacturaResumen struct {
+		models.Factura
+		PacienteNombre string `json:"paciente_nombre"`
+	}
+
+	facturas := make([]FacturaResumen, 0)
+	for rows.Next() {
+		var f FacturaResumen
+		if err := rows.Scan(
+			&f.ID, &f.FacturaID, &f.NumeroVersion, &f.PacienteDocumento,
+			&f.Estado, &f.Subtotal, &f.Total, &f.FechaCreacion, &f.CreadoPor,
+			&f.PacienteNombre,
+		); err != nil {
+			responderError(w, http.StatusInternalServerError, "error al leer factura")
+			return
+		}
+		f.Items = []models.FacturaItem{}
+		facturas = append(facturas, f)
+	}
+
+	responderJSON(w, http.StatusOK, map[string]any{
+		"facturas": facturas,
+		"total":    total,
+	})
 }
 
 // GET /facturas/{facturaId}

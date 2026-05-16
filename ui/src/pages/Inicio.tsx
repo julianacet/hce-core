@@ -100,7 +100,7 @@ export default function Inicio() {
       ) : (
         <div className="grid grid-cols-4 gap-4">
           <Tarjeta
-            label="Encuentros hoy"
+            label="Consultas hoy"
             value={data?.encuentros_hoy ?? 0}
             icon={CalendarCheck}
             color="text-blue-700"
@@ -168,7 +168,7 @@ export default function Inicio() {
           )}
           {!isLoading && (data?.ultimos_pacientes.length ?? 0) === 0 && (
             <div className="px-5 py-8 text-center text-sm text-slate-400">
-              Sin encuentros registrados aún.
+              Sin consultas registradas aún.
             </div>
           )}
           {data?.ultimos_pacientes.map((p) => (

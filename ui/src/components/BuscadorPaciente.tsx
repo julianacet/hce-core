@@ -89,7 +89,7 @@ export function BuscadorPaciente({ selectedDocumento, onSelect }: Props) {
             className={`btn-secondary flex items-center gap-1.5 shrink-0 ${filtrosAbiertos ? 'bg-slate-100' : ''}`}
           >
             <Filter size={14} />
-            {filtrosAbiertos ? 'Búsqueda simple' : 'Filtros avanzados'}
+            Filtros
             {hayFiltros && <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0" />}
           </button>
         </div>

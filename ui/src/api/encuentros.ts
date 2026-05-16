@@ -136,6 +136,8 @@ type EncuentrosPaginadosParams = {
   desde: string
   hasta: string
   finalidad: string
+  orden?: string
+  dir?: string
 }
 
 export function useEncuentrosPaginados(params: EncuentrosPaginadosParams) {
@@ -150,6 +152,8 @@ export function useEncuentrosPaginados(params: EncuentrosPaginadosParams) {
       if (params.desde) p.set('desde', params.desde)
       if (params.hasta) p.set('hasta', params.hasta)
       if (params.finalidad) p.set('finalidad', params.finalidad)
+      if (params.orden) p.set('orden', params.orden)
+      if (params.dir) p.set('dir', params.dir)
       return apiFetch<EncuentrosPaginados>(`/encuentros?${p}`)
     },
     placeholderData: (prev) => prev,
@@ -157,7 +161,7 @@ export function useEncuentrosPaginados(params: EncuentrosPaginadosParams) {
   })
 }
 
-type ExportFiltros = Pick<EncuentrosPaginadosParams, 'q' | 'desde' | 'hasta' | 'finalidad'>
+type ExportFiltros = Pick<EncuentrosPaginadosParams, 'q' | 'desde' | 'hasta' | 'finalidad' | 'orden' | 'dir'>
 
 export function exportarEncuentros(filtros: ExportFiltros) {
   const p = new URLSearchParams({ export: '1' })
@@ -165,5 +169,7 @@ export function exportarEncuentros(filtros: ExportFiltros) {
   if (filtros.desde) p.set('desde', filtros.desde)
   if (filtros.hasta) p.set('hasta', filtros.hasta)
   if (filtros.finalidad) p.set('finalidad', filtros.finalidad)
+  if (filtros.orden) p.set('orden', filtros.orden)
+  if (filtros.dir) p.set('dir', filtros.dir)
   return apiFetch<EncuentrosPaginados>(`/encuentros?${p}`)
 }

@@ -45,6 +45,48 @@ export function useFacturas(q?: string) {
   })
 }
 
+export type FacturasFiltros = {
+  q?: string
+  estado?: string
+  desde?: string
+  hasta?: string
+  page?: number
+  limit?: number
+  orden?: string
+  dir?: string
+}
+
+export function useFacturasPaginadas(filtros: FacturasFiltros) {
+  const params = new URLSearchParams()
+  params.set('page', String(filtros.page ?? 1))
+  params.set('limit', String(filtros.limit ?? 25))
+  if (filtros.q) params.set('q', filtros.q)
+  if (filtros.estado) params.set('estado', filtros.estado)
+  if (filtros.desde) params.set('desde', filtros.desde)
+  if (filtros.hasta) params.set('hasta', filtros.hasta)
+  if (filtros.orden) params.set('orden', filtros.orden)
+  if (filtros.dir) params.set('dir', filtros.dir)
+  return useQuery({
+    queryKey: [...FACTURAS_KEY, 'paginado', filtros],
+    queryFn: () => apiFetch<{ facturas: (Factura & { paciente_nombre: string })[]; total: number }>(
+      `/facturas?${params}`
+    ),
+  })
+}
+
+export async function exportarFacturas(filtros: Omit<FacturasFiltros, 'page' | 'limit'>) {
+  const params = new URLSearchParams({ page: '1', limit: '1', export: '1' })
+  if (filtros.q) params.set('q', filtros.q)
+  if (filtros.estado) params.set('estado', filtros.estado)
+  if (filtros.desde) params.set('desde', filtros.desde)
+  if (filtros.hasta) params.set('hasta', filtros.hasta)
+  if (filtros.orden) params.set('orden', filtros.orden)
+  if (filtros.dir) params.set('dir', filtros.dir)
+  return apiFetch<{ facturas: (Factura & { paciente_nombre: string })[]; total: number }>(
+    `/facturas?${params}`
+  )
+}
+
 export function useFactura(facturaId: string) {
   return useQuery({
     queryKey: [...FACTURAS_KEY, facturaId],

@@ -60,7 +60,7 @@ export default function NuevaConsulta() {
       <div className="page-header">
         <div>
           <h2 className="page-title">Nueva consulta</h2>
-          <p className="page-desc">Buscá al paciente antes de registrar el encuentro</p>
+          <p className="page-desc">Buscá al paciente antes de registrar la consulta</p>
         </div>
       </div>
 

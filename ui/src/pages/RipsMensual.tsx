@@ -125,7 +125,7 @@ export default function RipsMensual() {
           <div className="grid grid-cols-2 gap-3 pt-2">
             {[
               { label: 'Pacientes', value: resumen.pacientes, icon: Users, color: 'text-blue-600' },
-              { label: 'Encuentros', value: resumen.encuentros, icon: Calendar, color: 'text-slate-600' },
+              { label: 'Consultas', value: resumen.encuentros, icon: Calendar, color: 'text-slate-600' },
             ].map(({ label, value, icon: Icon, color }) => (
               <div key={label} className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 text-center">
                 <Icon size={16} className={`mx-auto mb-1 ${color}`} />
@@ -153,7 +153,7 @@ export default function RipsMensual() {
           <p className="text-xs text-red-500">{generar.error.message}</p>
         )}
         {resumen?.encuentros === 0 && (
-          <p className="text-xs text-slate-400">No hay encuentros registrados en este período.</p>
+          <p className="text-xs text-slate-400">No hay consultas registradas en este período.</p>
         )}
       </div>
 

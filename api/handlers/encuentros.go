@@ -431,6 +431,22 @@ func (h *EncuentroHandler) listarGlobal(w http.ResponseWriter, r *http.Request) 
 		where += ` AND ec.estado = ` + args.Add(estado)
 	}
 
+	orderDir := "DESC"
+	if strings.ToLower(strings.TrimSpace(r.URL.Query().Get("dir"))) == "asc" {
+		orderDir = "ASC"
+	}
+	var orderByClause string
+	switch strings.TrimSpace(r.URL.Query().Get("orden")) {
+	case "paciente":
+		orderByClause = "p.nombre_primero " + orderDir + ", p.apellido_primero " + orderDir
+	case "finalidad":
+		orderByClause = "ec.finalidad_consulta " + orderDir
+	case "diagnostico":
+		orderByClause = "COALESCE(ec.codigo_diagnostico_principal,'') " + orderDir
+	default:
+		orderByClause = "ec.fecha_atencion " + orderDir
+	}
+
 	// Labels unificados con columnasEncuentro (B3)
 	baseQuery := `
 		SELECT
@@ -455,7 +471,7 @@ func (h *EncuentroHandler) listarGlobal(w http.ResponseWriter, r *http.Request) 
 		JOIN paciente p ON p.numero_documento = ec.paciente_documento
 			AND p.es_ultima_version = TRUE AND p.esta_activo = TRUE
 		WHERE ` + where + `
-		ORDER BY ec.fecha_atencion DESC`
+		ORDER BY ` + orderByClause
 
 	var query string
 	if exportar {

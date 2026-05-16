@@ -1,7 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router'
 import { Search, X, ClipboardList, ChevronRight } from 'lucide-react'
 import { useEncuentros, type FiltrosEncuentro, type Encuentro } from '../../api/encuentros'
+import { SortButton, type SortDir } from '../../components/SortButton'
+
+type OrdenHistorial = 'fecha' | 'finalidad'
 
 const FINALIDADES = [
   { value: '', label: 'Todas' },
@@ -23,6 +26,8 @@ export default function HistorialEncuentros() {
   const [form, setForm] = useState({ desde: '', hasta: '', diagnostico: '', finalidad: '' })
   const [filtros, setFiltros] = useState<FiltrosEncuentro>({})
   const [filtrosDebounced, setFiltrosDebounced] = useState<FiltrosEncuentro>({})
+  const [orden, setOrden] = useState<OrdenHistorial>('fecha')
+  const [dir, setDir] = useState<SortDir>('desc')
 
   useEffect(() => {
     const t = setTimeout(() => setFiltrosDebounced(filtros), 350)
@@ -47,9 +52,31 @@ export default function HistorialEncuentros() {
 
   const hayFiltros = !!(form.desde || form.hasta || form.diagnostico)
 
-  const visibles = form.finalidad
+  function ordenarPor(col: OrdenHistorial) {
+    if (orden === col) {
+      setDir(d => d === 'asc' ? 'desc' : 'asc')
+    } else {
+      setOrden(col)
+      setDir(col === 'fecha' ? 'desc' : 'asc')
+    }
+  }
+
+  const filtrados = form.finalidad
     ? encuentros.filter((e: Encuentro) => e.finalidad_consulta === form.finalidad)
     : encuentros
+
+  const visibles = useMemo(() => {
+    const sorted = [...filtrados].sort((a, b) => {
+      let cmp = 0
+      if (orden === 'fecha') {
+        cmp = a.fecha_atencion < b.fecha_atencion ? -1 : a.fecha_atencion > b.fecha_atencion ? 1 : 0
+      } else {
+        cmp = (a.finalidad_consulta_nombre ?? '').localeCompare(b.finalidad_consulta_nombre ?? '', 'es')
+      }
+      return dir === 'asc' ? cmp : -cmp
+    })
+    return sorted
+  }, [filtrados, orden, dir])
 
   return (
     <div className="space-y-4">
@@ -118,24 +145,21 @@ export default function HistorialEncuentros() {
         >
           {isLoading
             ? 'Cargando…'
-            : `${visibles.length} encuentro${visibles.length !== 1 ? 's' : ''}${hayFiltros || form.finalidad ? ' (filtrado)' : ''}`}
+            : `${visibles.length} consulta${visibles.length !== 1 ? 's' : ''}${hayFiltros || form.finalidad ? ' (filtrado)' : ''}`}
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr
-                className="text-left text-xs font-medium border-b"
-                style={{
-                  background: 'var(--hce-bg)',
-                  borderColor: 'var(--hce-border)',
-                  color: 'var(--hce-text-muted)',
-                }}
-              >
-                <th className="px-5 py-2.5">Fecha</th>
-                <th className="px-4 py-2.5">Finalidad</th>
-                <th className="px-4 py-2.5">Diagnóstico</th>
-                <th className="px-4 py-2.5" />
+              <tr className="border-b" style={{ borderColor: 'var(--hce-border)', background: 'var(--hce-fondo)' }}>
+                <th className="px-5 py-3 text-left">
+                  <SortButton activo={orden === 'fecha'} dir={dir} onClick={() => ordenarPor('fecha')}>Fecha</SortButton>
+                </th>
+                <th className="px-4 py-3 text-left">
+                  <SortButton activo={orden === 'finalidad'} dir={dir} onClick={() => ordenarPor('finalidad')}>Finalidad</SortButton>
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-slate-500">Diagnóstico</th>
+                <th className="px-4 py-3" />
               </tr>
             </thead>
             <tbody className="divide-y" style={{ borderColor: 'var(--hce-border)' }}>
@@ -152,8 +176,8 @@ export default function HistorialEncuentros() {
                     <ClipboardList size={28} className="mx-auto mb-2 text-slate-300" />
                     <p className="text-sm" style={{ color: 'var(--hce-text-muted)' }}>
                       {hayFiltros || form.finalidad
-                        ? 'Sin encuentros para esos filtros.'
-                        : 'Este paciente no tiene encuentros registrados.'}
+                        ? 'Sin consultas para esos filtros.'
+                        : 'Este paciente no tiene consultas registradas.'}
                     </p>
                   </td>
                 </tr>

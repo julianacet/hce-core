@@ -14,7 +14,7 @@ export default function PacienteLayout() {
 
   const tabs = [
     { to: `/pacientes/${id}`, label: 'Ficha', icon: User, end: true },
-    { to: `/pacientes/${id}/encuentros`, label: 'Encuentros', icon: ClipboardList },
+    { to: `/pacientes/${id}/encuentros`, label: 'Consultas', icon: ClipboardList },
     { to: `/pacientes/${id}/auditoria`, label: 'Auditoría', icon: Shield },
   ]
 
@@ -44,7 +44,7 @@ export default function PacienteLayout() {
             className="btn-primary"
           >
             <PlusCircle size={15} />
-            Nuevo encuentro
+            Nueva consulta
           </button>
         </div>
 

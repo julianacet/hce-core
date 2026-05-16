@@ -3,12 +3,18 @@ import { useDebounced } from '../hooks/useDebounced'
 import { DEBOUNCE_FILTROS_MS } from '../utils/constants'
 import { useNavigate } from 'react-router'
 import {
-  Search, Plus, Filter, Trash2, ChevronLeft, ChevronRight, ClipboardList, Download,
+  Search, Plus, Filter, Trash2, ClipboardList,
 } from 'lucide-react'
 import { useEncuentrosPaginados, exportarEncuentros } from '../api/encuentros'
+import { SortButton, type SortDir } from '../components/SortButton'
 import { descargarCSV, descargarXLSX } from '../utils/csv'
+import { PaginationFooter } from '../components/PaginationFooter'
+import { TableEmptyState } from '../components/TableEmptyState'
+import { ExportButtons } from '../components/ExportButtons'
 
 const LIMIT = 30
+
+type OrdenEncuentro = 'fecha' | 'paciente' | 'finalidad' | 'diagnostico'
 
 const FINALIDADES = [
   { value: '', label: 'Todas las finalidades' },
@@ -28,6 +34,8 @@ export default function EncuentrosGlobal() {
 
   const [q, setQ] = useState('')
   const [page, setPage] = useState(1)
+  const [orden, setOrden] = useState<OrdenEncuentro>('fecha')
+  const [dir, setDir] = useState<SortDir>('desc')
   const [filtrosAbiertos, setFiltrosAbiertos] = useState(false)
   const [filtros, setFiltros] = useState({
     desde: '', hasta: '', finalidad: '',
@@ -37,6 +45,16 @@ export default function EncuentrosGlobal() {
   const filtrosDebounced = useDebounced(filtros, DEBOUNCE_FILTROS_MS)
 
   useEffect(() => { setPage(1) }, [qDebounced, filtrosDebounced])
+
+  function ordenarPor(col: OrdenEncuentro) {
+    if (orden === col) {
+      setDir(d => d === 'asc' ? 'desc' : 'asc')
+    } else {
+      setOrden(col)
+      setDir(col === 'fecha' ? 'desc' : 'asc')
+    }
+    setPage(1)
+  }
 
   function setFiltro<K extends keyof typeof filtros>(key: K, value: string) {
     setFiltros(f => ({ ...f, [key]: value }))
@@ -63,7 +81,7 @@ export default function EncuentrosGlobal() {
   const HEADERS_ENC = ['Fecha', 'Paciente', 'Tipo doc', 'Documento', 'Finalidad', 'Código diagnóstico', 'Diagnóstico']
 
   async function obtenerFilas() {
-    const { encuentros } = await exportarEncuentros({ q: qDebounced, ...filtrosDebounced })
+    const { encuentros } = await exportarEncuentros({ q: qDebounced, orden, dir, ...filtrosDebounced })
     return encuentros.map(e => [
       new Date(e.fecha_atencion).toLocaleDateString('es-CO'),
       e.paciente_nombre, e.tipo_documento, e.paciente_documento,
@@ -75,14 +93,14 @@ export default function EncuentrosGlobal() {
   async function descargarCsv() {
     setDescargando('csv')
     try {
-      descargarCSV(`encuentros_${new Date().toISOString().slice(0, 10)}.csv`, HEADERS_ENC, await obtenerFilas())
+      descargarCSV(`consultas_${new Date().toISOString().slice(0, 10)}.csv`, HEADERS_ENC, await obtenerFilas())
     } finally { setDescargando(null) }
   }
 
   async function descargarExcel() {
     setDescargando('xlsx')
     try {
-      descargarXLSX(`encuentros_${new Date().toISOString().slice(0, 10)}.xlsx`, HEADERS_ENC, await obtenerFilas())
+      descargarXLSX(`consultas_${new Date().toISOString().slice(0, 10)}.xlsx`, HEADERS_ENC, await obtenerFilas())
     } finally { setDescargando(null) }
   }
 
@@ -90,45 +108,35 @@ export default function EncuentrosGlobal() {
     q: qDebounced,
     page,
     limit: LIMIT,
+    orden,
+    dir,
     ...filtrosDebounced,
   })
 
   const encuentros = data?.encuentros ?? []
   const total = data?.total ?? 0
   const totalPages = Math.max(1, Math.ceil(total / LIMIT))
-  const desde = total === 0 ? 0 : (page - 1) * LIMIT + 1
-  const hasta = Math.min(page * LIMIT, total)
 
   return (
     <div className="page-hce">
       <div className="page-header">
         <div>
           <h2 className="page-title">Consultas</h2>
-          <p className="page-desc">Todos los encuentros clínicos registrados</p>
+          <p className="page-desc">Todas las consultas clínicas registradas</p>
         </div>
         <div className="flex gap-2">
-          <button
-            onClick={descargarCsv}
-            disabled={descargando !== null || total === 0}
-            className="btn-secondary flex items-center gap-1.5 disabled:opacity-40"
-          >
-            <Download size={14} />
-            {descargando === 'csv' ? 'Generando…' : 'CSV'}
-          </button>
-          <button
-            onClick={descargarExcel}
-            disabled={descargando !== null || total === 0}
-            className="btn-secondary flex items-center gap-1.5 disabled:opacity-40"
-          >
-            <Download size={14} />
-            {descargando === 'xlsx' ? 'Generando…' : 'Excel'}
-          </button>
+          <ExportButtons
+            onCsv={descargarCsv}
+            onExcel={descargarExcel}
+            descargando={descargando}
+            disabled={total === 0}
+          />
           <button
             onClick={() => navigate('/nueva-consulta/nuevo')}
             className="btn-primary"
           >
             <Plus size={15} />
-            Nuevo encuentro
+            Nueva consulta
           </button>
         </div>
       </div>
@@ -202,62 +210,37 @@ export default function EncuentrosGlobal() {
           )}
         </div>
 
-        {/* Contador */}
-        <div
-          className="px-5 py-2 flex items-center justify-between text-xs"
-          style={{ background: 'var(--hce-bg)', borderBottom: '1px solid var(--hce-border)' }}
-        >
-          <span style={{ color: 'var(--hce-text-muted)' }}>
-            {isLoading
-              ? 'Cargando…'
-              : total === 0
-              ? 'Sin resultados'
-              : `Mostrando ${desde}–${hasta} de ${total} consulta${total !== 1 ? 's' : ''}`}
-          </span>
-          {isFetching && !isLoading && (
-            <span className="text-slate-400">Actualizando…</span>
-          )}
-        </div>
-
         {/* Tabla */}
-        <div className="overflow-x-auto">
+        <div className={`overflow-x-auto transition-opacity duration-150 ${isFetching && !isLoading ? 'opacity-60' : ''}`}>
           <table className="w-full text-sm">
             <thead>
-              <tr
-                className="text-left text-xs font-medium border-b"
-                style={{
-                  background: 'var(--hce-bg)',
-                  borderColor: 'var(--hce-border)',
-                  color: 'var(--hce-text-muted)',
-                }}
-              >
-                <th className="px-5 py-2.5">Paciente</th>
-                <th className="px-4 py-2.5">Fecha</th>
-                <th className="px-4 py-2.5">Finalidad</th>
-                <th className="px-4 py-2.5">Diagnóstico</th>
-                <th className="px-4 py-2.5" />
+              <tr className="border-b" style={{ borderColor: 'var(--hce-border)', background: 'var(--hce-fondo)' }}>
+                <th className="px-5 py-3 text-left">
+                  <SortButton activo={orden === 'paciente'} dir={dir} onClick={() => ordenarPor('paciente')}>Paciente</SortButton>
+                </th>
+                <th className="px-4 py-3 text-left">
+                  <SortButton activo={orden === 'fecha'} dir={dir} onClick={() => ordenarPor('fecha')}>Fecha</SortButton>
+                </th>
+                <th className="px-4 py-3 text-left">
+                  <SortButton activo={orden === 'finalidad'} dir={dir} onClick={() => ordenarPor('finalidad')}>Finalidad</SortButton>
+                </th>
+                <th className="px-4 py-3 text-left">
+                  <SortButton activo={orden === 'diagnostico'} dir={dir} onClick={() => ordenarPor('diagnostico')}>Diagnóstico</SortButton>
+                </th>
+                <th className="px-4 py-3" />
               </tr>
             </thead>
             <tbody className="divide-y" style={{ borderColor: 'var(--hce-border)' }}>
-              {isError && (
-                <tr>
-                  <td colSpan={5} className="px-5 py-8 text-center text-sm text-red-500">
-                    Error al cargar. Intenta de nuevo.
-                  </td>
-                </tr>
-              )}
-              {!isLoading && !isError && encuentros.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="px-5 py-12 text-center">
-                    <ClipboardList size={28} className="mx-auto mb-2 text-slate-300" />
-                    <p className="text-sm" style={{ color: 'var(--hce-text-muted)' }}>
-                      {qDebounced || hayFiltros
-                        ? 'Sin resultados para esa búsqueda.'
-                        : 'Aún no hay consultas registradas.'}
-                    </p>
-                  </td>
-                </tr>
-              )}
+              <TableEmptyState
+                isLoading={isLoading}
+                isError={isError}
+                isEmpty={encuentros.length === 0}
+                colSpan={5}
+                hayBusqueda={!!(qDebounced || hayFiltros)}
+                textoVacio="Aún no hay consultas registradas."
+                textoSinResultados="Sin resultados para esa búsqueda."
+                icon={<ClipboardList size={28} className="text-slate-300" />}
+              />
               {encuentros.map(e => (
                 <tr
                   key={e.encuentro_id}
@@ -302,31 +285,16 @@ export default function EncuentrosGlobal() {
           </table>
         </div>
 
-        {/* Paginación */}
-        {totalPages > 1 && (
-          <div
-            className="px-5 py-3 flex items-center justify-between border-t text-sm"
-            style={{ borderColor: 'var(--hce-border)' }}
-          >
-            <button
-              onClick={() => setPage(p => Math.max(1, p - 1))}
-              disabled={page === 1}
-              className="flex items-center gap-1 btn-ghost disabled:opacity-30"
-            >
-              <ChevronLeft size={14} /> Anterior
-            </button>
-            <span style={{ color: 'var(--hce-text-muted)' }}>
-              Página {page} de {totalPages}
-            </span>
-            <button
-              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-              disabled={page === totalPages}
-              className="flex items-center gap-1 btn-ghost disabled:opacity-30"
-            >
-              Siguiente <ChevronRight size={14} />
-            </button>
-          </div>
-        )}
+        <PaginationFooter
+          page={page}
+          totalPages={totalPages}
+          total={total}
+          limit={LIMIT}
+          isLoading={isLoading}
+          isFetching={isFetching}
+          onPageChange={setPage}
+          entityLabel={`consulta${total !== 1 ? 's' : ''}`}
+        />
       </div>
     </div>
   )

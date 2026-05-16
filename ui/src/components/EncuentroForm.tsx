@@ -245,7 +245,7 @@ export default function EncuentroForm({
       try { sessionStorage.removeItem(DRAFT_KEY) } catch {}
     } catch (err) {
       setSubmitting(false)
-      setError((err as Error)?.message ?? 'Error al guardar el encuentro.')
+      setError((err as Error)?.message ?? 'Error al guardar la consulta.')
     }
   }
 

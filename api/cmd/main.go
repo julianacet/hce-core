@@ -22,8 +22,9 @@ import (
 )
 
 func main() {
-	// En Docker las variables vienen del entorno del contenedor; el archivo .env
-	// solo existe en desarrollo local. Se ignora si no existe.
+	// .env.dev tiene prioridad (desarrollo local). En Docker no existe → falla silenciosamente.
+	// godotenv.Load no sobreescribe vars ya definidas en el entorno del sistema.
+	_ = godotenv.Load("../.env.dev")
 	_ = godotenv.Load("../.env")
 
 	dbURL, dbURLExists := os.LookupEnv("DATABASE_URL")

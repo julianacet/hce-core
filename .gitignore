@@ -1,2 +1,4 @@
 .env
+.env.dev
 ui/.env
+ui/.env.development
