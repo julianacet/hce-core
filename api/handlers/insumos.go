@@ -41,6 +41,7 @@ func (h *insumosHandler) listar(w http.ResponseWriter, r *http.Request) {
 
 	query := `
 		SELECT id, nombre, descripcion, unidad, stock_actual, stock_minimo,
+		       lote, registro_invima, fecha_compra, fecha_vencimiento,
 		       esta_activo, fecha_creacion, creado_por
 		FROM insumo
 		WHERE esta_activo = TRUE`
@@ -64,7 +65,9 @@ func (h *insumosHandler) listar(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var i models.Insumo
 		if err := rows.Scan(&i.ID, &i.Nombre, &i.Descripcion, &i.Unidad,
-			&i.StockActual, &i.StockMinimo, &i.EstaActivo, &i.FechaCreacion, &i.CreadoPor,
+			&i.StockActual, &i.StockMinimo,
+			&i.Lote, &i.RegistroInvima, &i.FechaCompra, &i.FechaVencimiento,
+			&i.EstaActivo, &i.FechaCreacion, &i.CreadoPor,
 		); err != nil {
 			log.Printf("escanear insumo: %v", err)
 			responderError(w, http.StatusInternalServerError, "error al leer insumo")
@@ -91,13 +94,18 @@ func (h *insumosHandler) crear(w http.ResponseWriter, r *http.Request) {
 
 	var i models.Insumo
 	err := h.db.QueryRow(r.Context(), `
-		INSERT INTO insumo (nombre, descripcion, unidad, stock_minimo, creado_por)
-		VALUES ($1, $2, $3, $4, $5)
+		INSERT INTO insumo (nombre, descripcion, unidad, stock_minimo,
+		                    lote, registro_invima, fecha_compra, fecha_vencimiento, creado_por)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		RETURNING id, nombre, descripcion, unidad, stock_actual, stock_minimo,
+		          lote, registro_invima, fecha_compra, fecha_vencimiento,
 		          esta_activo, fecha_creacion, creado_por`,
-		input.Nombre, input.Descripcion, input.Unidad, input.StockMinimo, u.Nombre,
+		input.Nombre, input.Descripcion, input.Unidad, input.StockMinimo,
+		input.Lote, input.RegistroInvima, input.FechaCompra, input.FechaVencimiento, u.Nombre,
 	).Scan(&i.ID, &i.Nombre, &i.Descripcion, &i.Unidad,
-		&i.StockActual, &i.StockMinimo, &i.EstaActivo, &i.FechaCreacion, &i.CreadoPor)
+		&i.StockActual, &i.StockMinimo,
+		&i.Lote, &i.RegistroInvima, &i.FechaCompra, &i.FechaVencimiento,
+		&i.EstaActivo, &i.FechaCreacion, &i.CreadoPor)
 	if err != nil {
 		log.Printf("crear insumo: %v", err)
 		responderError(w, http.StatusInternalServerError, "error al crear insumo")
@@ -118,13 +126,18 @@ func (h *insumosHandler) actualizar(w http.ResponseWriter, r *http.Request) {
 
 	var i models.Insumo
 	err := h.db.QueryRow(r.Context(), `
-		UPDATE insumo SET nombre=$1, descripcion=$2, unidad=$3, stock_minimo=$4
-		WHERE id=$5 AND esta_activo=TRUE
+		UPDATE insumo SET nombre=$1, descripcion=$2, unidad=$3, stock_minimo=$4,
+		    lote=$5, registro_invima=$6, fecha_compra=$7, fecha_vencimiento=$8
+		WHERE id=$9 AND esta_activo=TRUE
 		RETURNING id, nombre, descripcion, unidad, stock_actual, stock_minimo,
+		          lote, registro_invima, fecha_compra, fecha_vencimiento,
 		          esta_activo, fecha_creacion, creado_por`,
-		input.Nombre, input.Descripcion, input.Unidad, input.StockMinimo, insumoID,
+		input.Nombre, input.Descripcion, input.Unidad, input.StockMinimo,
+		input.Lote, input.RegistroInvima, input.FechaCompra, input.FechaVencimiento, insumoID,
 	).Scan(&i.ID, &i.Nombre, &i.Descripcion, &i.Unidad,
-		&i.StockActual, &i.StockMinimo, &i.EstaActivo, &i.FechaCreacion, &i.CreadoPor)
+		&i.StockActual, &i.StockMinimo,
+		&i.Lote, &i.RegistroInvima, &i.FechaCompra, &i.FechaVencimiento,
+		&i.EstaActivo, &i.FechaCreacion, &i.CreadoPor)
 	if err != nil {
 		responderError(w, http.StatusNotFound, "insumo no encontrado")
 		return

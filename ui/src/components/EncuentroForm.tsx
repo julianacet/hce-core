@@ -171,6 +171,7 @@ export default function EncuentroForm({
   const [examen, setExamen] = useState<Record<string, string | ValorNormalNotas>>(draft?.examen ?? {})
   const [diagnosticos, setDiagnosticos] = useState<DiagnosticoItem[]>(draft?.diagnosticos ?? [])
   const [impresion, setImpresion] = useState<DiagnosticoItem | null>(draft?.impresion ?? null)
+  const [tipoDiagnosticoPrincipal, setTipoDiagnosticoPrincipal] = useState<string>(draft?.tipoDiagnosticoPrincipal ?? '01')
   const [medsPos, setMedsPos] = useState<Medicamento[]>(draft?.medsPos ?? [{ ...medVacio }])
   const [medsNoPos, setMedsNoPos] = useState<Medicamento[]>(draft?.medsNoPos ?? [{ ...medVacio }])
   const [error, setError] = useState<string | null>(null)
@@ -210,7 +211,7 @@ export default function EncuentroForm({
   ]
 
   useEffect(() => {
-    try { sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ form, signos, revision, examen, diagnosticos, impresion, medsPos, medsNoPos })) } catch {}
+    try { sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ form, signos, revision, examen, diagnosticos, impresion, medsPos, medsNoPos, tipoDiagnosticoPrincipal })) } catch {}
   }, [form, signos, revision, examen, diagnosticos, impresion, medsPos, medsNoPos, DRAFT_KEY])
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) {
@@ -228,6 +229,7 @@ export default function EncuentroForm({
       revision_sistemas: Object.keys(revision).length > 0 ? revision : undefined,
       examen_fisico: Object.keys(examen).length > 0 ? examen : undefined,
       diagnosticos: [...(impresion ? [impresion] : []), ...diagnosticos],
+      tipo_diagnostico_principal: tipoDiagnosticoPrincipal,
       plan_manejo: form.plan_manejo || undefined,
       finalidad_consulta: form.finalidad_consulta,
       causa_externa: form.causa_externa,
@@ -347,8 +349,8 @@ export default function EncuentroForm({
                   name="motivo_consulta"
                   value={form.motivo_consulta}
                   onChange={handleChange}
-                  rows={4}
-                  className="input-hce resize-none"
+                  rows={2}
+                  className="input-hce"
                   placeholder="Describa el motivo de consulta…"
                 />
               </div>
@@ -360,8 +362,8 @@ export default function EncuentroForm({
                   name="descripcion_ingreso"
                   value={form.descripcion_ingreso}
                   onChange={handleChange}
-                  rows={3}
-                  className="input-hce resize-none"
+                  rows={4}
+                  className="input-hce"
                   placeholder="Ej: Paciente llega por sus propios medios, consciente, orientado en tiempo y espacio…"
                 />
               </div>
@@ -407,8 +409,21 @@ export default function EncuentroForm({
                 value={form.plan_manejo}
                 onChange={handleChange}
                 rows={3}
-                className="input-hce resize-none"
+                className="input-hce"
               />
+            </div>
+
+            <div>
+              <label className="label-hce">Tipo de diagnóstico <span className="text-slate-400 font-normal">(RIPS)</span></label>
+              <select
+                value={tipoDiagnosticoPrincipal}
+                onChange={e => setTipoDiagnosticoPrincipal(e.target.value)}
+                className="input-hce"
+              >
+                <option value="01">01 — Impresión diagnóstica</option>
+                <option value="02">02 — Confirmado clínicamente</option>
+                <option value="03">03 — Confirmado por laboratorio</option>
+              </select>
             </div>
           </>
         )}

@@ -89,11 +89,10 @@ type RipsGeneradoResponse struct {
 
 // RipsMensualInput es el body del POST para generar el lote mensual.
 type RipsMensualInput struct {
-	Anio                     int    `json:"anio"`
-	Mes                      int    `json:"mes"`
-	NIT                      string `json:"nit"`
-	CodPrestador             string `json:"codPrestador"`
-	TipoDiagnosticoPrincipal string `json:"tipoDiagnosticoPrincipal"`
+	Anio         int    `json:"anio"`
+	Mes          int    `json:"mes"`
+	NIT          string `json:"nit"`
+	CodPrestador string `json:"codPrestador"`
 }
 
 // RipsMensualResumen es la vista previa de lo que contiene un período.

@@ -109,33 +109,30 @@ func (h *RipsHandler) generarMensual(w http.ResponseWriter, r *http.Request) {
 		responderError(w, http.StatusBadRequest, "anio y mes inválidos")
 		return
 	}
-	if input.TipoDiagnosticoPrincipal == "" {
-		input.TipoDiagnosticoPrincipal = "01"
-	}
-
 	// 1. Cargar todos los encuentros del período con datos del paciente
 	type encData struct {
-		EncuentroID       string
-		FechaAtencion     time.Time
-		CausaExterna      string
-		FinalidadConsulta string
-		ViaIngreso        string
-		CodigoDiagnostico string
-		TipoDoc           string
-		NumDoc            string
-		FechaNac          string
-		Genero            string
-		PaisOrigen        string
-		MunicipioRes      string
-		ZonaRes           string
-		TipoUsuario       string
+		EncuentroID               string
+		FechaAtencion             time.Time
+		CausaExterna              string
+		FinalidadConsulta         string
+		ViaIngreso                string
+		CodigoDiagnostico         string
+		TipoDiagnosticoPrincipal  string
+		TipoDoc                   string
+		NumDoc                    string
+		FechaNac                  string
+		Genero                    string
+		PaisOrigen                string
+		MunicipioRes              string
+		ZonaRes                   string
+		TipoUsuario               string
 	}
 
 	rows, err := h.db.Query(r.Context(), `
 		SELECT
 			ec.encuentro_id, ec.fecha_atencion,
 			ec.causa_externa, ec.finalidad_consulta, ec.via_ingreso,
-			ec.codigo_diagnostico_principal,
+			ec.codigo_diagnostico_principal, ec.tipo_diagnostico_principal,
 			p.tipo_documento, p.numero_documento, p.fecha_nacimiento::text,
 			p.genero, p.codigo_pais_origen,
 			p.codigo_municipio_residencia, p.zona_residencia, p.tipo_usuario
@@ -168,7 +165,7 @@ func (h *RipsHandler) generarMensual(w http.ResponseWriter, r *http.Request) {
 		if err := rows.Scan(
 			&enc.EncuentroID, &enc.FechaAtencion,
 			&enc.CausaExterna, &enc.FinalidadConsulta, &enc.ViaIngreso,
-			&enc.CodigoDiagnostico,
+			&enc.CodigoDiagnostico, &enc.TipoDiagnosticoPrincipal,
 			&enc.TipoDoc, &enc.NumDoc, &enc.FechaNac,
 			&enc.Genero, &enc.PaisOrigen,
 			&enc.MunicipioRes, &enc.ZonaRes, &enc.TipoUsuario,
@@ -217,7 +214,7 @@ func (h *RipsHandler) generarMensual(w http.ResponseWriter, r *http.Request) {
 				CodDiagnosticoRelacionado1: nil,
 				CodDiagnosticoRelacionado2: nil,
 				CodDiagnosticoRelacionado3: nil,
-				TipoDiagnosticoPrincipal:   input.TipoDiagnosticoPrincipal,
+				TipoDiagnosticoPrincipal:   enc.TipoDiagnosticoPrincipal,
 				FinalidadTecnologiaSalud:   enc.FinalidadConsulta,
 				CausaExternaMotivoAtencion: enc.CausaExterna,
 				CodConsulta:                cups,

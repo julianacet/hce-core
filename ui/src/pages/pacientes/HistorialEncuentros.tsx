@@ -166,7 +166,7 @@ export default function HistorialEncuentros() {
               {isError && (
                 <tr>
                   <td colSpan={4} className="px-5 py-8 text-center text-sm text-red-500">
-                    Error al cargar. Intenta de nuevo.
+                    Error al cargar. Intente de nuevo.
                   </td>
                 </tr>
               )}

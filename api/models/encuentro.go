@@ -24,9 +24,10 @@ type Encuentro struct {
 	ExamenFisico               json.RawMessage `json:"examen_fisico"`
 	RevisionSistemas           json.RawMessage `json:"revision_sistemas"`
 	// Kept for RIPS compatibility and list-view display.
-	CodigoDiagnosticoPrincipal string          `json:"codigo_diagnostico_principal"`
-	DescripcionDiagnostico     *string         `json:"descripcion_diagnostico"`
-	PlanManejo                 *string         `json:"plan_manejo"`
+	CodigoDiagnosticoPrincipal  string          `json:"codigo_diagnostico_principal"`
+	DescripcionDiagnostico      *string         `json:"descripcion_diagnostico"`
+	TipoDiagnosticoPrincipal    string          `json:"tipo_diagnostico_principal"`
+	PlanManejo                  *string         `json:"plan_manejo"`
 	FechaCreacion              time.Time       `json:"fecha_creacion"`
 	CreadoPor                  string          `json:"creado_por"`
 	IDSistemaAnterior          *string         `json:"id_sistema_anterior"`
@@ -51,6 +52,7 @@ type EncuentroInput struct {
 	SignosVitales     json.RawMessage    `json:"signos_vitales"`
 	RevisionSistemas  json.RawMessage    `json:"revision_sistemas"`
 	ExamenFisico      json.RawMessage    `json:"examen_fisico"`
-	Diagnosticos      []DiagnosticoInput `json:"diagnosticos"`
-	PlanManejo        *string            `json:"plan_manejo"`
+	Diagnosticos               []DiagnosticoInput `json:"diagnosticos"`
+	TipoDiagnosticoPrincipal   string             `json:"tipo_diagnostico_principal"`
+	PlanManejo                 *string            `json:"plan_manejo"`
 }

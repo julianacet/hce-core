@@ -62,7 +62,7 @@ const columnasEncuentro = `
 	fecha_atencion, causa_externa, finalidad_consulta, via_ingreso,
 	motivo_consulta, descripcion_ingreso,
 	signos_vitales, examen_fisico, revision_sistemas,
-	COALESCE(codigo_diagnostico_principal, ''), descripcion_diagnostico, plan_manejo,
+	COALESCE(codigo_diagnostico_principal, ''), descripcion_diagnostico, tipo_diagnostico_principal, plan_manejo,
 	fecha_creacion, creado_por, id_sistema_anterior,
 	CASE finalidad_consulta WHEN '10' THEN 'Consulta de primera vez' WHEN '11' THEN 'Consulta de control o seguimiento' WHEN '12' THEN 'Urgencias' ELSE finalidad_consulta END AS finalidad_consulta_nombre,
 	CASE causa_externa WHEN '13' THEN 'Enfermedad general' WHEN '01' THEN 'Accidente de trabajo' WHEN '02' THEN 'Accidente de tránsito' WHEN '03' THEN 'Otro accidente' WHEN '04' THEN 'Lesión por agresión' WHEN '05' THEN 'Lesión autoinfligida' WHEN '06' THEN 'Evento catastrófico' ELSE causa_externa END AS causa_externa_nombre,
@@ -242,7 +242,7 @@ func escanearEncuentro(row scanner) (models.Encuentro, error) {
 		&e.FechaAtencion, &e.CausaExterna, &e.FinalidadConsulta, &e.ViaIngreso,
 		&e.MotivoConsulta, &e.DescripcionIngreso,
 		&svRaw, &efRaw, &rsRaw,
-		&e.CodigoDiagnosticoPrincipal, &e.DescripcionDiagnostico, &e.PlanManejo,
+		&e.CodigoDiagnosticoPrincipal, &e.DescripcionDiagnostico, &e.TipoDiagnosticoPrincipal, &e.PlanManejo,
 		&e.FechaCreacion, &e.CreadoPor, &e.IDSistemaAnterior,
 		&e.FinalidadConsultaNombre, &e.CausaExternaNombre, &e.ViaIngresoNombre,
 	)
@@ -275,6 +275,11 @@ func insertarEncuentro(ctx context.Context, db encuentroQuerier, encuentroID str
 		}
 	}
 
+	tipoDiag := input.TipoDiagnosticoPrincipal
+	if tipoDiag == "" {
+		tipoDiag = "01"
+	}
+
 	row := db.QueryRow(ctx, `
 		INSERT INTO encuentro_clinico (
 			encuentro_id, numero_version, es_ultima_version, esta_activo, estado,
@@ -282,7 +287,7 @@ func insertarEncuentro(ctx context.Context, db encuentroQuerier, encuentroID str
 			fecha_atencion, causa_externa, finalidad_consulta, via_ingreso,
 			motivo_consulta, descripcion_ingreso,
 			signos_vitales, examen_fisico, revision_sistemas,
-			codigo_diagnostico_principal, descripcion_diagnostico, plan_manejo,
+			codigo_diagnostico_principal, descripcion_diagnostico, tipo_diagnostico_principal, plan_manejo,
 			creado_por
 		) VALUES (
 			$1, $2, TRUE, TRUE, 'finalizado',
@@ -290,15 +295,15 @@ func insertarEncuentro(ctx context.Context, db encuentroQuerier, encuentroID str
 			$5, $6, $7, $8,
 			$9, $10,
 			$11, $12, $13,
-			$14, $15, $16,
-			$17
+			$14, $15, $16, $17,
+			$18
 		) RETURNING `+columnasEncuentro,
 		encuentroID, version,
 		documento, input.EncuentroPadreID,
 		fechaAtencion, input.CausaExterna, input.FinalidadConsulta, input.ViaIngreso,
 		input.MotivoConsulta, input.DescripcionIngreso,
 		asJSON(input.SignosVitales), asJSON(input.ExamenFisico), asJSON(input.RevisionSistemas),
-		codigoPrincipal, descPrincipal, input.PlanManejo,
+		codigoPrincipal, descPrincipal, tipoDiag, input.PlanManejo,
 		creadoPor,
 	)
 

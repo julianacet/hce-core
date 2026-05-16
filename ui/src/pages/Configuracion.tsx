@@ -175,7 +175,7 @@ export default function Configuracion() {
           <div>
             <h3 className="card-title">Firma del médico</h3>
             <p className="text-xs mt-0.5" style={{ color: 'var(--hce-text-muted)' }}>
-              Imagen escaneada o fotografiada de la firma. Se incluye en las fórmulas médicas si lo elegís.
+              Imagen escaneada o fotografiada de la firma. Se incluye en las fórmulas médicas si lo elige.
             </p>
           </div>
 
@@ -194,7 +194,7 @@ export default function Configuracion() {
             <label className="flex flex-col items-center justify-center rounded-lg p-8 cursor-pointer transition-colors border-2 border-dashed border-[var(--hce-border)] hover:border-[var(--hce-primary)]">
               <Upload size={22} className="mb-2" style={{ color: 'var(--hce-text-muted)' }} />
               <span className="text-sm" style={{ color: 'var(--hce-text-muted)' }}>
-                Hacé clic para subir la imagen de tu firma
+                Haga clic para subir la imagen de su firma
               </span>
               <span className="text-xs mt-1" style={{ color: 'var(--hce-text-muted)' }}>
                 PNG, JPG — fondo blanco o transparente

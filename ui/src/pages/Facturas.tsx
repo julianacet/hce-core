@@ -12,7 +12,7 @@ import { ExportButtons } from '../components/ExportButtons'
 
 const LIMIT = 25
 
-type OrdenFactura = 'fecha' | 'paciente' | 'total' | 'estado'
+type OrdenFactura = 'fecha' | 'paciente' | 'total'
 
 function formatCOP(valor: number) {
   return new Intl.NumberFormat('es-CO', {
@@ -33,7 +33,7 @@ export default function Facturas() {
   const [orden, setOrden] = useState<OrdenFactura>('fecha')
   const [dir, setDir] = useState<SortDir>('desc')
   const [filtrosAbiertos, setFiltrosAbiertos] = useState(false)
-  const [filtros, setFiltros] = useState({ estado: '', desde: '', hasta: '' })
+  const [filtros, setFiltros] = useState({ desde: '', hasta: '' })
   const [descargando, setDescargando] = useState<'csv' | 'xlsx' | null>(null)
 
   const qDebounced = useDebounced(q)
@@ -47,7 +47,7 @@ export default function Facturas() {
   }
 
   function limpiarFiltros() {
-    setFiltros({ estado: '', desde: '', hasta: '' })
+    setFiltros({ desde: '', hasta: '' })
     setPage(1)
   }
 
@@ -83,7 +83,7 @@ export default function Facturas() {
   const total = data?.total ?? 0
   const totalPages = Math.max(1, Math.ceil(total / LIMIT))
 
-  const HEADERS = ['Fecha', 'Paciente', 'Documento', 'Estado', 'Subtotal', 'Total']
+  const HEADERS = ['Fecha', 'Paciente', 'Documento', 'Subtotal', 'Total']
 
   async function obtenerFilas() {
     const { facturas } = await exportarFacturas({ q: qDebounced, orden, dir, ...filtrosDebounced })
@@ -91,7 +91,6 @@ export default function Facturas() {
       formatFecha(f.fecha_creacion),
       f.paciente_nombre || f.paciente_documento,
       f.paciente_documento,
-      f.estado,
       f.subtotal,
       f.total,
     ])
@@ -158,15 +157,7 @@ export default function Facturas() {
 
           {filtrosAbiertos && (
             <div className="space-y-3 pt-1">
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                <div>
-                  <label className="label-hce">Estado</label>
-                  <select className="input-hce" value={filtros.estado} onChange={e => setFiltro('estado', e.target.value)}>
-                    <option value="">Todos</option>
-                    <option value="activa">Activa</option>
-                    <option value="anulada">Anulada</option>
-                  </select>
-                </div>
+              <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="label-hce">Desde</label>
                   <input type="date" className="input-hce" value={filtros.desde} onChange={e => setFiltro('desde', e.target.value)} />
@@ -197,9 +188,6 @@ export default function Facturas() {
                 <th className="px-4 py-3 text-right">
                   <SortButton activo={orden === 'total'} dir={dir} onClick={() => ordenarPor('total')}>Total</SortButton>
                 </th>
-                <th className="px-4 py-3 text-left">
-                  <SortButton activo={orden === 'estado'} dir={dir} onClick={() => ordenarPor('estado')}>Estado</SortButton>
-                </th>
                 <th className="w-8" />
               </tr>
             </thead>
@@ -208,7 +196,7 @@ export default function Facturas() {
                 isLoading={isLoading}
                 isError={isError}
                 isEmpty={facturas.length === 0}
-                colSpan={5}
+                colSpan={4}
                 hayBusqueda={!!(qDebounced || hayFiltros)}
                 textoVacio="No hay facturas registradas."
                 textoSinResultados="Sin resultados para ese criterio."
@@ -230,13 +218,6 @@ export default function Facturas() {
                   </td>
                   <td className="px-4 py-3 text-right font-medium tabular-nums">
                     {formatCOP(f.total)}
-                  </td>
-                  <td className="px-4 py-3">
-                    {f.estado === 'anulada' ? (
-                      <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-red-100 text-red-700">Anulada</span>
-                    ) : (
-                      <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-green-100 text-green-700">Activa</span>
-                    )}
                   </td>
                   <td className="px-3 py-3 text-slate-300">
                     <ChevronRight size={15} />

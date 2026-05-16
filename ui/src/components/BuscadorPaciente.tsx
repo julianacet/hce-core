@@ -157,16 +157,16 @@ export function BuscadorPaciente({ selectedDocumento, onSelect }: Props) {
       <div className="border-t" style={{ borderColor: 'var(--hce-border)' }}>
         <div className="px-5 py-2 flex items-center justify-between" style={{ background: 'var(--hce-bg)' }}>
           <p className="text-xs" style={{ color: 'var(--hce-text-muted)' }}>
-            {isLoading ? 'Buscando…' : `${total} paciente${total !== 1 ? 's' : ''} — haz clic en uno para seleccionarlo`}
+            {isLoading ? 'Buscando…' : `${total} paciente${total !== 1 ? 's' : ''} — haga clic en uno para seleccionarlo`}
           </p>
         </div>
         <div className="overflow-y-auto divide-y" style={{ maxHeight: '14rem', borderColor: 'var(--hce-border)' }}>
           {isError && (
-            <div className="px-5 py-6 text-center text-sm text-red-500">Error al cargar. Intenta de nuevo.</div>
+            <div className="px-5 py-6 text-center text-sm text-red-500">Error al cargar. Intente de nuevo.</div>
           )}
           {!isLoading && !isError && resultados.length === 0 && (
             <div className="px-5 py-6 text-center text-sm" style={{ color: 'var(--hce-text-muted)' }}>
-              {(qDebounced || hayFiltros) ? 'Sin resultados para esa búsqueda.' : 'Escribe para buscar un paciente.'}
+              {(qDebounced || hayFiltros) ? 'Sin resultados para esa búsqueda.' : 'Escriba para buscar un paciente.'}
             </div>
           )}
           {resultados.map(p => {

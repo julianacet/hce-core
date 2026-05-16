@@ -17,7 +17,7 @@ export function TableEmptyState({
   hayBusqueda = false,
   textoVacio = 'Sin resultados.',
   textoSinResultados = 'No se encontraron resultados con ese criterio.',
-  textoError = 'Error al cargar. Intenta de nuevo.',
+  textoError = 'Error al cargar. Intente de nuevo.',
   icon,
 }: TableEmptyStateProps) {
   if (!isLoading && !isError && !isEmpty) return null

@@ -136,6 +136,7 @@ CREATE TABLE encuentro_clinico (
     -- Diagnóstico principal (mantenido para compat. RIPS; derivado de encuentro_diagnostico)
     codigo_diagnostico_principal VARCHAR(8),  -- CIE-10
     descripcion_diagnostico      TEXT,
+    tipo_diagnostico_principal   CHAR(2) NOT NULL DEFAULT '01', -- "01" impresión, "02" confirmado clínicamente, "03" por laboratorio
     plan_manejo                  TEXT,
 
     -- Integridad del documento (Ley 527/1999)
@@ -342,15 +343,19 @@ CREATE INDEX idx_encuesta_fecha ON encuesta_satisfaccion(fecha_atencion DESC);
 -- ============================================================
 
 CREATE TABLE insumo (
-    id            UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
-    nombre        TEXT          NOT NULL,
-    descripcion   TEXT,
-    unidad        TEXT          NOT NULL,  -- unidad, caja, rollo, ml…
-    stock_actual  NUMERIC(10,2) NOT NULL DEFAULT 0 CHECK (stock_actual >= 0),
-    stock_minimo  NUMERIC(10,2) NOT NULL DEFAULT 0,  -- dispara alerta cuando stock_actual <= stock_minimo
-    esta_activo   BOOLEAN       NOT NULL DEFAULT TRUE,
-    fecha_creacion TIMESTAMPTZ  NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    creado_por    TEXT          NOT NULL
+    id                UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
+    nombre            TEXT          NOT NULL,
+    descripcion       TEXT,
+    unidad            TEXT          NOT NULL,  -- unidad, caja, rollo, ml…
+    stock_actual      NUMERIC(10,2) NOT NULL DEFAULT 0 CHECK (stock_actual >= 0),
+    stock_minimo      NUMERIC(10,2) NOT NULL DEFAULT 0,  -- dispara alerta cuando stock_actual <= stock_minimo
+    lote              TEXT,
+    registro_invima   TEXT,
+    fecha_compra      DATE,
+    fecha_vencimiento DATE,
+    esta_activo       BOOLEAN       NOT NULL DEFAULT TRUE,
+    fecha_creacion    TIMESTAMPTZ   NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    creado_por        TEXT          NOT NULL
 );
 
 -- Cada entrada o salida de inventario queda registrada aquí.

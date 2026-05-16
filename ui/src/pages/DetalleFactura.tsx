@@ -22,7 +22,7 @@ export default function DetalleFactura() {
   const anular = useAnularFactura(facturaId ?? '')
 
   async function handleAnular() {
-    if (!window.confirm('¿Seguro que querés anular esta factura? Esta acción no se puede deshacer.')) return
+    if (!window.confirm('¿Está seguro de que desea anular esta factura? Esta acción no se puede deshacer.')) return
     await anular.mutateAsync()
     navigate('/facturas')
   }
@@ -75,11 +75,6 @@ export default function DetalleFactura() {
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="card-title">Factura</h3>
-                {factura.estado === 'anulada' && (
-                  <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-red-100 text-red-700">
-                    ANULADA
-                  </span>
-                )}
               </div>
               <p className="text-xs text-slate-400 mt-0.5">
                 {new Date(factura.fecha_creacion).toLocaleString('es-CO')} · {pacienteNombre}

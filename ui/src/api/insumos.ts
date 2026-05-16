@@ -9,6 +9,10 @@ export type Insumo = {
   unidad: string
   stock_actual: number
   stock_minimo: number
+  lote: string | null
+  registro_invima: string | null
+  fecha_compra: string | null
+  fecha_vencimiento: string | null
   esta_activo: boolean
   fecha_creacion: string
   creado_por: string
@@ -19,6 +23,10 @@ export type InsumoInput = {
   descripcion?: string
   unidad: string
   stock_minimo: number
+  lote?: string
+  registro_invima?: string
+  fecha_compra?: string
+  fecha_vencimiento?: string
 }
 
 export type MovimientoInput = {

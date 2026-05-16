@@ -152,7 +152,7 @@ function FormProveedor({
           <label className="label-hce">Productos o servicios que provee</label>
           <textarea className="input-hce" rows={3} value={form.descripcion_servicios ?? ''}
             onChange={e => set('descripcion_servicios', e.target.value)}
-            placeholder="Describe los productos o servicios que provee este proveedor al consultorio..." />
+            placeholder="Describa los productos o servicios que provee este proveedor al consultorio..." />
         </div>
         <div>
           <label className="label-hce">Notas internas</label>

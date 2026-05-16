@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { FileCode2, AlertCircle, Users, Calendar } from 'lucide-react'
+import { FileCode2, AlertCircle } from 'lucide-react'
 import { useMedico } from '../context/MedicoContext'
 import {
   useRipsMensualResumen,
@@ -27,19 +27,11 @@ function descargarJSON(datos: unknown, nombre: string) {
   URL.revokeObjectURL(url)
 }
 
-function mesAnterior() {
-  const hoy = new Date()
-  const mes = hoy.getMonth() === 0 ? 12 : hoy.getMonth()
-  const anio = hoy.getMonth() === 0 ? hoy.getFullYear() - 1 : hoy.getFullYear()
-  return { mes, anio }
-}
-
 export default function RipsMensual() {
   const { medico } = useMedico()
-  const prev = mesAnterior()
-  const [anio, setAnio] = useState(prev.anio)
-  const [mes, setMes] = useState(prev.mes)
-  const [tipoDiag, setTipoDiag] = useState('01')
+  const hoy = new Date()
+  const [anio, setAnio] = useState(hoy.getFullYear())
+  const [mes, setMes] = useState(hoy.getMonth() + 1)
 
   const { data: resumen } = useRipsMensualResumen(anio, mes)
   const { data: historial = [] } = useRipsHistorial()
@@ -53,7 +45,6 @@ export default function RipsMensual() {
       mes,
       nit: medico.nit,
       codPrestador: medico.codPrestador,
-      tipoDiagnosticoPrincipal: tipoDiag,
     })
     const nombreArchivo = `rips_${anio}_${String(mes).padStart(2, '0')}.json`
     descargarJSON(resultado.datos_json, nombreArchivo)
@@ -72,7 +63,7 @@ export default function RipsMensual() {
         <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
           <AlertCircle size={16} className="text-amber-600 mt-0.5 shrink-0" />
           <p className="text-sm text-amber-700">
-            Completá el <strong>NIT</strong> y el <strong>código de habilitación</strong> en
+            Complete el <strong>NIT</strong> y el <strong>código de habilitación</strong> en
             Configuración antes de generar RIPS.
           </p>
         </div>
@@ -82,8 +73,8 @@ export default function RipsMensual() {
       <div className="card-hce p-5 space-y-4">
         <h3 className="card-title">Período a reportar</h3>
 
-        <div className="grid grid-cols-3 gap-4">
-          <div>
+        <div className="flex gap-3">
+          <div className="w-44">
             <label className="label-hce">Mes</label>
             <select
               value={mes}
@@ -95,7 +86,7 @@ export default function RipsMensual() {
               ))}
             </select>
           </div>
-          <div>
+          <div className="w-28">
             <label className="label-hce">Año</label>
             <input
               type="number"
@@ -106,55 +97,30 @@ export default function RipsMensual() {
               className="input-hce"
             />
           </div>
-          <div>
-            <label className="label-hce">Tipo diagnóstico</label>
-            <select
-              value={tipoDiag}
-              onChange={(e) => setTipoDiag(e.target.value)}
-              className="input-hce"
-            >
-              <option value="01">01 — Impresión diagnóstica</option>
-              <option value="02">02 — Confirmado clínicamente</option>
-              <option value="03">03 — Confirmado por laboratorio</option>
-            </select>
-          </div>
         </div>
 
-        {/* Resumen del período */}
         {resumen && (
-          <div className="grid grid-cols-2 gap-3 pt-2">
-            {[
-              { label: 'Pacientes', value: resumen.pacientes, icon: Users, color: 'text-blue-600' },
-              { label: 'Consultas', value: resumen.encuentros, icon: Calendar, color: 'text-slate-600' },
-            ].map(({ label, value, icon: Icon, color }) => (
-              <div key={label} className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 text-center">
-                <Icon size={16} className={`mx-auto mb-1 ${color}`} />
-                <p className="text-lg font-semibold" style={{ color: 'var(--hce-text)' }}>{value}</p>
-                <p className="text-xs" style={{ color: 'var(--hce-text-muted)' }}>{label}</p>
-              </div>
-            ))}
-          </div>
+          <p className="text-sm" style={{ color: 'var(--hce-text-muted)' }}>
+            {resumen.pacientes} {resumen.pacientes === 1 ? 'paciente' : 'pacientes'} · {resumen.encuentros} {resumen.encuentros === 1 ? 'consulta' : 'consultas'}
+          </p>
         )}
 
-        <div className="flex justify-end pt-1">
+        <div className="flex flex-col items-center gap-2">
           <button
             onClick={handleGenerar}
             disabled={sinConfig || generar.isPending || (resumen?.encuentros ?? 0) === 0}
             className="btn-primary disabled:opacity-50"
           >
             <FileCode2 size={15} />
-            {generar.isPending
-              ? 'Generando...'
-              : `Generar RIPS ${MESES[mes - 1]} ${anio}`}
+            {generar.isPending ? 'Generando...' : `Generar RIPS ${MESES[mes - 1]} ${anio}`}
           </button>
+          {generar.isError && (
+            <p className="text-xs text-red-500">{generar.error.message}</p>
+          )}
+          {resumen?.encuentros === 0 && (
+            <p className="text-xs" style={{ color: 'var(--hce-text-muted)' }}>No hay consultas registradas en este período.</p>
+          )}
         </div>
-
-        {generar.isError && (
-          <p className="text-xs text-red-500">{generar.error.message}</p>
-        )}
-        {resumen?.encuentros === 0 && (
-          <p className="text-xs text-slate-400">No hay consultas registradas en este período.</p>
-        )}
       </div>
 
       {/* Historial de lotes */}

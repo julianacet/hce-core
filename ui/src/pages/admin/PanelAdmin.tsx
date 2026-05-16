@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useTabParam } from '../../hooks/useTabParam'
 import { useTema, DEFAULTS, type Tema } from '../../context/TemaContext'
-import { Upload, Trash2, CheckCircle, RotateCcw, Plus, Pencil, X, ShieldCheck, Stethoscope, Users, AlertTriangle, ExternalLink, ClipboardList, Activity, Info, PowerOff, Power, Pill } from 'lucide-react'
+import { Upload, Trash2, CheckCircle, RotateCcw, Plus, Pencil, X, ShieldCheck, Stethoscope, Users, AlertTriangle, ExternalLink, ClipboardList, Activity, Info, PowerOff, Power, Pill, Moon } from 'lucide-react'
 import { RowMenu } from '../../components/RowMenu'
 import { NavigationGuard } from '../../components/NavigationGuard'
 import { useConfirmar } from '../../components/ModalConfirmar'
@@ -60,24 +60,36 @@ import {
 
 const PALETAS = [
   {
-    nombre: 'Azul (defecto)',
-    t: { colorPrimario: '#1d4ed8', colorPrimarioTexto: '#ffffff', colorPrimarioHover: '#1e40af', colorSidebar: '#1e3a5f', colorSidebarTexto: '#ffffff', colorSidebarTextoMuted: 'rgba(255,255,255,0.55)', colorFondo: '#f8fafc', colorCard: '#ffffff', colorBorde: '#e2e8f0', colorTexto: '#0f172a', colorTextoMuted: '#64748b' },
+    nombre: 'Azul clínico',
+    t: { colorPrimario: '#1d4ed8', colorPrimarioTexto: '#ffffff', colorPrimarioHover: '#1e40af', colorSidebar: '#1e3a5f', colorSidebarTexto: '#ffffff', colorSidebarTextoMuted: 'rgba(255,255,255,0.6)', colorFondo: '#f1f5f9', colorCard: '#ffffff', colorBorde: '#cbd5e1', colorTexto: '#0f172a', colorTextoMuted: '#475569' },
   },
   {
-    nombre: 'Verde médico',
-    t: { colorPrimario: '#059669', colorPrimarioTexto: '#ffffff', colorPrimarioHover: '#047857', colorSidebar: '#064e3b', colorSidebarTexto: '#ffffff', colorSidebarTextoMuted: 'rgba(255,255,255,0.55)', colorFondo: '#f0fdf4', colorCard: '#ffffff', colorBorde: '#d1fae5', colorTexto: '#052e16', colorTextoMuted: '#6b7280' },
+    nombre: 'Azul marino',
+    t: { colorPrimario: '#1e40af', colorPrimarioTexto: '#ffffff', colorPrimarioHover: '#1e3a8a', colorSidebar: '#172554', colorSidebarTexto: '#ffffff', colorSidebarTextoMuted: 'rgba(255,255,255,0.6)', colorFondo: '#f1f5f9', colorCard: '#ffffff', colorBorde: '#cbd5e1', colorTexto: '#0f172a', colorTextoMuted: '#475569' },
+  },
+  {
+    nombre: 'Teal',
+    t: { colorPrimario: '#0d9488', colorPrimarioTexto: '#ffffff', colorPrimarioHover: '#0f766e', colorSidebar: '#134e4a', colorSidebarTexto: '#ffffff', colorSidebarTextoMuted: 'rgba(255,255,255,0.6)', colorFondo: '#f1f5f9', colorCard: '#ffffff', colorBorde: '#cbd5e1', colorTexto: '#0f172a', colorTextoMuted: '#475569' },
+  },
+  {
+    nombre: 'Verde salud',
+    t: { colorPrimario: '#16a34a', colorPrimarioTexto: '#ffffff', colorPrimarioHover: '#15803d', colorSidebar: '#14532d', colorSidebarTexto: '#ffffff', colorSidebarTextoMuted: 'rgba(255,255,255,0.6)', colorFondo: '#f1f5f9', colorCard: '#ffffff', colorBorde: '#cbd5e1', colorTexto: '#0f172a', colorTextoMuted: '#475569' },
+  },
+  {
+    nombre: 'Índigo',
+    t: { colorPrimario: '#4338ca', colorPrimarioTexto: '#ffffff', colorPrimarioHover: '#3730a3', colorSidebar: '#1e1b4b', colorSidebarTexto: '#ffffff', colorSidebarTextoMuted: 'rgba(255,255,255,0.6)', colorFondo: '#f1f5f9', colorCard: '#ffffff', colorBorde: '#cbd5e1', colorTexto: '#0f172a', colorTextoMuted: '#475569' },
   },
   {
     nombre: 'Violeta',
-    t: { colorPrimario: '#7c3aed', colorPrimarioTexto: '#ffffff', colorPrimarioHover: '#6d28d9', colorSidebar: '#3b1f6e', colorSidebarTexto: '#ffffff', colorSidebarTextoMuted: 'rgba(255,255,255,0.55)', colorFondo: '#faf5ff', colorCard: '#ffffff', colorBorde: '#ede9fe', colorTexto: '#1e1b4b', colorTextoMuted: '#6b7280' },
+    t: { colorPrimario: '#7c3aed', colorPrimarioTexto: '#ffffff', colorPrimarioHover: '#6d28d9', colorSidebar: '#3b1f6e', colorSidebarTexto: '#ffffff', colorSidebarTextoMuted: 'rgba(255,255,255,0.6)', colorFondo: '#f1f5f9', colorCard: '#ffffff', colorBorde: '#cbd5e1', colorTexto: '#0f172a', colorTextoMuted: '#475569' },
   },
   {
     nombre: 'Gris oscuro',
-    t: { colorPrimario: '#374151', colorPrimarioTexto: '#ffffff', colorPrimarioHover: '#1f2937', colorSidebar: '#111827', colorSidebarTexto: '#ffffff', colorSidebarTextoMuted: 'rgba(255,255,255,0.5)', colorFondo: '#f9fafb', colorCard: '#ffffff', colorBorde: '#e5e7eb', colorTexto: '#111827', colorTextoMuted: '#6b7280' },
+    t: { colorPrimario: '#374151', colorPrimarioTexto: '#ffffff', colorPrimarioHover: '#1f2937', colorSidebar: '#111827', colorSidebarTexto: '#ffffff', colorSidebarTextoMuted: 'rgba(255,255,255,0.6)', colorFondo: '#f1f5f9', colorCard: '#ffffff', colorBorde: '#cbd5e1', colorTexto: '#0f172a', colorTextoMuted: '#475569' },
   },
   {
-    nombre: 'Claro / Light',
-    t: { colorPrimario: '#2563eb', colorPrimarioTexto: '#ffffff', colorPrimarioHover: '#1d4ed8', colorSidebar: '#f1f5f9', colorSidebarTexto: '#1e293b', colorSidebarTextoMuted: '#64748b', colorFondo: '#ffffff', colorCard: '#f8fafc', colorBorde: '#e2e8f0', colorTexto: '#0f172a', colorTextoMuted: '#64748b' },
+    nombre: 'Claro',
+    t: { colorPrimario: '#2563eb', colorPrimarioTexto: '#ffffff', colorPrimarioHover: '#1d4ed8', colorSidebar: '#f1f5f9', colorSidebarTexto: '#1e293b', colorSidebarTextoMuted: '#64748b', colorFondo: '#ffffff', colorCard: '#f8fafc', colorBorde: '#e2e8f0', colorTexto: '#0f172a', colorTextoMuted: '#475569' },
   },
 ]
 
@@ -151,7 +163,7 @@ function TiposEventoAdversoAdmin({ onAbierto }: { onAbierto?: (v: boolean) => vo
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm" style={{ color: 'var(--hce-text-muted)' }}>
-            Configura qué tipos de eventos adversos puede seleccionar el personal al reportar.
+            Configure qué tipos de eventos adversos puede seleccionar el personal al reportar.
             Los tipos marcados con INVIMA indican que requieren reporte externo a Farmacovigilancia o Tecnovigilancia.
           </p>
         </div>
@@ -213,7 +225,7 @@ function TiposEventoAdversoAdmin({ onAbierto }: { onAbierto?: (v: boolean) => vo
       </div>
 
       <p className="text-xs" style={{ color: 'var(--hce-text-muted)' }}>
-        Tipos marcados con INVIMA: asegúrate de completar el reporte en
+        Tipos marcados con INVIMA: asegúrese de completar el reporte en
         {' '}<span className="font-medium">reportesalud.minsalud.gov.co</span>{' '}
         o en el sistema de farmacovigilancia correspondiente.
       </p>
@@ -406,7 +418,7 @@ function PlantillasAdmin({ onAbierto }: { onAbierto?: (v: boolean) => void }) {
             {/* Chips de variables */}
             <div className="border border-slate-200 rounded-t-lg bg-slate-50 px-3 py-2.5">
               <p className="text-xs text-slate-500 mb-2">
-                Haz clic en un dato para insertarlo en el texto donde esté el cursor:
+                Haga clic en un dato para insertarlo en el texto donde esté el cursor:
               </p>
               <div className="flex flex-wrap gap-1.5">
                 {VARIABLES_CONSENTIMIENTO.map((v) => (
@@ -429,7 +441,7 @@ function PlantillasAdmin({ onAbierto }: { onAbierto?: (v: boolean) => void }) {
               onChange={(e) => setFormP((f) => ({ ...f, contenido: e.target.value }))}
               rows={14}
               className="input-hce rounded-t-none border-t-0 resize-y text-sm leading-relaxed"
-              placeholder="Por medio del presente documento, yo…  (usa los botones de arriba para insertar datos del paciente o del médico)"
+              placeholder="Por medio del presente documento, yo…  (use los botones de arriba para insertar datos del paciente o del médico)"
             />
           </div>
 
@@ -761,7 +773,7 @@ function AntecedentesAdmin({ onAbierto }: { onAbierto?: (v: boolean) => void }) 
     if (opcionesRaw.trim()) {
       if (form.tipo_respuesta === 'opciones') {
         opcionesJSON = opcionesRaw.split('\n').map(o => o.trim()).filter(Boolean)
-        if (opcionesJSON.length === 0) { setError('Debes definir al menos una opción.'); return }
+        if (opcionesJSON.length === 0) { setError('Debe definir al menos una opción.'); return }
       } else {
         try { opcionesJSON = JSON.parse(opcionesRaw) }
         catch { setError('El JSON de opciones no es válido.'); return }
@@ -832,7 +844,7 @@ function AntecedentesAdmin({ onAbierto }: { onAbierto?: (v: boolean) => void }) 
               <label className="label-hce">
                 Opciones <span className="font-normal text-slate-400">— una por línea *</span>
               </label>
-              <textarea className="input-hce font-mono text-sm resize-none" rows={4}
+              <textarea className="input-hce font-mono text-sm resize-y" rows={4}
                 value={opcionesRaw}
                 onChange={e => setOpcionesRaw(e.target.value)}
                 placeholder={'Nunca ha fumado\nFumador activo\nEx-fumador'} />
@@ -1032,7 +1044,7 @@ function CamposClinicosAdmin({ onAbierto }: { onAbierto?: (v: boolean) => void }
   async function guardar() {
     if (!form.nombre.trim()) { setError('El nombre es obligatorio.'); return }
     if (!editando && !form.clave.trim()) { setError('La clave es obligatoria.'); return }
-    if (form.tipo === 'opciones' && !opcionesRaw.trim()) { setError('Debes definir al menos una opción.'); return }
+    if (form.tipo === 'opciones' && !opcionesRaw.trim()) { setError('Debe definir al menos una opción.'); return }
     setError('')
     const opciones = form.tipo === 'opciones'
       ? opcionesRaw.split('\n').map(o => o.trim()).filter(Boolean)
@@ -1100,7 +1112,7 @@ function CamposClinicosAdmin({ onAbierto }: { onAbierto?: (v: boolean) => void }
 
           <div>
             <label className="label-hce">Descripción / instrucción para el médico <span className="font-normal text-slate-400">(opcional)</span></label>
-            <textarea className="input-hce resize-none" rows={2}
+            <textarea className="input-hce resize-y" rows={2}
               value={form.descripcion ?? ''}
               onChange={e => setForm(f => ({ ...f, descripcion: e.target.value || undefined }))}
               placeholder="Ej: Tomar en reposo, brazo derecho…" />
@@ -1328,7 +1340,7 @@ function MedicamentosAdmin({ onAbierto }: { onAbierto?: (v: boolean) => void }) 
     <div className="space-y-4">
       <div className="flex items-start justify-between gap-4">
         <p className="text-sm" style={{ color: 'var(--hce-text-muted)' }}>
-          Catálogo de medicamentos disponibles para formular. Muestra hasta 80 resultados; usa el buscador para encontrar uno específico.
+          Catálogo de medicamentos disponibles para formular. Muestra hasta 80 resultados; use el buscador para encontrar uno específico.
         </p>
         <button onClick={abrirNuevo} className="btn-primary shrink-0">
           <Plus className="w-4 h-4" /> Nuevo
@@ -1489,6 +1501,12 @@ export default function PanelAdmin() {
 
   const aparienciaDirty = tab === 'apariencia' && JSON.stringify(form) !== JSON.stringify(tema)
 
+  const prevFondo      = form.modoOscuro ? '#0f172a' : form.colorFondo
+  const prevCard       = form.modoOscuro ? '#1e293b' : form.colorCard
+  const prevBorde      = form.modoOscuro ? '#334155' : form.colorBorde
+  const prevTexto      = form.modoOscuro ? '#f1f5f9' : form.colorTexto
+  const prevTextoMuted = form.modoOscuro ? '#94a3b8' : form.colorTextoMuted
+
   return (
     <>
     <NavigationGuard when={aparienciaDirty || formularioAbierto} />
@@ -1590,6 +1608,56 @@ export default function PanelAdmin() {
           </div>
         </div>
 
+        {/* Tipografía */}
+        <div className="card-hce p-5 space-y-4">
+          <h3 className="card-title">Tipografía</h3>
+          <div>
+            <label className="label-hce">Tamaño de fuente</label>
+            <div className="flex gap-2">
+              {([
+                { v: 'compacto', l: 'Compacto', desc: '13 px' },
+                { v: 'normal',   l: 'Normal',   desc: '14 px' },
+                { v: 'grande',   l: 'Grande',   desc: '15 px' },
+              ] as const).map(({ v, l, desc }) => (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => set('tamanoFuente', v)}
+                  className={`flex-1 py-2 rounded-md border text-sm font-medium transition-colors ${
+                    form.tamanoFuente === v
+                      ? 'border-[var(--hce-primary)] bg-blue-50 text-[var(--hce-primary)]'
+                      : 'border-[var(--hce-border)] hover:border-slate-400'
+                  }`}
+                  style={{ color: form.tamanoFuente === v ? undefined : 'var(--hce-text-muted)' }}
+                >
+                  {l}
+                  <span className="block text-xs font-normal opacity-60">{desc}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="border-t pt-4" style={{ borderColor: 'var(--hce-border)' }}>
+            <label className="label-hce">Modo oscuro</label>
+            <button
+              type="button"
+              onClick={() => set('modoOscuro', !form.modoOscuro)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-md border text-sm font-medium transition-colors ${
+                form.modoOscuro
+                  ? 'border-[var(--hce-primary)] bg-blue-50 text-[var(--hce-primary)]'
+                  : 'border-[var(--hce-border)]'
+              }`}
+              style={{ color: form.modoOscuro ? undefined : 'var(--hce-text-muted)' }}
+            >
+              <Moon size={14} />
+              {form.modoOscuro ? 'Activado' : 'Desactivado'}
+            </button>
+            <p className="text-xs mt-1.5" style={{ color: 'var(--hce-text-muted)' }}>
+              Cambia fondos y superficies a tonos oscuros. El acento y el sidebar se mantienen de la paleta.
+            </p>
+          </div>
+        </div>
+
         {/* Colores individuales */}
         <div className="card-hce p-5 space-y-4">
           <h3 className="card-title">Colores individuales</h3>
@@ -1640,10 +1708,10 @@ export default function PanelAdmin() {
             </div>
             {/* Mini contenido */}
             <div className="flex-1 rounded-lg p-3 space-y-2"
-              style={{ backgroundColor: form.colorFondo }}>
-              <div className="rounded-md p-3" style={{ backgroundColor: form.colorCard, border: `1px solid ${form.colorBorde}` }}>
-                <p className="text-xs font-medium mb-1" style={{ color: form.colorTexto }}>Panel de ejemplo</p>
-                <p className="text-xs" style={{ color: form.colorTextoMuted }}>Texto secundario</p>
+              style={{ backgroundColor: prevFondo }}>
+              <div className="rounded-md p-3" style={{ backgroundColor: prevCard, border: `1px solid ${prevBorde}` }}>
+                <p className="text-xs font-medium mb-1" style={{ color: prevTexto }}>Panel de ejemplo</p>
+                <p className="text-xs" style={{ color: prevTextoMuted }}>Texto secundario</p>
               </div>
               <button type="button" className="text-xs px-3 py-1.5 rounded-md"
                 style={{ backgroundColor: form.colorPrimario, color: form.colorPrimarioTexto }}>

@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import type { PacienteInput } from '../api/pacientes'
 import { SelectorMunicipioCol, SelectorPais } from './SelectorUbicacion'
 import { SelectorOcupacion } from './SelectorOcupacion'
@@ -16,7 +17,7 @@ function Seccion({ titulo, children }: { titulo: string; children: React.ReactNo
 function Campo({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
   return (
     <div>
-      <label className="block text-xs text-slate-500 mb-1">
+      <label className="label-hce">
         {label}{required && <span className="text-red-400 ml-0.5">*</span>}
       </label>
       {children}
@@ -36,6 +37,9 @@ export default function PacienteFormFields({
   form, onChange, ocupacionNombre, onOcupacionNombreChange, showPoliticaDatos = false,
 }: Props) {
   const set = (campo: keyof PacienteInput, valor: string | boolean) => onChange(campo, valor)
+  const [acompananteAbierto, setAcompananteAbierto] = useState(false)
+  const [etniaDiscAbierta, setEtniaDscAbierta] = useState(false)
+  const edad = form.fecha_nacimiento ? calcularEdad(form.fecha_nacimiento) : null
 
   return (
     <>
@@ -89,21 +93,16 @@ export default function PacienteFormFields({
       <Seccion titulo="Datos personales">
         <div className="grid grid-cols-2 gap-4">
           <Campo label="Fecha de nacimiento" required>
-            <input type="date" value={form.fecha_nacimiento ?? ''} onChange={e => set('fecha_nacimiento', e.target.value)}
-              required className="input-hce" />
-          </Campo>
-          <Campo label="Edad">
-            <input type="text" readOnly
-              value={form.fecha_nacimiento ? (calcularEdad(form.fecha_nacimiento) !== null ? `${calcularEdad(form.fecha_nacimiento)} años` : '') : ''}
-              placeholder="Se calcula automáticamente"
-              className="input-hce bg-slate-50 text-slate-500 cursor-default" />
-          </Campo>
-          <Campo label="Género" required>
-            <select value={form.genero ?? 'M'} onChange={e => set('genero', e.target.value)} className="input-hce">
-              <option value="M">Masculino</option>
-              <option value="F">Femenino</option>
-              <option value="X">Otro</option>
-            </select>
+            <div className="flex items-center gap-2">
+              <input type="date" value={form.fecha_nacimiento ?? ''} onChange={e => set('fecha_nacimiento', e.target.value)}
+                required className="input-hce" />
+              {edad !== null && (
+                <span className="text-xs px-2 py-1 rounded-full whitespace-nowrap shrink-0"
+                  style={{ backgroundColor: 'var(--hce-bg)', color: 'var(--hce-text-muted)', border: '1px solid var(--hce-border)' }}>
+                  {edad} años
+                </span>
+              )}
+            </div>
           </Campo>
           <Campo label="Estado civil">
             <select value={form.estado_civil ?? ''} onChange={e => set('estado_civil', e.target.value)} className="input-hce">
@@ -116,19 +115,38 @@ export default function PacienteFormFields({
               <option value="06">Viudo/a</option>
             </select>
           </Campo>
-          <Campo label="Ocupación">
-            <SelectorOcupacion
-              value={form.ocupacion ?? ''}
-              nombre={ocupacionNombre}
-              onChange={(codigo, nombre) => { set('ocupacion', codigo); onOcupacionNombreChange(nombre) }}
-            />
-          </Campo>
+          <div className="col-span-2">
+            <Campo label="Género" required>
+              <div className="flex gap-6 mt-1.5">
+                {([['M', 'Masculino'], ['F', 'Femenino'], ['X', 'Otro']] as const).map(([v, l]) => (
+                  <label key={v} className="flex items-center gap-2 cursor-pointer select-none"
+                    style={{ color: 'var(--hce-text)' }}>
+                    <input type="radio" name="genero" value={v}
+                      checked={(form.genero ?? 'M') === v}
+                      onChange={e => set('genero', e.target.value)} />
+                    <span className="text-sm">{l}</span>
+                  </label>
+                ))}
+              </div>
+            </Campo>
+          </div>
+          <div className="col-span-2">
+            <Campo label="Ocupación">
+              <SelectorOcupacion
+                value={form.ocupacion ?? ''}
+                nombre={ocupacionNombre}
+                onChange={(codigo, nombre) => { set('ocupacion', codigo); onOcupacionNombreChange(nombre) }}
+              />
+            </Campo>
+          </div>
         </div>
       </Seccion>
 
-      {/* Contacto */}
+      {/* Contacto y ubicación */}
       <Seccion titulo="Contacto y ubicación">
         <div className="grid grid-cols-2 gap-4">
+
+          {/* Contacto */}
           <Campo label="Teléfono">
             <input type="tel" value={form.telefono ?? ''} onChange={e => set('telefono', e.target.value)}
               placeholder="Ej: 3001234567" className="input-hce" />
@@ -137,22 +155,35 @@ export default function PacienteFormFields({
             <input type="email" value={form.correo_electronico ?? ''} onChange={e => set('correo_electronico', e.target.value)}
               placeholder="Ej: correo@ejemplo.com" className="input-hce" />
           </Campo>
-          <SelectorMunicipioCol
-            value={form.codigo_municipio_residencia ?? ''}
-            onChange={v => set('codigo_municipio_residencia', v)}
-            required
-          />
+
+          {/* Dirección + zona */}
           <Campo label="Dirección">
             <input type="text" value={form.direccion ?? ''} onChange={e => set('direccion', e.target.value)}
               placeholder="Ej: Cra 10 # 20-30" className="input-hce" />
           </Campo>
           <Campo label="Zona de residencia" required>
-            <select value={form.zona_residencia ?? 'U'} onChange={e => set('zona_residencia', e.target.value)} className="input-hce">
-              <option value="U">Urbana</option>
-              <option value="R">Rural</option>
-            </select>
+            <div className="flex gap-6 mt-1.5">
+              {([['U', 'Urbana'], ['R', 'Rural']] as const).map(([v, l]) => (
+                <label key={v} className="flex items-center gap-2 cursor-pointer select-none"
+                  style={{ color: 'var(--hce-text)' }}>
+                  <input type="radio" name="zona_residencia" value={v}
+                    checked={(form.zona_residencia ?? 'U') === v}
+                    onChange={e => set('zona_residencia', e.target.value)} />
+                  <span className="text-sm">{l}</span>
+                </label>
+              ))}
+            </div>
           </Campo>
-          <Campo label="País de origen" required>
+
+          {/* Municipio de residencia */}
+          <SelectorMunicipioCol
+            value={form.codigo_municipio_residencia ?? ''}
+            onChange={v => set('codigo_municipio_residencia', v)}
+            required
+          />
+
+          {/* País de origen — separado de residencia, default Colombia */}
+          <Campo label="País de origen">
             <SelectorPais
               value={form.codigo_pais_origen ?? '170'}
               onChange={v => set('codigo_pais_origen', v)}
@@ -162,25 +193,7 @@ export default function PacienteFormFields({
         </div>
       </Seccion>
 
-      {/* Responsable */}
-      <Seccion titulo="Acompañante o responsable">
-        <div className="grid grid-cols-2 gap-4">
-          <Campo label="Nombre del responsable">
-            <input type="text" value={form.nombre_responsable ?? ''} onChange={e => set('nombre_responsable', e.target.value)}
-              placeholder="Nombre completo" className="input-hce" />
-          </Campo>
-          <Campo label="Teléfono del responsable">
-            <input type="tel" value={form.telefono_responsable ?? ''} onChange={e => set('telefono_responsable', e.target.value)}
-              placeholder="Ej: 3009876543" className="input-hce" />
-          </Campo>
-          <Campo label="Parentesco">
-            <input type="text" value={form.parentesco_responsable ?? ''} onChange={e => set('parentesco_responsable', e.target.value)}
-              placeholder="Ej: Madre, Cónyuge" className="input-hce" />
-          </Campo>
-        </div>
-      </Seccion>
-
-      {/* Aseguramiento */}
+      {/* Información de salud */}
       <Seccion titulo="Información de salud">
         <div className="grid grid-cols-2 gap-4">
           <Campo label="Tipo de usuario" required>
@@ -193,34 +206,88 @@ export default function PacienteFormFields({
               <option value="06">No asegurado</option>
             </select>
           </Campo>
+          <div />
           <SelectorEps
             value={form.codigo_eps ?? ''}
             onChange={v => set('codigo_eps', v)}
           />
-          <Campo label="Pertenencia étnica" required>
-            <select value={form.codigo_etnia ?? '00'} onChange={e => set('codigo_etnia', e.target.value)} className="input-hce">
-              <option value="00">Sin pertenencia étnica</option>
-              <option value="01">Indígena</option>
-              <option value="02">ROM (gitano)</option>
-              <option value="03">Raizal del Archipiélago</option>
-              <option value="04">Palenquero de San Basilio</option>
-              <option value="05">Afrocolombiano / afrodescendiente</option>
-              <option value="06">Otro</option>
-            </select>
-          </Campo>
-          <Campo label="Discapacidad" required>
-            <select value={form.codigo_discapacidad ?? '00'} onChange={e => set('codigo_discapacidad', e.target.value)} className="input-hce">
-              <option value="00">Sin discapacidad</option>
-              <option value="01">Física</option>
-              <option value="02">Cognitiva</option>
-              <option value="03">Mental</option>
-              <option value="04">Visual</option>
-              <option value="05">Auditiva</option>
-              <option value="06">Múltiple</option>
-            </select>
-          </Campo>
         </div>
+
       </Seccion>
+
+      {/* Pertenencia étnica y discapacidad — colapsable */}
+      <div className="card-hce overflow-hidden">
+        <button
+          type="button"
+          onClick={() => setEtniaDscAbierta(v => !v)}
+          className="w-full flex items-center gap-2 px-6 py-4 text-left transition-colors bg-slate-50 hover:bg-slate-100"
+        >
+          <h4 className="section-title !mb-0">Pertenencia étnica y discapacidad</h4>
+          <span className="text-xs font-medium" style={{ color: 'var(--hce-primary)' }}>
+            {etniaDiscAbierta ? 'Ocultar' : 'Mostrar'}
+          </span>
+        </button>
+
+        {etniaDiscAbierta && (
+          <div className="px-6 pb-6 grid grid-cols-2 gap-4 border-t" style={{ borderColor: 'var(--hce-border)' }}>
+            <div className="col-span-2 pt-4" />
+            <Campo label="Pertenencia étnica" required>
+              <select value={form.codigo_etnia ?? '00'} onChange={e => set('codigo_etnia', e.target.value)} className="input-hce">
+                <option value="00">Sin pertenencia étnica</option>
+                <option value="01">Indígena</option>
+                <option value="02">ROM (gitano)</option>
+                <option value="03">Raizal del Archipiélago</option>
+                <option value="04">Palenquero de San Basilio</option>
+                <option value="05">Afrocolombiano / afrodescendiente</option>
+                <option value="06">Otro</option>
+              </select>
+            </Campo>
+            <Campo label="Discapacidad" required>
+              <select value={form.codigo_discapacidad ?? '00'} onChange={e => set('codigo_discapacidad', e.target.value)} className="input-hce">
+                <option value="00">Sin discapacidad</option>
+                <option value="01">Física</option>
+                <option value="02">Cognitiva</option>
+                <option value="03">Mental</option>
+                <option value="04">Visual</option>
+                <option value="05">Auditiva</option>
+                <option value="06">Múltiple</option>
+              </select>
+            </Campo>
+          </div>
+        )}
+      </div>
+
+      {/* Acompañante / responsable — colapsable */}
+      <div className="card-hce overflow-hidden">
+        <button
+          type="button"
+          onClick={() => setAcompananteAbierto(v => !v)}
+          className="w-full flex items-center gap-2 px-6 py-4 text-left transition-colors bg-slate-50 hover:bg-slate-100"
+        >
+          <h4 className="section-title !mb-0">Acompañante o responsable</h4>
+          <span className="text-xs font-medium" style={{ color: 'var(--hce-primary)' }}>
+            {acompananteAbierto ? 'Ocultar' : 'Mostrar'}
+          </span>
+        </button>
+
+        {acompananteAbierto && (
+          <div className="px-6 pb-6 grid grid-cols-2 gap-4 border-t" style={{ borderColor: 'var(--hce-border)' }}>
+            <div className="col-span-2 pt-4" />
+            <Campo label="Nombre del responsable">
+              <input type="text" value={form.nombre_responsable ?? ''} onChange={e => set('nombre_responsable', e.target.value)}
+                placeholder="Nombre completo" className="input-hce" />
+            </Campo>
+            <Campo label="Teléfono del responsable">
+              <input type="tel" value={form.telefono_responsable ?? ''} onChange={e => set('telefono_responsable', e.target.value)}
+                placeholder="Ej: 3009876543" className="input-hce" />
+            </Campo>
+            <Campo label="Parentesco">
+              <input type="text" value={form.parentesco_responsable ?? ''} onChange={e => set('parentesco_responsable', e.target.value)}
+                placeholder="Ej: Madre, Cónyuge" className="input-hce" />
+            </Campo>
+          </div>
+        )}
+      </div>
 
       {/* Política de datos — solo en registro nuevo */}
       {showPoliticaDatos && (

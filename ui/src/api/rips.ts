@@ -14,7 +14,6 @@ export type RipsMensualInput = {
   mes: number
   nit: string
   codPrestador: string
-  tipoDiagnosticoPrincipal: string
 }
 
 export type RipsGenerado = {

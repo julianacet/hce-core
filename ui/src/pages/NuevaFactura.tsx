@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router'
 import { Search, Plus, Trash2, X } from 'lucide-react'
-import { usePacientes, type Paciente } from '../api/pacientes'
+import { type Paciente } from '../api/pacientes'
 import { useCups, type CupsCodigo } from '../api/cups'
-import { DEBOUNCE_MS } from '../utils/constants'
 import { useCrearFactura, type FacturaItemInput } from '../api/facturas'
 import { nombreCompleto } from '../utils/paciente'
+import { BuscadorPaciente } from '../components/BuscadorPaciente'
 
 type ItemFormulario = FacturaItemInput & { _key: number }
 
@@ -19,27 +19,16 @@ export default function NuevaFactura() {
   const navigate = useNavigate()
   const crear = useCrearFactura()
 
-  const [busquedaPaciente, setBusquedaPaciente] = useState('')
-  const [queryPaciente, setQueryPaciente] = useState<string | undefined>(undefined)
   const [paciente, setPaciente] = useState<Paciente | null>(null)
-
   const [busquedaCups, setBusquedaCups] = useState('')
   const [items, setItems] = useState<ItemFormulario[]>([])
 
-  useEffect(() => {
-    const t = setTimeout(() => setQueryPaciente(busquedaPaciente.trim() || undefined), DEBOUNCE_MS)
-    return () => clearTimeout(t)
-  }, [busquedaPaciente])
-
-  const { data: resultadosPacientes = [], isLoading: cargandoPacientes } = usePacientes(queryPaciente)
   const { data: resultadosCups = [], isFetching: cargandoCups } = useCups(busquedaCups)
 
   const total = items.reduce((acc, item) => acc + item.cantidad * item.valor_unitario, 0)
 
   function seleccionarPaciente(p: Paciente) {
     setPaciente(p)
-    setBusquedaPaciente('')
-    setQueryPaciente(undefined)
   }
 
   function agregarCups(cups: CupsCodigo) {
@@ -78,7 +67,7 @@ export default function NuevaFactura() {
       <div className="page-header">
         <div>
           <h2 className="page-title">Nueva factura</h2>
-          <p className="page-desc">Seleccioná el paciente y agregá los procedimientos</p>
+          <p className="page-desc">Seleccione el paciente y agregue los procedimientos</p>
         </div>
         <button onClick={() => navigate('/facturas')} className="btn-secondary">
           Cancelar
@@ -87,10 +76,9 @@ export default function NuevaFactura() {
 
       <div className="space-y-4 max-w-3xl">
         {/* Selección de paciente */}
-        <div className="card-hce p-5 space-y-3">
-          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Paciente</p>
-
-          {paciente ? (
+        {paciente ? (
+          <div className="card-hce p-5">
+            <p className="section-title">Paciente</p>
             <div className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg px-4 py-3">
               <div>
                 <p className="text-sm font-medium text-slate-800">{nombreCompleto(paciente)}</p>
@@ -107,49 +95,13 @@ export default function NuevaFactura() {
                 <X size={16} />
               </button>
             </div>
-          ) : (
-            <>
-              <div className="relative">
-                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input
-                  type="text"
-                  value={busquedaPaciente}
-                  onChange={(e) => setBusquedaPaciente(e.target.value)}
-                  placeholder="Nombre, apellido o documento…"
-                  className="input-hce pl-9"
-                  autoFocus
-                />
-              </div>
-
-              {(busquedaPaciente || cargandoPacientes) && (
-                <div className="border border-slate-200 rounded-md overflow-hidden">
-                  {cargandoPacientes && (
-                    <p className="px-4 py-3 text-sm text-slate-400">Buscando...</p>
-                  )}
-                  {!cargandoPacientes && resultadosPacientes.length === 0 && (
-                    <p className="px-4 py-3 text-sm text-slate-400">Sin resultados</p>
-                  )}
-                  {resultadosPacientes.map((p) => (
-                    <button
-                      key={p.numero_documento}
-                      type="button"
-                      onClick={() => seleccionarPaciente(p)}
-                      className="w-full px-4 py-2.5 flex items-center justify-between hover:bg-blue-50 transition-colors text-left border-b border-slate-100 last:border-0"
-                    >
-                      <div>
-                        <p className="text-sm text-slate-800">{nombreCompleto(p)}</p>
-                        <p className="text-xs text-slate-400 mt-0.5">
-                          {p.tipo_documento} {p.numero_documento}
-                          {p.edad != null ? ` · ${p.edad} años` : ''}
-                        </p>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </>
-          )}
-        </div>
+          </div>
+        ) : (
+          <BuscadorPaciente
+            selectedDocumento={null}
+            onSelect={seleccionarPaciente}
+          />
+        )}
 
         {/* Buscador CUPS — solo si hay paciente */}
         {paciente && (

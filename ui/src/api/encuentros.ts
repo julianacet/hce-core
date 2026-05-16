@@ -36,6 +36,7 @@ export type Encuentro = {
   // Kept for RIPS / list display
   codigo_diagnostico_principal: string
   descripcion_diagnostico?: string
+  tipo_diagnostico_principal: string
   plan_manejo?: string
   fecha_creacion: string
   creado_por: string
@@ -61,6 +62,7 @@ export type EncuentroInput = {
   revision_sistemas?: Record<string, ValorNormalNotas>
   examen_fisico?: Record<string, string | ValorNormalNotas>
   diagnosticos: DiagnosticoItem[]
+  tipo_diagnostico_principal?: string
   plan_manejo?: string
 }
 

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router'
 import { useCrearPaciente, type PacienteInput } from '../api/pacientes'
 import PacienteFormFields from '../components/PacienteFormFields'
+import { NavigationGuard } from '../components/NavigationGuard'
 
 const initialForm: PacienteInput = {
   tipo_documento: 'CC',
@@ -41,23 +42,32 @@ export default function NuevoPaciente() {
   const crear = useCrearPaciente()
   const [form, setForm] = useState<PacienteInput>(initialForm)
   const [ocupacionNombre, setOcupacionNombre] = useState('')
+  const [touched, setTouched] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
 
   function handleChange(campo: keyof PacienteInput, valor: string | boolean) {
+    setTouched(true)
     setForm(prev => ({ ...prev, [campo]: valor }))
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    const payload = { ...form }
-    for (const campo of CAMPOS_OPCIONALES) {
-      if (payload[campo] === '') (payload as Record<string, unknown>)[campo] = undefined
+    setSubmitting(true)
+    try {
+      const payload = { ...form }
+      for (const campo of CAMPOS_OPCIONALES) {
+        if (payload[campo] === '') (payload as Record<string, unknown>)[campo] = undefined
+      }
+      const paciente = await crear.mutateAsync(payload)
+      navigate(`/pacientes/${paciente.numero_documento}`)
+    } catch {
+      setSubmitting(false)
     }
-    const paciente = await crear.mutateAsync(payload)
-    navigate(`/pacientes/${paciente.numero_documento}`)
   }
 
   return (
     <div className="page-hce space-y-4">
+      <NavigationGuard when={touched && !submitting} />
       <div className="page-header">
         <div>
           <h2 className="page-title">Nuevo paciente</h2>

@@ -27,7 +27,7 @@ export default function RootLayout() {
   ]
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex h-screen">
       <aside
         className="w-56 flex flex-col shrink-0 text-white"
         style={{ backgroundColor: tema.colorSidebar }}

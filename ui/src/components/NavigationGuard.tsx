@@ -23,7 +23,7 @@ export function NavigationGuard({ when }: { when: boolean }) {
       <div className="bg-white rounded-xl shadow-xl p-6 max-w-sm w-full mx-4">
         <h3 className="font-semibold text-slate-800 mb-2">¿Salir sin guardar?</h3>
         <p className="text-sm text-slate-500 mb-5">
-          Tienes cambios sin guardar. Si sales ahora, se perderán.
+          Tiene cambios sin guardar. Si sale ahora, se perderán.
         </p>
         <div className="flex gap-2 justify-end">
           <button

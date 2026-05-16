@@ -20,7 +20,7 @@ export class ErrorBoundary extends Component<Props, State> {
         <div style={{ padding: '3rem', textAlign: 'center', fontFamily: 'sans-serif' }}>
           <h2 style={{ marginBottom: '0.5rem' }}>Algo salió mal</h2>
           <p style={{ color: '#6b7280', marginBottom: '1.5rem' }}>
-            Recargá la página. Si el problema persiste, contactá al administrador.
+            Recargue la página. Si el problema persiste, contacte al administrador.
           </p>
           <button
             onClick={() => this.setState({ crashed: false })}

@@ -4,39 +4,59 @@ import {
   useInsumos, useMovimientos,
   useCrearInsumo, useActualizarInsumo, useDesactivarInsumo, useRegistrarMovimiento,
 } from '../api/insumos'
-import type { Insumo, InsumoInput, MovimientoInput } from '../api/insumos'
+import { useConfirmar } from '../components/ModalConfirmar'
+import type { Insumo, InsumoInput } from '../api/insumos'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function estadoExistencias(insumo: Insumo) {
-  if (insumo.stock_actual === 0) return 'agotado'
-  if (insumo.stock_actual <= insumo.stock_minimo) return 'bajo'
-  return 'ok'
-}
 
-const BADGE: Record<string, string> = {
-  agotado: 'bg-red-100 text-red-700',
-  bajo: 'bg-amber-100 text-amber-700',
-  ok: 'bg-green-100 text-green-700',
-}
-const BADGE_LABEL: Record<string, string> = {
-  agotado: 'Agotado',
-  bajo: 'Existencias bajas',
-  ok: 'Ok',
-}
-
-const TIPO_ICON: Record<string, React.ElementType> = {
-  entrada: ArrowDownCircle,
-  salida: ArrowUpCircle,
-  ajuste: RefreshCw,
-}
+const TIPO_ICON = { entrada: ArrowDownCircle, salida: ArrowUpCircle, ajuste: RefreshCw }
 const TIPO_COLOR: Record<string, string> = {
   entrada: 'text-green-600',
   salida: 'text-red-500',
   ajuste: 'text-blue-600',
 }
 
-// ── Formulario de insumo ──────────────────────────────────────────────────────
+function fmtFecha(iso: string | null) {
+  if (!iso) return '—'
+  const [y, m, d] = iso.slice(0, 10).split('-')
+  return `${d}/${m}/${y}`
+}
+
+// ── Modal envoltorio ──────────────────────────────────────────────────────────
+
+function Modal({
+  titulo,
+  ancho = 'max-w-lg',
+  onCerrar,
+  children,
+}: {
+  titulo: string
+  ancho?: string
+  onCerrar: () => void
+  children: React.ReactNode
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}
+      onClick={onCerrar}
+    >
+      <div
+        className={`card-hce w-full ${ancho} max-h-[90vh] overflow-y-auto shadow-xl`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: 'var(--hce-border)' }}>
+          <h3 className="card-title">{titulo}</h3>
+          <button onClick={onCerrar} className="btn-icon"><X size={16} /></button>
+        </div>
+        <div className="p-5">{children}</div>
+      </div>
+    </div>
+  )
+}
+
+// ── Formulario insumo ─────────────────────────────────────────────────────────
 
 function FormInsumo({
   inicial,
@@ -53,10 +73,17 @@ function FormInsumo({
 }) {
   const [form, setForm] = useState<InsumoInput>({
     nombre: inicial?.nombre ?? '',
-    descripcion: inicial?.descripcion ?? '',
+    descripcion: inicial?.descripcion ?? undefined,
     unidad: inicial?.unidad ?? '',
-    stock_minimo: inicial?.stock_minimo ?? 0,
+    stock_minimo: 0,
+    lote: inicial?.lote ?? undefined,
+    registro_invima: inicial?.registro_invima ?? undefined,
+    fecha_compra: inicial?.fecha_compra ? inicial.fecha_compra.slice(0, 10) : undefined,
+    fecha_vencimiento: inicial?.fecha_vencimiento ? inicial.fecha_vencimiento.slice(0, 10) : undefined,
   })
+
+  const setOpt = (k: keyof InsumoInput, v: string) =>
+    setForm((f) => ({ ...f, [k]: v || undefined }))
 
   return (
     <div className="space-y-3">
@@ -80,38 +107,60 @@ function FormInsumo({
           />
         </div>
       </div>
+
+      <div>
+        <label className="label-hce">Descripción <span className="text-slate-400">(opcional)</span></label>
+        <input
+          className="input-hce"
+          value={form.descripcion ?? ''}
+          onChange={(e) => setOpt('descripcion', e.target.value)}
+        />
+      </div>
+
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="label-hce">Descripción <span className="text-slate-400">(opcional)</span></label>
+          <label className="label-hce">Lote <span className="text-slate-400">(opcional)</span></label>
           <input
             className="input-hce"
-            value={form.descripcion ?? ''}
-            onChange={(e) => setForm((f) => ({ ...f, descripcion: e.target.value }))}
+            value={form.lote ?? ''}
+            onChange={(e) => setOpt('lote', e.target.value)}
           />
         </div>
         <div>
-          <label className="label-hce">Existencias mínimas</label>
+          <label className="label-hce">Registro INVIMA <span className="text-slate-400">(opcional)</span></label>
           <input
-            type="number"
-            min={0}
-            step="0.01"
             className="input-hce"
-            value={form.stock_minimo}
-            onChange={(e) => setForm((f) => ({ ...f, stock_minimo: parseFloat(e.target.value) || 0 }))}
+            value={form.registro_invima ?? ''}
+            onChange={(e) => setOpt('registro_invima', e.target.value)}
           />
         </div>
       </div>
 
-      {error && (
-        <p className="form-error">{error}</p>
-      )}
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="label-hce">Fecha de compra <span className="text-slate-400">(opcional)</span></label>
+          <input
+            type="date"
+            className="input-hce"
+            value={form.fecha_compra ?? ''}
+            onChange={(e) => setOpt('fecha_compra', e.target.value)}
+          />
+        </div>
+        <div>
+          <label className="label-hce">Fecha de vencimiento <span className="text-slate-400">(opcional)</span></label>
+          <input
+            type="date"
+            className="input-hce"
+            value={form.fecha_vencimiento ?? ''}
+            onChange={(e) => setOpt('fecha_vencimiento', e.target.value)}
+          />
+        </div>
+      </div>
+
+      {error && <p className="form-error">{error}</p>}
 
       <div className="flex justify-end gap-2 pt-1">
-        <button
-          type="button"
-          onClick={onCancelar}
-          className="btn-secondary"
-        >
+        <button type="button" onClick={onCancelar} className="btn-secondary">
           Cancelar
         </button>
         <button
@@ -127,119 +176,39 @@ function FormInsumo({
   )
 }
 
-// ── Panel de detalle ──────────────────────────────────────────────────────────
+// ── Modal de movimientos ──────────────────────────────────────────────────────
 
-function DetalleInsumo({ insumo, onCerrar }: { insumo: Insumo; onCerrar: () => void }) {
-  const [editando, setEditando] = useState(false)
+function ModalMovimiento({ insumo, onCerrar }: { insumo: Insumo; onCerrar: () => void }) {
   const [tipoMov, setTipoMov] = useState<'entrada' | 'salida' | 'ajuste'>('entrada')
   const [cantidad, setCantidad] = useState('')
   const [notas, setNotas] = useState('')
   const [errorMov, setErrorMov] = useState('')
 
   const { data: movimientos = [] } = useMovimientos(insumo.id)
-  const actualizar = useActualizarInsumo(insumo.id)
-  const desactivar = useDesactivarInsumo()
   const registrar = useRegistrarMovimiento(insumo.id)
-
-  const estado = estadoExistencias(insumo)
 
   async function handleMovimiento() {
     const cant = parseFloat(cantidad)
-    if (!cant || cant <= 0) { setErrorMov('Ingresa una cantidad válida'); return }
+    if (!cant || cant <= 0) { setErrorMov('Ingrese una cantidad válida'); return }
     setErrorMov('')
     try {
-      const input: MovimientoInput = {
-        tipo: tipoMov,
-        cantidad: cant,
-        notas: notas.trim() || undefined,
-      }
-      await registrar.mutateAsync(input)
+      await registrar.mutateAsync({ tipo: tipoMov, cantidad: cant, notas: notas.trim() || undefined })
       setCantidad('')
       setNotas('')
-    } catch (e: unknown) {
+    } catch (e) {
       setErrorMov(e instanceof Error ? e.message : 'Error al registrar movimiento')
     }
   }
 
-  async function handleDesactivar() {
-    if (!confirm(`¿Eliminar el insumo "${insumo.nombre}"? Esta acción no se puede deshacer.`)) return
-    await desactivar.mutateAsync(insumo.id)
-    onCerrar()
-  }
-
   return (
-    <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100">
-
-      {/* Header */}
-      <div className="px-5 py-4 flex items-start justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <h3 className="card-title">{insumo.nombre}</h3>
-            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${BADGE[estado]}`}>
-              {BADGE_LABEL[estado]}
-            </span>
-          </div>
-          {insumo.descripcion && <p className="text-xs text-slate-400 mt-0.5">{insumo.descripcion}</p>}
+    <Modal titulo={`Movimiento — ${insumo.nombre}`} ancho="max-w-xl" onCerrar={onCerrar}>
+      <div className="space-y-4">
+        <div className="flex items-center gap-6 rounded-lg px-4 py-2.5 text-sm" style={{ backgroundColor: 'var(--hce-bg)' }}>
+          <span style={{ color: 'var(--hce-text-muted)' }}>Stock actual:</span>
+          <span className="font-semibold" style={{ color: 'var(--hce-text)' }}>
+            {insumo.stock_actual} {insumo.unidad}
+          </span>
         </div>
-        <button onClick={onCerrar} className="text-slate-400 hover:text-slate-600 shrink-0">
-          <X size={16} />
-        </button>
-      </div>
-
-      {/* Existencias */}
-      <div className="px-5 py-4 grid grid-cols-3 gap-4 text-center">
-        <div>
-          <p className="text-2xl font-bold text-slate-800">{insumo.stock_actual}</p>
-          <p className="text-xs text-slate-400 mt-0.5">Existencias actuales</p>
-        </div>
-        <div>
-          <p className="text-2xl font-bold text-slate-500">{insumo.stock_minimo}</p>
-          <p className="text-xs text-slate-400 mt-0.5">Existencias mínimas</p>
-        </div>
-        <div>
-          <p className="text-lg font-semibold text-slate-600">{insumo.unidad}</p>
-          <p className="text-xs text-slate-400 mt-0.5">Unidad</p>
-        </div>
-      </div>
-
-      {/* Editar insumo */}
-      <div className="px-5 py-4">
-        <div className="flex items-center justify-between mb-3">
-          <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Datos del insumo</p>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setEditando((v) => !v)}
-              className="flex items-center gap-1 text-xs text-slate-500 hover:text-blue-700"
-            >
-              <Pencil size={12} />
-              Editar
-            </button>
-            <button
-              onClick={handleDesactivar}
-              className="flex items-center gap-1 text-xs text-slate-500 hover:text-red-600"
-            >
-              <Trash2 size={12} />
-              Eliminar
-            </button>
-          </div>
-        </div>
-        {editando && (
-          <FormInsumo
-            inicial={insumo}
-            onGuardar={async (v) => {
-              await actualizar.mutateAsync(v)
-              setEditando(false)
-            }}
-            onCancelar={() => setEditando(false)}
-            cargando={actualizar.isPending}
-            error={actualizar.error?.message}
-          />
-        )}
-      </div>
-
-      {/* Registrar movimiento */}
-      <div className="px-5 py-4 space-y-3">
-        <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Registrar movimiento</p>
 
         <div className="flex gap-2">
           {(['entrada', 'salida', 'ajuste'] as const).map((t) => (
@@ -248,8 +217,8 @@ function DetalleInsumo({ insumo, onCerrar }: { insumo: Insumo; onCerrar: () => v
               onClick={() => setTipoMov(t)}
               className={`flex-1 text-xs py-1.5 rounded-md border font-medium capitalize transition-colors ${
                 tipoMov === t
-                  ? 'border-blue-700 bg-blue-50 text-blue-700'
-                  : 'border-slate-200 text-slate-500 hover:border-slate-300'
+                  ? 'border-[var(--hce-primary)] bg-blue-50 text-[var(--hce-primary)]'
+                  : 'border-[var(--hce-border)] text-[var(--hce-text-muted)] hover:border-slate-300'
               }`}
             >
               {t}
@@ -257,7 +226,7 @@ function DetalleInsumo({ insumo, onCerrar }: { insumo: Insumo; onCerrar: () => v
           ))}
         </div>
 
-        <p className="text-xs text-slate-400">
+        <p className="text-xs" style={{ color: 'var(--hce-text-muted)' }}>
           {tipoMov === 'entrada' && 'Suma al total de existencias.'}
           {tipoMov === 'salida' && 'Resta del total de existencias.'}
           {tipoMov === 'ajuste' && 'Establece el total de existencias directamente.'}
@@ -265,9 +234,7 @@ function DetalleInsumo({ insumo, onCerrar }: { insumo: Insumo; onCerrar: () => v
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="label-hce">
-              {tipoMov === 'ajuste' ? 'Nueva cantidad' : 'Cantidad'}
-            </label>
+            <label className="label-hce">{tipoMov === 'ajuste' ? 'Nueva cantidad' : 'Cantidad'}</label>
             <input
               type="number"
               min="0.01"
@@ -289,48 +256,46 @@ function DetalleInsumo({ insumo, onCerrar }: { insumo: Insumo; onCerrar: () => v
           </div>
         </div>
 
-        {errorMov && (
-          <p className="form-error">{errorMov}</p>
-        )}
+        {errorMov && <p className="form-error">{errorMov}</p>}
 
         <button
           onClick={handleMovimiento}
           disabled={registrar.isPending || !cantidad}
-          className="w-full text-sm py-2 rounded-md bg-blue-700 text-white hover:bg-blue-800 disabled:opacity-40 transition-colors"
+          className="btn-primary w-full justify-center"
         >
           {registrar.isPending ? 'Registrando...' : `Registrar ${tipoMov}`}
         </button>
-      </div>
 
-      {/* Historial de movimientos */}
-      <div className="px-5 py-4">
-        <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-3">Historial</p>
-        {movimientos.length === 0 ? (
-          <p className="text-xs text-slate-400 text-center py-4">Sin movimientos registrados.</p>
-        ) : (
-          <div className="space-y-2">
-            {movimientos.map((m) => {
-              const Icon = TIPO_ICON[m.tipo] ?? RefreshCw
-              return (
-                <div key={m.id} className="flex items-start gap-3 text-xs">
-                  <Icon size={14} className={`mt-0.5 shrink-0 ${TIPO_COLOR[m.tipo] ?? 'text-slate-400'}`} />
-                  <div className="flex-1 min-w-0">
-                    <span className="font-medium text-slate-700 capitalize">{m.tipo}</span>
-                    <span className="text-slate-500"> · {m.cantidad} {insumo.unidad}</span>
-                    <span className="text-slate-400"> → {m.stock_resultante} en total</span>
-                    {m.notas && <p className="text-slate-400 truncate mt-0.5">{m.notas}</p>}
+        {movimientos.length > 0 && (
+          <div className="pt-2">
+            <p className="section-title">Historial</p>
+            <div className="space-y-2">
+              {movimientos.map((m) => {
+                const Icon = TIPO_ICON[m.tipo as keyof typeof TIPO_ICON] ?? RefreshCw
+                return (
+                  <div key={m.id} className="flex items-start gap-3 text-xs">
+                    <Icon size={13} className={`mt-0.5 shrink-0 ${TIPO_COLOR[m.tipo] ?? 'text-slate-400'}`} />
+                    <div className="flex-1 min-w-0">
+                      <span className="font-medium capitalize" style={{ color: 'var(--hce-text)' }}>{m.tipo}</span>
+                      <span style={{ color: 'var(--hce-text-muted)' }}>
+                        {' · '}{m.cantidad} {insumo.unidad} → {m.stock_resultante} total
+                      </span>
+                      {m.notas && (
+                        <p className="truncate mt-0.5" style={{ color: 'var(--hce-text-muted)' }}>{m.notas}</p>
+                      )}
+                    </div>
+                    <div className="text-right shrink-0" style={{ color: 'var(--hce-text-muted)' }}>
+                      <p>{new Date(m.fecha_movimiento).toLocaleDateString('es-CO')}</p>
+                      <p>{m.creado_por}</p>
+                    </div>
                   </div>
-                  <div className="text-right shrink-0 text-slate-400">
-                    <p>{new Date(m.fecha_movimiento).toLocaleDateString('es-CO')}</p>
-                    <p>{m.creado_por}</p>
-                  </div>
-                </div>
-              )
-            })}
+                )
+              })}
+            </div>
           </div>
         )}
       </div>
-    </div>
+    </Modal>
   )
 }
 
@@ -338,112 +303,167 @@ function DetalleInsumo({ insumo, onCerrar }: { insumo: Insumo; onCerrar: () => v
 
 export default function Inventario() {
   const [busqueda, setBusqueda] = useState('')
-  const [creando, setCreando] = useState(false)
-  const [seleccionado, setSeleccionado] = useState<Insumo | null>(null)
+  const [modalCrear, setModalCrear] = useState(false)
+  const [editando, setEditando] = useState<Insumo | null>(null)
+  const [movimiento, setMovimiento] = useState<Insumo | null>(null)
+  const { confirmar, modal: modalConfirmar } = useConfirmar()
 
   const { data: insumos = [], isLoading } = useInsumos(busqueda)
   const crear = useCrearInsumo()
+  const actualizar = useActualizarInsumo(editando?.id ?? '')
+  const desactivar = useDesactivarInsumo()
 
   return (
-    <div className="page-hce space-y-6">
+    <div className="page-hce space-y-6" style={{ maxWidth: '80rem' }}>
       <div className="page-header">
         <div>
           <h2 className="page-title">Inventario de insumos</h2>
           <p className="page-desc">Control de existencias del consultorio</p>
         </div>
-        <button
-          onClick={() => { setCreando(true); setSeleccionado(null) }}
-          className="btn-primary"
-        >
+        <button onClick={() => setModalCrear(true)} className="btn-primary">
           <Plus size={15} />
           Nuevo insumo
         </button>
       </div>
 
-      <div className="grid grid-cols-5 gap-6 items-start">
-
-        {/* Columna izquierda — lista */}
-        <div className="col-span-2 space-y-3">
-          <div className="relative">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              value={busqueda}
-              onChange={(e) => setBusqueda(e.target.value)}
-              placeholder="Buscar insumo..."
-              className="input-hce pl-8"
-            />
-          </div>
-
-          {/* Formulario de creación */}
-          {creando && (
-            <div className="bg-white rounded-xl border border-slate-200 p-4">
-              <p className="card-title mb-3">Nuevo insumo</p>
-              <FormInsumo
-                onGuardar={async (v) => {
-                  await crear.mutateAsync(v)
-                  setCreando(false)
-                }}
-                onCancelar={() => setCreando(false)}
-                cargando={crear.isPending}
-                error={crear.error?.message}
-              />
-            </div>
-          )}
-
-          {/* Lista */}
-          <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100 overflow-hidden">
-            {isLoading && (
-              <div className="px-5 py-8 text-center text-sm text-slate-400">Cargando...</div>
-            )}
-            {!isLoading && insumos.length === 0 && (
-              <div className="px-5 py-10 text-center">
-                <PackageOpen size={32} className="mx-auto text-slate-200 mb-2" />
-                <p className="text-sm text-slate-400">
-                  {busqueda ? 'Sin resultados.' : 'Aún no hay insumos registrados.'}
-                </p>
-              </div>
-            )}
-            {insumos.map((insumo) => {
-              const estado = estadoExistencias(insumo)
-              const activo = seleccionado?.id === insumo.id
-              return (
-                <button
-                  key={insumo.id}
-                  onClick={() => { setSeleccionado(insumo); setCreando(false) }}
-                  className={`w-full text-left px-4 py-3 flex items-center justify-between hover:bg-slate-50 transition-colors ${activo ? 'bg-blue-50' : ''}`}
-                >
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-slate-800 truncate">{insumo.nombre}</p>
-                    <p className="text-xs text-slate-400 mt-0.5">
-                      {insumo.stock_actual} {insumo.unidad}
-                    </p>
-                  </div>
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium shrink-0 ml-2 ${BADGE[estado]}`}>
-                    {BADGE_LABEL[estado]}
-                  </span>
-                </button>
-              )
-            })}
-          </div>
-        </div>
-
-        {/* Columna derecha — detalle */}
-        <div className="col-span-3">
-          {seleccionado ? (
-            <DetalleInsumo
-              key={seleccionado.id}
-              insumo={seleccionado}
-              onCerrar={() => setSeleccionado(null)}
-            />
-          ) : (
-            <div className="bg-white rounded-xl border border-slate-200 flex flex-col items-center justify-center py-20 text-center">
-              <PackageOpen size={40} className="text-slate-200 mb-3" />
-              <p className="text-sm text-slate-400">Selecciona un insumo para ver su detalle</p>
-            </div>
-          )}
-        </div>
-
+      <div className="relative w-72">
+        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+        <input
+          value={busqueda}
+          onChange={(e) => setBusqueda(e.target.value)}
+          placeholder="Buscar insumo..."
+          className="input-hce pl-8"
+        />
       </div>
+
+      <div className="card-hce overflow-hidden">
+        {isLoading ? (
+          <div className="px-5 py-8 text-center text-sm" style={{ color: 'var(--hce-text-muted)' }}>
+            Cargando...
+          </div>
+        ) : insumos.length === 0 ? (
+          <div className="px-5 py-12 text-center">
+            <PackageOpen size={36} className="mx-auto mb-2" style={{ color: 'var(--hce-border)' }} />
+            <p className="text-sm" style={{ color: 'var(--hce-text-muted)' }}>
+              {busqueda ? 'Sin resultados.' : 'Aún no hay insumos registrados.'}
+            </p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="border-b" style={{ borderColor: 'var(--hce-border)', backgroundColor: 'var(--hce-bg)' }}>
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium" style={{ color: 'var(--hce-text-muted)' }}>Insumo</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium" style={{ color: 'var(--hce-text-muted)' }}>Lote</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium" style={{ color: 'var(--hce-text-muted)' }}>Reg. INVIMA</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium" style={{ color: 'var(--hce-text-muted)' }}>Unidad</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium" style={{ color: 'var(--hce-text-muted)' }}>F. Compra</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium" style={{ color: 'var(--hce-text-muted)' }}>F. Vencimiento</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium" style={{ color: 'var(--hce-text-muted)' }}>Existencias</th>
+                  <th className="px-4 py-3" />
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {insumos.map((insumo) => (
+                    <tr key={insumo.id} className="hover:bg-slate-50 transition-colors">
+                      <td className="px-4 py-3">
+                        <p className="font-medium" style={{ color: 'var(--hce-text)' }}>{insumo.nombre}</p>
+                        {insumo.descripcion && (
+                          <p className="text-xs mt-0.5" style={{ color: 'var(--hce-text-muted)' }}>{insumo.descripcion}</p>
+                        )}
+                      </td>
+
+                      <td className="px-4 py-3 text-xs" style={{ color: 'var(--hce-text-muted)' }}>
+                        {insumo.lote ?? '—'}
+                      </td>
+                      <td className="px-4 py-3 text-xs" style={{ color: 'var(--hce-text-muted)' }}>
+                        {insumo.registro_invima ?? '—'}
+                      </td>
+                      <td className="px-4 py-3 text-xs" style={{ color: 'var(--hce-text-muted)' }}>
+                        {insumo.unidad}
+                      </td>
+                      <td className="px-4 py-3 text-xs" style={{ color: 'var(--hce-text-muted)' }}>
+                        {fmtFecha(insumo.fecha_compra)}
+                      </td>
+                      <td className="px-4 py-3 text-xs" style={{ color: 'var(--hce-text-muted)' }}>
+                        {fmtFecha(insumo.fecha_vencimiento)}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <span className="font-semibold" style={{ color: 'var(--hce-text)' }}>
+                          {insumo.stock_actual}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1 justify-end">
+                          <button
+                            title="Registrar movimiento"
+                            onClick={() => setMovimiento(insumo)}
+                            className="btn-icon"
+                          >
+                            <ArrowDownCircle size={14} />
+                          </button>
+                          <button
+                            title="Editar"
+                            onClick={() => setEditando(insumo)}
+                            className="btn-icon"
+                          >
+                            <Pencil size={14} />
+                          </button>
+                          <button
+                            title="Eliminar"
+                            onClick={() =>
+                              confirmar(
+                                `¿Eliminar el insumo "${insumo.nombre}"? Esta acción no se puede deshacer.`,
+                                () => desactivar.mutateAsync(insumo.id),
+                              )
+                            }
+                            className="btn-icon"
+                            style={{ color: 'var(--hce-danger)' }}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {modalCrear && (
+        <Modal titulo="Nuevo insumo" onCerrar={() => setModalCrear(false)}>
+          <FormInsumo
+            onGuardar={async (v) => { await crear.mutateAsync(v); setModalCrear(false) }}
+            onCancelar={() => setModalCrear(false)}
+            cargando={crear.isPending}
+            error={crear.error?.message}
+          />
+        </Modal>
+      )}
+
+      {editando && (
+        <Modal titulo="Editar insumo" onCerrar={() => setEditando(null)}>
+          <FormInsumo
+            inicial={editando}
+            onGuardar={async (v) => { await actualizar.mutateAsync(v); setEditando(null) }}
+            onCancelar={() => setEditando(null)}
+            cargando={actualizar.isPending}
+            error={actualizar.error?.message}
+          />
+        </Modal>
+      )}
+
+      {movimiento && (
+        <ModalMovimiento
+          key={movimiento.id}
+          insumo={movimiento}
+          onCerrar={() => setMovimiento(null)}
+        />
+      )}
+
+      {modalConfirmar}
     </div>
   )
 }

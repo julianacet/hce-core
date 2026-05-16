@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { useTabParam } from '../hooks/useTabParam'
 import { AlertTriangle, Plus, ChevronRight, X, CheckCircle, Clock, AlertCircle, Pencil, Trash2, ClipboardList } from 'lucide-react'
 import { RowMenu } from '../components/RowMenu'
 import { NavigationGuard } from '../components/NavigationGuard'
@@ -159,7 +158,7 @@ function FormEvento({
       }
       onExito()
     } catch {
-      setError('Error al guardar el evento. Intenta de nuevo.')
+      setError('Error al guardar el evento. Intente de nuevo.')
     }
   }
 
@@ -249,10 +248,10 @@ function FormEvento({
       <div className="card-hce p-5 space-y-4">
         <h3 className="card-title">Descripción del evento *</h3>
         <div>
-          <label className="label-hce">¿Qué ocurrió? Describe el evento de forma objetiva</label>
+          <label className="label-hce">¿Qué ocurrió? Describa el evento de forma objetiva</label>
           <textarea className="input-hce" rows={4} value={descripcion}
             onChange={e => setDescripcion(e.target.value)}
-            placeholder="Describe cronológicamente lo que sucedió..." required />
+            placeholder="Describa cronológicamente lo que sucedió..." required />
         </div>
         <div>
           <label className="label-hce">¿Cómo se detectó?</label>
@@ -454,7 +453,7 @@ function ModalSeguimiento({ evento, onCerrar }: { evento: EventoAdverso; onCerra
                 <label className="label-hce">Análisis de causa raíz</label>
                 <textarea className="input-hce" rows={3} value={analisis}
                   onChange={e => setAnalisis(e.target.value)}
-                  placeholder="Describe las causas identificadas..." />
+                  placeholder="Describa las causas identificadas..." />
               </div>
             )}
 
@@ -507,7 +506,7 @@ function ModalSeguimiento({ evento, onCerrar }: { evento: EventoAdverso; onCerra
 // ── Página principal ──────────────────────────────────────────────────────────
 
 export default function EventosAdversos() {
-  const [tab, setTab] = useTabParam('tab', 'registros' as const, ['registros', 'nuevo'] as const)
+  const [nuevoAbierto, setNuevoAbierto] = useState(false)
   const [filtroEstado, setFiltroEstado] = useState('')
   const [eventoSeguimiento, setEventoSeguimiento] = useState<EventoAdverso | null>(null)
   const [eventoEditando, setEventoEditando] = useState<EventoAdverso | null>(null)
@@ -536,7 +535,7 @@ export default function EventosAdversos() {
             <p className="page-desc">Registro y seguimiento — PAMEC / Res. 2003/2014</p>
           </div>
         </div>
-        <button onClick={() => setTab('nuevo')} className="btn-primary">
+        <button onClick={() => setNuevoAbierto(true)} className="btn-primary">
           <Plus className="w-4 h-4" /> Nuevo reporte
         </button>
       </div>
@@ -554,22 +553,8 @@ export default function EventosAdversos() {
         </div>
       )}
 
-      {/* Tabs */}
-      <div className="flex gap-1 border-b" style={{ borderColor: 'var(--hce-border)' }}>
-        {([
-          { id: 'registros', label: 'Registros' },
-          { id: 'nuevo',     label: 'Nuevo reporte' },
-        ] as const).map(({ id, label }) => (
-          <button key={id} onClick={() => setTab(id)}
-            className={`tab-hce ${tab === id ? 'tab-hce--active' : 'tab-hce--inactive'}`}>
-            {label}
-          </button>
-        ))}
-      </div>
-
       {/* Lista de registros */}
-      {tab === 'registros' && (
-        <div className="space-y-4">
+      <div className="space-y-4">
           <div className="flex items-center gap-3">
             <label className="text-sm" style={{ color: 'var(--hce-text-muted)' }}>Filtrar por estado:</label>
             <select className="input-hce w-auto text-sm"
@@ -645,11 +630,27 @@ export default function EventosAdversos() {
               })}
             </div>
           )}
+      </div>
+
+      {/* Modal nuevo reporte */}
+      {nuevoAbierto && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-start justify-center pt-12 px-4">
+          <div className="card-hce w-full max-w-2xl max-h-[85vh] overflow-y-auto">
+            <div className="flex items-start justify-between p-5 border-b" style={{ borderColor: 'var(--hce-border)' }}>
+              <p className="card-title">Nuevo reporte de evento adverso</p>
+              <button onClick={() => setNuevoAbierto(false)} className="text-slate-400 hover:text-slate-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-5">
+              <FormEvento
+                onExito={() => setNuevoAbierto(false)}
+                onCancelar={() => setNuevoAbierto(false)}
+              />
+            </div>
+          </div>
         </div>
       )}
-
-      {/* Nuevo reporte */}
-      {tab === 'nuevo' && <FormEvento onExito={() => setTab('registros')} />}
 
       {/* Modal de seguimiento */}
       {eventoSeguimiento && (

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useDebounced } from '../hooks/useDebounced'
 import { DEBOUNCE_FILTROS_MS } from '../utils/constants'
 import { useNavigate } from 'react-router'
-import { Search, UserPlus, Filter, Trash2, ChevronRight } from 'lucide-react'
+import { Search, UserPlus, Filter, Trash2, ChevronRight, Users } from 'lucide-react'
 import { SortButton } from '../components/SortButton'
 import { usePacientesPaginados, exportarPacientes } from '../api/pacientes'
 import { SelectorEps } from '../components/SelectorEps'
@@ -268,6 +268,7 @@ export default function ListaPacientes() {
                 isEmpty={pacientes.length === 0}
                 colSpan={7}
                 hayBusqueda={!!(q || hayFiltros)}
+                icon={<Users size={28} className="text-slate-300" />}
                 textoVacio="Aún no hay pacientes registrados."
                 textoSinResultados="No se encontraron pacientes con ese criterio."
                 textoError="Error al cargar pacientes."

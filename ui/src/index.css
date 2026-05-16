@@ -60,6 +60,10 @@ body {
   color: var(--hce-text);
 }
 
+textarea {
+  resize: vertical;
+}
+
 /* ═══════════════════════════════════════════════════════════════════════════
    TIPOGRAFÍA
    ═══════════════════════════════════════════════════════════════════════════ */
@@ -95,7 +99,7 @@ body {
   color: var(--hce-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  margin: 0;
+  margin: 0 0 0.625rem;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -245,7 +249,7 @@ body {
   display: block;
   font-size: var(--hce-font-xs);
   color: var(--hce-text-muted);
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.375rem;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -331,3 +335,48 @@ body {
 .badge-hce--danger  { background-color: var(--hce-danger-bg);  color: var(--hce-danger);  border-color: var(--hce-danger-border);  }
 .badge-hce--warning { background-color: var(--hce-warning-bg); color: var(--hce-warning); border-color: var(--hce-warning-border); }
 .badge-hce--neutral { background-color: var(--hce-bg); color: var(--hce-text-muted); border-color: var(--hce-border); }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MODO OSCURO — overrides de clases Tailwind hardcodeadas
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.hce-oscuro { color-scheme: dark; }
+
+/* Fondos */
+.hce-oscuro .bg-white        { background-color: var(--hce-card) !important; }
+.hce-oscuro .bg-slate-50     { background-color: var(--hce-bg)   !important; }
+.hce-oscuro .bg-slate-100    { background-color: #263248          !important; }
+
+/* Hover de filas y botones */
+.hce-oscuro .hover\:bg-slate-50:hover,
+.hce-oscuro .hover\:bg-slate-100:hover { background-color: #263248 !important; }
+
+/* Bordes */
+.hce-oscuro .border-slate-100,
+.hce-oscuro .border-slate-200,
+.hce-oscuro .border-slate-300 { border-color: var(--hce-border) !important; }
+
+/* Divisores */
+.hce-oscuro .divide-slate-100 > * + *,
+.hce-oscuro .divide-slate-200 > * + * { border-color: var(--hce-border) !important; }
+
+/* Texto */
+.hce-oscuro .text-slate-900,
+.hce-oscuro .text-slate-800,
+.hce-oscuro .text-slate-700 { color: var(--hce-text) !important; }
+
+.hce-oscuro .text-slate-600,
+.hce-oscuro .text-slate-500 { color: var(--hce-text-muted) !important; }
+
+.hce-oscuro .text-slate-400,
+.hce-oscuro .text-slate-300 { color: #64748b !important; }
+
+/* Inputs y selects nativos */
+.hce-oscuro input[type="date"],
+.hce-oscuro input[type="datetime-local"],
+.hce-oscuro input[type="number"],
+.hce-oscuro input[type="text"],
+.hce-oscuro input[type="email"],
+.hce-oscuro input[type="password"],
+.hce-oscuro select,
+.hce-oscuro textarea { color-scheme: dark; }

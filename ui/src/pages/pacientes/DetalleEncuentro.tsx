@@ -161,7 +161,7 @@ export default function DetalleEncuentro() {
               rows={3}
               value={notaTexto}
               onChange={ev => setNotaTexto(ev.target.value)}
-              placeholder="Escribí la corrección o aclaración…"
+              placeholder="Escriba la corrección o aclaración…"
               className="input-hce resize-none w-full"
               autoFocus
             />
@@ -186,7 +186,7 @@ export default function DetalleEncuentro() {
 
         {notas.length === 0 && !notaAbierta && (
           <p className="text-xs text-slate-400">
-            Sin notas. Usá esta sección para aclaraciones o correcciones sobre la consulta.
+            Sin notas. Use esta sección para aclaraciones o correcciones sobre la consulta.
           </p>
         )}
 
