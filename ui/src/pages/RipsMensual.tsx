@@ -137,12 +137,12 @@ export default function RipsMensual() {
           </p>
         ) : (
           <table className="w-full text-sm">
-            <thead className="bg-slate-50 border-b border-slate-200">
+            <thead className="thead-sticky border-b" style={{ borderColor: 'var(--hce-border)' }}>
               <tr>
-                <th className="px-4 py-3 text-left text-xs text-slate-500 font-medium">Período</th>
-                <th className="px-4 py-3 text-left text-xs text-slate-500 font-medium">Fecha generación</th>
-                <th className="px-4 py-3 text-left text-xs text-slate-500 font-medium">Generado por</th>
-                <th className="px-4 py-3 text-left text-xs text-slate-500 font-medium">Estado</th>
+                <th className="th-hce">Período</th>
+                <th className="th-hce">Fecha generación</th>
+                <th className="th-hce">Generado por</th>
+                <th className="th-hce">Estado</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">

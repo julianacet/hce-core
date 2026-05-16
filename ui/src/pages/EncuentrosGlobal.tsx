@@ -215,21 +215,20 @@ export default function EncuentrosGlobal() {
         {/* Tabla */}
         <div className={`overflow-x-auto transition-opacity duration-150 ${isFetching && !isLoading ? 'opacity-60' : ''}`}>
           <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b" style={{ borderColor: 'var(--hce-border)', background: 'var(--hce-fondo)' }}>
-                <th className="px-5 py-3 text-left">
+            <thead className="thead-sticky border-b" style={{ borderColor: 'var(--hce-border)' }}>
+              <tr>
+                <th className="th-hce px-5">
                   <SortButton activo={orden === 'paciente'} dir={dir} onClick={() => ordenarPor('paciente')}>Paciente</SortButton>
                 </th>
-                <th className="px-4 py-3 text-left">
+                <th className="th-hce">
                   <SortButton activo={orden === 'fecha'} dir={dir} onClick={() => ordenarPor('fecha')}>Fecha</SortButton>
                 </th>
-                <th className="px-4 py-3 text-left">
+                <th className="th-hce">
                   <SortButton activo={orden === 'finalidad'} dir={dir} onClick={() => ordenarPor('finalidad')}>Finalidad</SortButton>
                 </th>
-                <th className="px-4 py-3 text-left">
+                <th className="th-hce">
                   <SortButton activo={orden === 'diagnostico'} dir={dir} onClick={() => ordenarPor('diagnostico')}>Diagnóstico</SortButton>
                 </th>
-                <th className="px-4 py-3" />
               </tr>
             </thead>
             <tbody className="divide-y" style={{ borderColor: 'var(--hce-border)' }}>
@@ -275,11 +274,6 @@ export default function EncuentrosGlobal() {
                     ) : (
                       <span className="text-xs text-slate-300">—</span>
                     )}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <span className="text-xs" style={{ color: 'var(--hce-primary)' }}>
-                      Ver →
-                    </span>
                   </td>
                 </tr>
               ))}

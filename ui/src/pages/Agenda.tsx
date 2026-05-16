@@ -532,29 +532,35 @@ export default function Agenda() {
   return (
     <div className="h-screen flex flex-col overflow-hidden" style={{ background: 'var(--hce-bg)' }}>
       {/* Header */}
-      <div className="px-8 py-5 shrink-0 border-b" style={{ borderColor: 'var(--hce-border)' }}>
-        <Breadcrumb items={[{ label: 'Inicio', to: '/' }, { label: 'Agenda' }]} />
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <h2 className="page-title">Agenda</h2>
-            {citasActivas.length > 0 && (
-              <span className="text-xs px-2 py-0.5 rounded-full bg-[var(--hce-primary-soft)] text-[var(--hce-primary)]">
-                {completadas}/{citasActivas.length} atendidos hoy
-              </span>
-            )}
+      <div className="shrink-0">
+        <div style={{ maxWidth: 'var(--hce-page-width)', marginInline: 'auto', padding: '1.5rem 2rem 1rem' }}>
+          <Breadcrumb items={[{ label: 'Inicio', to: '/' }, { label: 'Agenda' }]} />
+          <div className="page-header" style={{ marginBottom: 0 }}>
+            <div>
+              <h2 className="page-title">Agenda</h2>
+              <p className="page-desc">Programación de citas y seguimiento de atención</p>
+            </div>
+            <div className="flex items-center gap-3">
+              {citasActivas.length > 0 && (
+                <span className="text-xs px-2 py-0.5 rounded-full bg-[var(--hce-primary-soft)] text-[var(--hce-primary)]">
+                  {completadas}/{citasActivas.length} atendidos hoy
+                </span>
+              )}
+              <button
+                onClick={() => setSlotNueva('08:00')}
+                className="btn-primary"
+              >
+                <Plus className="w-4 h-4" />
+                Nueva cita
+              </button>
+            </div>
           </div>
-          <button
-            onClick={() => setSlotNueva('08:00')}
-            className="btn-primary"
-          >
-            <Plus className="w-4 h-4" />
-            Nueva cita
-          </button>
         </div>
       </div>
 
       {/* Body */}
-      <div className="flex-1 flex gap-4 p-4 overflow-hidden">
+      <div className="flex-1 overflow-hidden">
+      <div className="flex gap-4 h-full" style={{ maxWidth: 'var(--hce-page-width)', marginInline: 'auto', padding: '0 2rem 1rem' }}>
 
         {/* Columna izquierda: mini calendario + leyenda */}
         <div className="w-72 shrink-0 flex flex-col gap-3">
@@ -652,6 +658,7 @@ export default function Agenda() {
             )}
           </div>
         </div>
+      </div>
       </div>
 
       {/* Modales */}

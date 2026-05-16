@@ -56,7 +56,7 @@ export default function RootLayout() {
             <img src={tema.logoBase64} alt="Logo" className="h-8 object-contain mb-2" />
           ) : null}
           <h1 className="text-sm font-semibold leading-tight">{tema.nombreSistema}</h1>
-          <p className="text-xs text-white/50 mt-0.5">Historia Clínica Electrónica</p>
+          <p className="text-xs text-white/50 mt-0.5">{tema.subtituloSidebar}</p>
         </div>
 
         {/* Navegación principal */}

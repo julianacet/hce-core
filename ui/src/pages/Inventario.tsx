@@ -353,16 +353,15 @@ export default function Inventario() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="border-b" style={{ borderColor: 'var(--hce-border)', backgroundColor: 'var(--hce-bg)' }}>
+              <thead className="thead-sticky border-b" style={{ borderColor: 'var(--hce-border)' }}>
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium" style={{ color: 'var(--hce-text-muted)' }}>Insumo</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium" style={{ color: 'var(--hce-text-muted)' }}>Lote</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium" style={{ color: 'var(--hce-text-muted)' }}>Reg. INVIMA</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium" style={{ color: 'var(--hce-text-muted)' }}>Unidad</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium" style={{ color: 'var(--hce-text-muted)' }}>F. Compra</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium" style={{ color: 'var(--hce-text-muted)' }}>F. Vencimiento</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium" style={{ color: 'var(--hce-text-muted)' }}>Existencias</th>
-                  <th className="px-4 py-3" />
+                  <th className="th-hce">Insumo</th>
+                  <th className="th-hce">Lote</th>
+                  <th className="th-hce">Reg. INVIMA</th>
+                  <th className="th-hce">Unidad</th>
+                  <th className="th-hce">F. Compra</th>
+                  <th className="th-hce">F. Vencimiento</th>
+                  <th className="th-hce th-hce--right">Existencias</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">

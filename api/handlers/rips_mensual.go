@@ -52,6 +52,8 @@ func (h *RipsHandler) resumen(w http.ResponseWriter, r *http.Request) {
 			COUNT(*)::int
 		FROM encuentro_clinico ec
 		WHERE ec.es_ultima_version = TRUE AND ec.esta_activo = TRUE
+		  AND ec.codigo_diagnostico_principal IS NOT NULL
+		  AND ec.codigo_diagnostico_principal != ''
 		  AND EXTRACT(YEAR  FROM ec.fecha_atencion) = $1
 		  AND EXTRACT(MONTH FROM ec.fecha_atencion) = $2`,
 		anio, mes,
@@ -141,6 +143,8 @@ func (h *RipsHandler) generarMensual(w http.ResponseWriter, r *http.Request) {
 		  ON p.numero_documento = ec.paciente_documento
 		 AND p.es_ultima_version = TRUE AND p.esta_activo = TRUE
 		WHERE ec.es_ultima_version = TRUE AND ec.esta_activo = TRUE
+		  AND ec.codigo_diagnostico_principal IS NOT NULL
+		  AND ec.codigo_diagnostico_principal != ''
 		  AND EXTRACT(YEAR  FROM ec.fecha_atencion) = $1
 		  AND EXTRACT(MONTH FROM ec.fecha_atencion) = $2
 		ORDER BY ec.paciente_documento, ec.fecha_atencion`,

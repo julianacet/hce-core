@@ -25,14 +25,14 @@ export function AuditoriaAdmin() {
       <div className="card-hce overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b" style={{ borderColor: 'var(--hce-border)', background: 'var(--hce-bg)' }}>
-                <th className="px-4 py-3 text-left font-medium" style={{ color: 'var(--hce-text-muted)' }}>Acción</th>
-                <th className="px-4 py-3 text-left font-medium" style={{ color: 'var(--hce-text-muted)' }}>Tabla</th>
-                <th className="px-4 py-3 text-left font-medium" style={{ color: 'var(--hce-text-muted)' }}>Registro</th>
-                <th className="px-4 py-3 text-left font-medium" style={{ color: 'var(--hce-text-muted)' }}>Usuario</th>
-                <th className="px-4 py-3 text-left font-medium" style={{ color: 'var(--hce-text-muted)' }}>Fecha</th>
-                <th className="px-4 py-3 text-left font-medium" style={{ color: 'var(--hce-text-muted)' }}>Datos</th>
+            <thead className="thead-sticky border-b" style={{ borderColor: 'var(--hce-border)' }}>
+              <tr>
+                <th className="th-hce">Acción</th>
+                <th className="th-hce">Tabla</th>
+                <th className="th-hce">Registro</th>
+                <th className="th-hce">Usuario</th>
+                <th className="th-hce">Fecha</th>
+                <th className="th-hce">Datos</th>
               </tr>
             </thead>
             <tbody className="divide-y" style={{ borderColor: 'var(--hce-border)' }}>

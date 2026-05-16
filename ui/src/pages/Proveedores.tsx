@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Building2, Plus, Search, Phone, Mail, Globe, X, Pencil, ChevronRight } from 'lucide-react'
+import { Building2, Plus, Search, Phone, Mail, Globe, X, Pencil } from 'lucide-react'
 import { Breadcrumb } from '../components/Breadcrumb'
 import {
   useProveedores,
@@ -450,7 +450,6 @@ export default function Proveedores() {
                         )}
                       </div>
                     </div>
-                    <ChevronRight className="w-4 h-4 text-slate-300 shrink-0" />
                   </button>
                 ))}
               </div>

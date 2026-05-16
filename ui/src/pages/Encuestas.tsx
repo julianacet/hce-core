@@ -316,39 +316,39 @@ function TabResultados() {
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
-            <thead>
-              <tr className="border-b" style={{ borderColor: 'var(--hce-border)', background: 'var(--hce-fondo)' }}>
-                <th className="px-4 py-3 text-left">
+            <thead className="thead-sticky border-b" style={{ borderColor: 'var(--hce-border)' }}>
+              <tr>
+                <th className="th-hce px-4">
                   <SortButton activo={orden === 'fecha'} dir={dir} onClick={() => ordenarPor('fecha')}>Fecha atención</SortButton>
                 </th>
-                <th className="px-4 py-3 text-left">
+                <th className="th-hce px-4">
                   <SortButton activo={orden === 'documento'} dir={dir} onClick={() => ordenarPor('documento')}>Documento</SortButton>
                 </th>
-                <th className="px-2 py-3 text-center" title="Facilidad cita">
+                <th className="th-hce px-2 text-center" title="Facilidad cita">
                   <SortButton activo={orden === 'facilidad_cita'} dir={dir} onClick={() => ordenarPor('facilidad_cita')}>FC</SortButton>
                 </th>
-                <th className="px-2 py-3 text-center" title="Tiempo espera">
+                <th className="th-hce px-2 text-center" title="Tiempo espera">
                   <SortButton activo={orden === 'tiempo_espera'} dir={dir} onClick={() => ordenarPor('tiempo_espera')}>TE</SortButton>
                 </th>
-                <th className="px-2 py-3 text-center" title="Calidad atención">
+                <th className="th-hce px-2 text-center" title="Calidad atención">
                   <SortButton activo={orden === 'calidad_atencion'} dir={dir} onClick={() => ordenarPor('calidad_atencion')}>CA</SortButton>
                 </th>
-                <th className="px-2 py-3 text-center" title="Comunicación médico">
+                <th className="th-hce px-2 text-center" title="Comunicación médico">
                   <SortButton activo={orden === 'comunicacion_medico'} dir={dir} onClick={() => ordenarPor('comunicacion_medico')}>CM</SortButton>
                 </th>
-                <th className="px-2 py-3 text-center" title="Claridad información">
+                <th className="th-hce px-2 text-center" title="Claridad información">
                   <SortButton activo={orden === 'claridad_informacion'} dir={dir} onClick={() => ordenarPor('claridad_informacion')}>CI</SortButton>
                 </th>
-                <th className="px-2 py-3 text-center" title="Comodidad instalaciones">
+                <th className="th-hce px-2 text-center" title="Comodidad instalaciones">
                   <SortButton activo={orden === 'comodidad_instalaciones'} dir={dir} onClick={() => ordenarPor('comodidad_instalaciones')}>CO</SortButton>
                 </th>
-                <th className="px-2 py-3 text-center" title="Satisfacción general">
+                <th className="th-hce px-2 text-center" title="Satisfacción general">
                   <SortButton activo={orden === 'satisfaccion_general'} dir={dir} onClick={() => ordenarPor('satisfaccion_general')}>SG</SortButton>
                 </th>
-                <th className="px-2 py-3 text-center">
+                <th className="th-hce px-2 text-center">
                   <SortButton activo={orden === 'recomendaria'} dir={dir} onClick={() => ordenarPor('recomendaria')}>¿Rec.?</SortButton>
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-slate-500">Comentarios</th>
+                <th className="th-hce px-4">Comentarios</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">

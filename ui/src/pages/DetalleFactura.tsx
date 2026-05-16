@@ -116,13 +116,13 @@ export default function DetalleFactura() {
         {/* Tabla de items */}
         <div className="card-hce overflow-hidden">
           <table className="w-full text-sm">
-            <thead className="bg-slate-50 border-b border-slate-200">
+            <thead className="thead-sticky border-b" style={{ borderColor: 'var(--hce-border)' }}>
               <tr>
-                <th className="px-4 py-3 text-left text-xs text-slate-500 font-medium">CUPS</th>
-                <th className="px-4 py-3 text-left text-xs text-slate-500 font-medium">Descripción</th>
-                <th className="px-4 py-3 text-right text-xs text-slate-500 font-medium">Cant.</th>
-                <th className="px-4 py-3 text-right text-xs text-slate-500 font-medium">V. Unit.</th>
-                <th className="px-4 py-3 text-right text-xs text-slate-500 font-medium">Subtotal</th>
+                <th className="th-hce">CUPS</th>
+                <th className="th-hce">Descripción</th>
+                <th className="th-hce th-hce--right">Cant.</th>
+                <th className="th-hce th-hce--right">V. Unit.</th>
+                <th className="th-hce th-hce--right">Subtotal</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">

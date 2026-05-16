@@ -42,19 +42,17 @@ const LABEL_ESTADO: Record<string, string> = {
 }
 
 function Tarjeta({
-  label, value, sub, icon: Icon, color = 'text-[var(--hce-primary)]',
+  label, value, sub, icon: Icon,
 }: {
   label: string; value: string | number; sub?: string
-  icon: React.ElementType; color?: string
+  icon: React.ElementType
 }) {
   return (
-    <div className="card-hce p-5 flex items-start gap-4">
-      <div className={`mt-0.5 ${color}`}><Icon size={20} /></div>
-      <div>
-        <p className="text-2xl font-bold leading-none" style={{ color: 'var(--hce-text)' }}>{value}</p>
-        <p className="text-sm mt-1" style={{ color: 'var(--hce-text-muted)' }}>{label}</p>
-        {sub && <p className="text-xs mt-0.5" style={{ color: 'var(--hce-text-muted)' }}>{sub}</p>}
-      </div>
+    <div className="card-hce p-5 flex flex-col items-center text-center gap-2">
+      <Icon size={20} style={{ color: 'var(--hce-primary)' }} />
+      <p className="text-2xl font-bold leading-none" style={{ color: 'var(--hce-text)' }}>{value}</p>
+      <p className="text-sm" style={{ color: 'var(--hce-text-muted)' }}>{label}</p>
+      {sub && <p className="text-xs" style={{ color: 'var(--hce-text-muted)' }}>{sub}</p>}
     </div>
   )
 }
@@ -71,7 +69,7 @@ export default function Inicio() {
   const porVencer     = data?.insumos_proximos_vencer ?? []
   const ultimosPac    = data?.ultimos_pacientes       ?? []
 
-  const maxDiag = topDiag[0]?.total ?? 1
+
 
   return (
     <div className="page-hce space-y-6">
@@ -83,7 +81,7 @@ export default function Inicio() {
       >
         <div className="relative z-10">
           <h1 className="text-2xl font-bold text-white leading-tight">{tema.nombreSistema}</h1>
-          <p className="text-white/70 text-sm mt-1">Historia Clínica Electrónica</p>
+          <p className="text-white/70 text-sm mt-1">{tema.subtituloSidebar}</p>
           <button
             onClick={() => navigate('/nueva-consulta')}
             className="mt-5 flex items-center gap-2 bg-white text-sm font-medium px-4 py-2 rounded-md transition-colors hover:bg-white/90"
@@ -165,15 +163,14 @@ export default function Inicio() {
         </div>
       ) : (
         <div className="grid grid-cols-4 gap-4">
-          <Tarjeta label="Consultas hoy"       value={data?.encuentros_hoy ?? 0}  icon={CalendarCheck} color="text-[var(--hce-primary)]" />
-          <Tarjeta label="Pacientes este mes"  value={data?.pacientes_mes ?? 0}   icon={Users}         color="text-indigo-600" />
-          <Tarjeta label="Facturado este mes"  value={formatCOP(data?.facturado_mes ?? 0)} icon={TrendingUp} color="text-emerald-600" />
+          <Tarjeta label="Consultas hoy"       value={data?.encuentros_hoy ?? 0}                                icon={CalendarCheck} />
+          <Tarjeta label="Pacientes este mes"  value={data?.pacientes_mes ?? 0}                                 icon={Users} />
+          <Tarjeta label="Facturado este mes"  value={formatCOP(data?.facturado_mes ?? 0)}                      icon={TrendingUp} />
           <Tarjeta
             label="Satisfacción promedio"
             value={data?.satisfaccion_promedio != null ? `${data.satisfaccion_promedio.toFixed(1)} / 5` : '—'}
             sub={data?.satisfaccion_promedio == null ? 'Sin encuestas aún' : undefined}
             icon={Star}
-            color="text-amber-500"
           />
         </div>
       )}
@@ -247,20 +244,20 @@ export default function Inicio() {
               Sin consultas este mes.
             </div>
           ) : (
-            <div className="space-y-3">
-              {topDiag.map((d) => (
-                <div key={d.codigo}>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs font-medium font-mono" style={{ color: 'var(--hce-text)' }}>{d.codigo}</span>
-                    <span className="text-xs tabular-nums" style={{ color: 'var(--hce-text-muted)' }}>{d.total}</span>
+            <div className="divide-y" style={{ borderColor: 'var(--hce-border)' }}>
+              {topDiag.map((d, i) => (
+                <div key={d.codigo} className="flex items-center gap-3 py-2.5">
+                  <span className="text-xs tabular-nums w-4 shrink-0 text-right" style={{ color: 'var(--hce-text-muted)' }}>
+                    {i + 1}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <span className="text-xs font-mono font-medium" style={{ color: 'var(--hce-primary)' }}>{d.codigo}</span>
+                    <p className="text-xs truncate mt-0.5" style={{ color: 'var(--hce-text-muted)' }}>{d.descripcion || '—'}</p>
                   </div>
-                  <p className="text-xs truncate mb-1" style={{ color: 'var(--hce-text-muted)' }}>{d.descripcion || '—'}</p>
-                  <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--hce-border)' }}>
-                    <div
-                      className="h-full rounded-full"
-                      style={{ width: `${(d.total / maxDiag) * 100}%`, background: tema.colorPrimario }}
-                    />
-                  </div>
+                  <span className="text-xs font-medium tabular-nums px-2 py-0.5 rounded-full shrink-0"
+                        style={{ background: 'var(--hce-primary-soft)', color: 'var(--hce-primary)' }}>
+                    {d.total}
+                  </span>
                 </div>
               ))}
             </div>

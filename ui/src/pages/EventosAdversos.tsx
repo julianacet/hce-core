@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { AlertTriangle, Plus, ChevronRight, X, CheckCircle, Clock, AlertCircle, Pencil, Trash2, ClipboardList } from 'lucide-react'
+import { AlertTriangle, Plus, X, CheckCircle, Clock, AlertCircle, Pencil, Trash2, ClipboardList } from 'lucide-react'
 import { Breadcrumb } from '../components/Breadcrumb'
 import { RowMenu } from '../components/RowMenu'
 import { NavigationGuard } from '../components/NavigationGuard'
@@ -615,7 +615,6 @@ export default function EventosAdversos() {
                           {new Date(ev.fecha_evento).toLocaleDateString('es-CO')}
                         </p>
                       </div>
-                      <ChevronRight className="w-4 h-4 text-slate-300 shrink-0" />
                     </button>
                     <RowMenu loading={eliminar.isPending} items={[
                       { label: 'Editar', icon: <Pencil size={14} />, onClick: () => setEventoEditando(ev) },

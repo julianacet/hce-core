@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useDebounced } from '../hooks/useDebounced'
 import { DEBOUNCE_FILTROS_MS } from '../utils/constants'
 import { useNavigate } from 'react-router'
-import { Search, UserPlus, Filter, Trash2, ChevronRight, Users } from 'lucide-react'
+import { Search, UserPlus, Filter, Trash2, Users } from 'lucide-react'
 import { Breadcrumb } from '../components/Breadcrumb'
 import { SortButton } from '../components/SortButton'
 import { usePacientesPaginados, exportarPacientes } from '../api/pacientes'
@@ -242,25 +242,24 @@ export default function ListaPacientes() {
         {/* Tabla */}
         <div className={`overflow-x-auto transition-opacity duration-150 ${isFetching && !isLoading ? 'opacity-60' : ''}`}>
           <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b" style={{ borderColor: 'var(--hce-border)', background: 'var(--hce-fondo)' }}>
-                <th className="px-5 py-3 text-left">
+            <thead className="thead-sticky border-b" style={{ borderColor: 'var(--hce-border)' }}>
+              <tr>
+                <th className="th-hce px-5">
                   <SortButton activo={orden === 'nombre'} dir={dir} onClick={() => ordenarPor('nombre')}>Paciente</SortButton>
                 </th>
-                <th className="px-4 py-3 text-left">
+                <th className="th-hce">
                   <SortButton activo={orden === 'edad'} dir={dir} onClick={() => ordenarPor('edad')}>Edad</SortButton>
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-slate-500">Teléfono</th>
-                <th className="px-4 py-3 text-left">
+                <th className="th-hce">Teléfono</th>
+                <th className="th-hce">
                   <SortButton activo={orden === 'tipoUsuario'} dir={dir} onClick={() => ordenarPor('tipoUsuario')}>Tipo</SortButton>
                 </th>
-                <th className="px-4 py-3 text-left">
+                <th className="th-hce">
                   <SortButton activo={orden === 'ultima_atencion'} dir={dir} onClick={() => ordenarPor('ultima_atencion')}>Última atención</SortButton>
                 </th>
-                <th className="px-4 py-3 text-left">
+                <th className="th-hce">
                   <SortButton activo={orden === 'fecha'} dir={dir} onClick={() => ordenarPor('fecha')}>Registrado</SortButton>
                 </th>
-                <th className="w-8" />
               </tr>
             </thead>
             <tbody className="divide-y" style={{ borderColor: 'var(--hce-border)' }}>
@@ -296,9 +295,6 @@ export default function ListaPacientes() {
                     {p.ultima_atencion ? formatFecha(p.ultima_atencion) : <span className="text-slate-300">—</span>}
                   </td>
                   <td className="px-4 py-3 text-xs text-slate-400">{formatFecha(p.fecha_creacion)}</td>
-                  <td className="px-3 py-3 text-slate-300">
-                    <ChevronRight size={15} />
-                  </td>
                 </tr>
               ))}
             </tbody>

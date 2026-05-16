@@ -265,6 +265,31 @@ textarea {
 .divider-hce { border-color: var(--hce-border); }
 
 /* ═══════════════════════════════════════════════════════════════════════════
+   TABLAS
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Celda de encabezado de tabla — aplicar en todo <th> */
+.th-hce {
+  padding: 0.75rem 1rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--hce-text-muted);
+  text-align: left;
+  white-space: nowrap;
+}
+.th-hce--right { text-align: right; }
+
+/* Thead sticky para scroll vertical — aplicar en <thead> */
+.thead-sticky {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background-color: var(--hce-fondo, var(--hce-bg));
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
    TABS
    ═══════════════════════════════════════════════════════════════════════════ */
 

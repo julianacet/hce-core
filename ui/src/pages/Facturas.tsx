@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router'
-import { Plus, Search, Filter, Trash2, Receipt, ChevronRight } from 'lucide-react'
+import { Plus, Search, Filter, Trash2, Receipt } from 'lucide-react'
 import { Breadcrumb } from '../components/Breadcrumb'
 import { useDebounced } from '../hooks/useDebounced'
 import { DEBOUNCE_FILTROS_MS } from '../utils/constants'
@@ -179,18 +179,17 @@ export default function Facturas() {
         {/* Tabla */}
         <div className={`overflow-x-auto transition-opacity duration-150 ${isFetching && !isLoading ? 'opacity-60' : ''}`}>
           <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b" style={{ borderColor: 'var(--hce-border)', background: 'var(--hce-fondo)' }}>
-                <th className="px-5 py-3 text-left">
+            <thead className="thead-sticky border-b" style={{ borderColor: 'var(--hce-border)' }}>
+              <tr>
+                <th className="th-hce px-5">
                   <SortButton activo={orden === 'paciente'} dir={dir} onClick={() => ordenarPor('paciente')}>Paciente</SortButton>
                 </th>
-                <th className="px-4 py-3 text-left">
+                <th className="th-hce">
                   <SortButton activo={orden === 'fecha'} dir={dir} onClick={() => ordenarPor('fecha')}>Fecha</SortButton>
                 </th>
-                <th className="px-4 py-3 text-right">
+                <th className="th-hce th-hce--right">
                   <SortButton activo={orden === 'total'} dir={dir} onClick={() => ordenarPor('total')}>Total</SortButton>
                 </th>
-                <th className="w-8" />
               </tr>
             </thead>
             <tbody className="divide-y" style={{ borderColor: 'var(--hce-border)' }}>
@@ -220,9 +219,6 @@ export default function Facturas() {
                   </td>
                   <td className="px-4 py-3 text-right font-medium tabular-nums">
                     {formatCOP(f.total)}
-                  </td>
-                  <td className="px-3 py-3 text-slate-300">
-                    <ChevronRight size={15} />
                   </td>
                 </tr>
               ))}

@@ -298,14 +298,19 @@ export default function DetalleEncuentro() {
               if (!v) continue
               const detalle = v.notas?.trim()
               filas.push(
-                <div key={c.clave} className="flex items-center gap-3 py-2 border-b border-slate-100 last:border-0">
-                  <span className="text-sm flex-1" style={{ color: 'var(--hce-text)' }}>{c.nombre}</span>
-                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full shrink-0 ${
+                <div key={c.clave}
+                  className="grid items-start py-2.5 border-b border-slate-100 last:border-0"
+                  style={{ gridTemplateColumns: '1fr auto' }}
+                >
+                  <div>
+                    <span className="text-sm" style={{ color: 'var(--hce-text)' }}>{c.nombre}</span>
+                    {detalle && <p className="text-xs text-slate-400 mt-0.5">{detalle}</p>}
+                  </div>
+                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full ml-6 mt-0.5 ${
                     v.normal ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
                   }`}>
                     {v.normal ? 'Niega' : 'Refiere'}
                   </span>
-                  {detalle && <span className="text-xs text-slate-500 max-w-xs">{detalle}</span>}
                 </div>
               )
             }
@@ -327,9 +332,9 @@ export default function DetalleEncuentro() {
               if (c.tipo === 'texto') {
                 if (typeof val === 'string' && val.trim()) {
                   filas.push(
-                    <div key={c.clave} className="flex items-center gap-3 py-2 border-b border-slate-100 last:border-0">
-                      <span className="text-sm flex-1" style={{ color: 'var(--hce-text)' }}>{c.nombre}</span>
-                      <span className="text-sm text-slate-700">{val}</span>
+                    <div key={c.clave} className="py-2.5 border-b border-slate-100 last:border-0">
+                      <p className="text-xs text-slate-400 mb-0.5">{c.nombre}</p>
+                      <p className="text-sm leading-relaxed" style={{ color: 'var(--hce-text)' }}>{val}</p>
                     </div>
                   )
                 }
@@ -337,14 +342,19 @@ export default function DetalleEncuentro() {
                 const v = val as ValorNormalNotas
                 const detalle = v.notas?.trim()
                 filas.push(
-                  <div key={c.clave} className="flex items-center gap-3 py-2 border-b border-slate-100 last:border-0">
-                    <span className="text-sm flex-1" style={{ color: 'var(--hce-text)' }}>{c.nombre}</span>
-                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full shrink-0 ${
+                  <div key={c.clave}
+                    className="grid items-start py-2.5 border-b border-slate-100 last:border-0"
+                    style={{ gridTemplateColumns: '1fr auto' }}
+                  >
+                    <div>
+                      <span className="text-sm" style={{ color: 'var(--hce-text)' }}>{c.nombre}</span>
+                      {detalle && <p className="text-xs text-slate-400 mt-0.5">{detalle}</p>}
+                    </div>
+                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ml-6 mt-0.5 ${
                       v.normal ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
                     }`}>
                       {v.normal ? 'Normal' : 'Anormal'}
                     </span>
-                    {detalle && <span className="text-xs text-slate-500 max-w-xs">{detalle}</span>}
                   </div>
                 )
               }
@@ -357,18 +367,23 @@ export default function DetalleEncuentro() {
           {tab === 'diagnosticos' && (
             <div className="space-y-4">
               {e.diagnosticos && e.diagnosticos.length > 0 ? (
-                <div className="space-y-2">
+                <div>
                   {e.diagnosticos.map(d => (
-                    <div key={d.id} className="flex items-baseline gap-2 text-sm">
-                      <span className={`text-xs px-2 py-0.5 rounded-full shrink-0 ${
+                    <div key={d.id}
+                      className="grid items-start py-2.5 border-b border-slate-100 last:border-0"
+                      style={{ gridTemplateColumns: 'auto 1fr' }}
+                    >
+                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full mr-4 mt-0.5 shrink-0 ${
                         d.tipo === 'principal' ? 'bg-[var(--hce-primary-soft)] text-[var(--hce-primary)]'
                         : d.tipo === 'secundario' ? 'bg-slate-100 text-slate-600'
                         : 'bg-amber-100 text-amber-700'
                       }`}>
                         {d.tipo === 'principal' ? 'Principal' : d.tipo === 'secundario' ? 'Secundario' : 'Nota'}
                       </span>
-                      {d.codigo && <span className="font-mono text-xs text-slate-500">{d.codigo}</span>}
-                      <span style={{ color: 'var(--hce-text)' }}>{d.descripcion}</span>
+                      <div>
+                        <span className="text-sm" style={{ color: 'var(--hce-text)' }}>{d.descripcion}</span>
+                        {d.codigo && <p className="text-xs text-slate-400 mt-0.5 font-mono">{d.codigo}</p>}
+                      </div>
                     </div>
                   ))}
                 </div>

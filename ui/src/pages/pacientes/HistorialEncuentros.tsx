@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router'
-import { Search, X, ClipboardList, ChevronRight } from 'lucide-react'
+import { Search, X, ClipboardList } from 'lucide-react'
 import { useEncuentros, type FiltrosEncuentro, type Encuentro } from '../../api/encuentros'
 import { SortButton, type SortDir } from '../../components/SortButton'
 
@@ -150,16 +150,15 @@ export default function HistorialEncuentros() {
 
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b" style={{ borderColor: 'var(--hce-border)', background: 'var(--hce-fondo)' }}>
-                <th className="px-5 py-3 text-left">
+            <thead className="thead-sticky border-b" style={{ borderColor: 'var(--hce-border)' }}>
+              <tr>
+                <th className="th-hce px-5">
                   <SortButton activo={orden === 'fecha'} dir={dir} onClick={() => ordenarPor('fecha')}>Fecha</SortButton>
                 </th>
-                <th className="px-4 py-3 text-left">
+                <th className="th-hce">
                   <SortButton activo={orden === 'finalidad'} dir={dir} onClick={() => ordenarPor('finalidad')}>Finalidad</SortButton>
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-slate-500">Diagnóstico</th>
-                <th className="px-4 py-3" />
+                <th className="th-hce">Diagnóstico</th>
               </tr>
             </thead>
             <tbody className="divide-y" style={{ borderColor: 'var(--hce-border)' }}>
@@ -208,9 +207,6 @@ export default function HistorialEncuentros() {
                         {e.motivo_consulta.slice(0, 60)}{e.motivo_consulta.length > 60 ? '…' : ''}
                       </span>
                     )}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <ChevronRight size={15} className="text-slate-300 inline" />
                   </td>
                 </tr>
               ))}

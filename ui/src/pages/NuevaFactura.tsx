@@ -148,13 +148,13 @@ export default function NuevaFactura() {
               <form onSubmit={handleSubmit}>
                 <div className="card-hce overflow-hidden">
                   <table className="w-full text-sm">
-                    <thead className="bg-slate-50 border-b border-slate-200">
+                    <thead className="thead-sticky border-b" style={{ borderColor: 'var(--hce-border)' }}>
                       <tr>
-                        <th className="px-4 py-3 text-left text-xs text-slate-500 font-medium">CUPS</th>
-                        <th className="px-4 py-3 text-left text-xs text-slate-500 font-medium">Descripción</th>
-                        <th className="px-4 py-3 text-right text-xs text-slate-500 font-medium w-20">Cant.</th>
-                        <th className="px-4 py-3 text-right text-xs text-slate-500 font-medium w-36">Valor unit.</th>
-                        <th className="px-4 py-3 text-right text-xs text-slate-500 font-medium w-32">Subtotal</th>
+                        <th className="th-hce">CUPS</th>
+                        <th className="th-hce">Descripción</th>
+                        <th className="th-hce th-hce--right w-20">Cant.</th>
+                        <th className="th-hce th-hce--right w-36">Valor unit.</th>
+                        <th className="th-hce th-hce--right w-32">Subtotal</th>
                         <th className="w-10" />
                       </tr>
                     </thead>
