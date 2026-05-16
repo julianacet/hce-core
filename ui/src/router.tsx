@@ -12,7 +12,6 @@ import PanelAdmin from './pages/admin/PanelAdmin'
 import FichaPaciente from './pages/pacientes/FichaPaciente'
 import HistorialEncuentros from './pages/pacientes/HistorialEncuentros'
 import DetalleEncuentro from './pages/pacientes/DetalleEncuentro'
-import AuditoriaPaciente from './pages/pacientes/AuditoriaPaciente'
 import NuevaFormula from './pages/pacientes/NuevaFormula'
 import Facturas from './pages/Facturas'
 import NuevaFactura from './pages/NuevaFactura'
@@ -69,7 +68,6 @@ const router = createBrowserRouter([
               { path: 'encuentros', element: <HistorialEncuentros /> },
               { path: 'encuentros/:encId', element: <DetalleEncuentro /> },
               { path: 'encuentros/:encId/formula', element: <NuevaFormula /> },
-              { path: 'auditoria', element: <AuditoriaPaciente /> },
             ],
           },
 

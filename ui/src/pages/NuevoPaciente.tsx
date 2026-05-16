@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router'
 import { useCrearPaciente, type PacienteInput } from '../api/pacientes'
+import { Breadcrumb } from '../components/Breadcrumb'
 import PacienteFormFields from '../components/PacienteFormFields'
 import { NavigationGuard } from '../components/NavigationGuard'
 
@@ -67,6 +68,7 @@ export default function NuevoPaciente() {
 
   return (
     <div className="page-hce space-y-4">
+      <Breadcrumb items={[{ label: 'Inicio', to: '/' }, { label: 'Pacientes', to: '/pacientes' }, { label: 'Nuevo paciente' }]} />
       <NavigationGuard when={touched && !submitting} />
       <div className="page-header">
         <div>

@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react'
 import { useMedico, type DatosMedico } from '../context/MedicoContext'
+import { Breadcrumb } from '../components/Breadcrumb'
 import { Upload, Trash2, CheckCircle } from 'lucide-react'
 
 export default function Configuracion() {
@@ -44,6 +45,7 @@ export default function Configuracion() {
 
   return (
     <div className="page-hce">
+      <Breadcrumb items={[{ label: 'Inicio', to: '/' }, { label: 'Configuración' }]} />
       <div className="page-header">
         <div>
           <h2 className="page-title">Configuración</h2>

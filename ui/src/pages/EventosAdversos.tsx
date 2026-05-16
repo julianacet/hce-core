@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { AlertTriangle, Plus, ChevronRight, X, CheckCircle, Clock, AlertCircle, Pencil, Trash2, ClipboardList } from 'lucide-react'
+import { Breadcrumb } from '../components/Breadcrumb'
 import { RowMenu } from '../components/RowMenu'
 import { NavigationGuard } from '../components/NavigationGuard'
 import {
@@ -434,7 +435,7 @@ function ModalSeguimiento({ evento, onCerrar }: { evento: EventoAdverso; onCerra
               <div className="flex flex-wrap gap-1">
                 {(['humano', 'entorno', 'equipos', 'organizacional', 'paciente'] as const).map(k =>
                   evento.factores_contribuyentes![k] && (
-                    <span key={k} className="px-2 py-0.5 rounded text-xs bg-blue-50 text-blue-700 capitalize">{k}</span>
+                    <span key={k} className="px-2 py-0.5 rounded text-xs bg-[var(--hce-primary-soft)] text-[var(--hce-primary)] capitalize">{k}</span>
                   )
                 )}
               </div>
@@ -526,6 +527,7 @@ export default function EventosAdversos() {
 
   return (
     <div className="page-hce space-y-6">
+      <Breadcrumb items={[{ label: 'Inicio', to: '/' }, { label: 'Eventos adversos' }]} />
 
       {/* Header */}
       <div className="page-header">

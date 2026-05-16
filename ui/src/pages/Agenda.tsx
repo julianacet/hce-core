@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router'
+import { Breadcrumb } from '../components/Breadcrumb'
 import {
   Clock, User, Phone, ChevronLeft, ChevronRight,
   Plus, X, Check, XCircle, AlertCircle, CheckCheck, Trash2,
@@ -28,7 +29,7 @@ const ESTADO_LABEL: Record<string, string> = {
 }
 
 const ESTADO_COLOR: Record<string, string> = {
-  programada: 'bg-blue-50 text-blue-700 border-blue-200',
+  programada: 'bg-[var(--hce-primary-soft)] text-[var(--hce-primary)] border-[var(--hce-primary)]',
   confirmada: 'bg-green-50 text-green-700 border-green-200',
   cancelada: 'bg-red-50 text-red-400 border-red-100',
   no_asistio: 'bg-orange-50 text-orange-700 border-orange-200',
@@ -36,7 +37,7 @@ const ESTADO_COLOR: Record<string, string> = {
 }
 
 const ESTADO_DOT: Record<string, string> = {
-  programada: 'bg-blue-400',
+  programada: 'bg-[var(--hce-primary)]',
   confirmada: 'bg-green-400',
   cancelada: 'bg-red-300',
   no_asistio: 'bg-orange-400',
@@ -152,7 +153,7 @@ function MiniCalendario({
             >
               {day}
               {hasCitas && !isSelected && (
-                <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-blue-400" />
+                <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[var(--hce-primary)]" />
               )}
             </button>
           )
@@ -531,30 +532,32 @@ export default function Agenda() {
   return (
     <div className="h-screen flex flex-col overflow-hidden" style={{ background: 'var(--hce-bg)' }}>
       {/* Header */}
-      <div className="px-6 py-4 border-b flex items-center justify-between shrink-0"
-        style={{ borderColor: 'var(--hce-border)', background: 'var(--hce-surface)' }}>
-        <div className="flex items-center gap-3">
-          <h2 className="page-title">Agenda</h2>
-          {citasActivas.length > 0 && (
-            <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
-              {completadas}/{citasActivas.length} atendidos hoy
-            </span>
-          )}
+      <div className="px-8 py-5 shrink-0 border-b" style={{ borderColor: 'var(--hce-border)' }}>
+        <Breadcrumb items={[{ label: 'Inicio', to: '/' }, { label: 'Agenda' }]} />
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <h2 className="page-title">Agenda</h2>
+            {citasActivas.length > 0 && (
+              <span className="text-xs px-2 py-0.5 rounded-full bg-[var(--hce-primary-soft)] text-[var(--hce-primary)]">
+                {completadas}/{citasActivas.length} atendidos hoy
+              </span>
+            )}
+          </div>
+          <button
+            onClick={() => setSlotNueva('08:00')}
+            className="btn-primary"
+          >
+            <Plus className="w-4 h-4" />
+            Nueva cita
+          </button>
         </div>
-        <button
-          onClick={() => setSlotNueva('08:00')}
-          className="btn-primary"
-        >
-          <Plus className="w-4 h-4" />
-          Nueva cita
-        </button>
       </div>
 
       {/* Body */}
       <div className="flex-1 flex gap-4 p-4 overflow-hidden">
 
         {/* Columna izquierda: mini calendario + leyenda */}
-        <div className="w-52 shrink-0 flex flex-col gap-3">
+        <div className="w-72 shrink-0 flex flex-col gap-3">
           <MiniCalendario
             currentMonth={currentMonth}
             selectedDate={selectedDate}

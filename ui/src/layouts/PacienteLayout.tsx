@@ -1,10 +1,12 @@
-import { Outlet, NavLink, useParams, useNavigate } from 'react-router'
-import { User, ClipboardList, Shield, ArrowLeft, PlusCircle } from 'lucide-react'
+import { Outlet, NavLink, useParams, useNavigate, useLocation } from 'react-router'
+import { User, ClipboardList, ArrowLeft, PlusCircle } from 'lucide-react'
 import { usePaciente } from '../api/pacientes'
+import { Breadcrumb } from '../components/Breadcrumb'
 
 export default function PacienteLayout() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const { pathname } = useLocation()
   const { data: paciente } = usePaciente(id ?? '')
 
   const nombreCompleto = paciente
@@ -12,15 +14,30 @@ export default function PacienteLayout() {
         .filter(Boolean).join(' ')
     : '...'
 
+  const crumbs = (() => {
+    const base = [
+      { label: 'Inicio', to: '/' },
+      { label: 'Pacientes', to: '/pacientes' },
+      { label: nombreCompleto, to: `/pacientes/${id}` },
+    ]
+    if (pathname.includes('/encuentros/')) {
+      const enc = [{ label: 'Consultas', to: `/pacientes/${id}/encuentros` }, { label: 'Detalle', to: pathname.replace(/\/(formula)$/, '') }]
+      if (pathname.endsWith('/formula')) return [...base, ...enc, { label: 'Fórmula' }]
+      return [...base, ...enc.slice(0, 1), { label: 'Detalle' }]
+    }
+    if (pathname.endsWith('/encuentros')) return [...base, { label: 'Consultas' }]
+    return base
+  })()
+
   const tabs = [
     { to: `/pacientes/${id}`, label: 'Ficha', icon: User, end: true },
     { to: `/pacientes/${id}/encuentros`, label: 'Consultas', icon: ClipboardList },
-    { to: `/pacientes/${id}/auditoria`, label: 'Auditoría', icon: Shield },
   ]
 
   return (
     <div className="flex flex-col h-full">
       <div className="bg-white border-b border-slate-200 px-6 py-4">
+        <Breadcrumb items={crumbs} />
         <button
           onClick={() => navigate(-1)}
           className="btn-ghost mb-3"

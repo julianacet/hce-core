@@ -27,7 +27,7 @@ function fmtHora(hora: string): string {
 
 const COLOR_ESTADO: Record<string, string> = {
   programada:  'bg-slate-100 text-slate-600',
-  confirmada:  'bg-blue-100 text-blue-700',
+  confirmada:  'bg-[var(--hce-primary-soft)] text-[var(--hce-primary)]',
   completada:  'bg-green-100 text-green-700',
   cancelada:   'bg-red-100 text-red-600',
   no_asistio:  'bg-orange-100 text-orange-700',
@@ -42,7 +42,7 @@ const LABEL_ESTADO: Record<string, string> = {
 }
 
 function Tarjeta({
-  label, value, sub, icon: Icon, color = 'text-blue-700',
+  label, value, sub, icon: Icon, color = 'text-[var(--hce-primary)]',
 }: {
   label: string; value: string | number; sub?: string
   icon: React.ElementType; color?: string
@@ -110,7 +110,7 @@ export default function Inicio() {
             <h3 className="text-sm font-medium" style={{ color: 'var(--hce-text)' }}>
               Citas de hoy
               {citasHoy.length > 0 && (
-                <span className="ml-2 text-xs font-normal px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700">
+                <span className="ml-2 text-xs font-normal px-1.5 py-0.5 rounded-full bg-[var(--hce-primary-soft)] text-[var(--hce-primary)]">
                   {citasHoy.length}
                 </span>
               )}
@@ -165,7 +165,7 @@ export default function Inicio() {
         </div>
       ) : (
         <div className="grid grid-cols-4 gap-4">
-          <Tarjeta label="Consultas hoy"       value={data?.encuentros_hoy ?? 0}  icon={CalendarCheck} color="text-blue-600" />
+          <Tarjeta label="Consultas hoy"       value={data?.encuentros_hoy ?? 0}  icon={CalendarCheck} color="text-[var(--hce-primary)]" />
           <Tarjeta label="Pacientes este mes"  value={data?.pacientes_mes ?? 0}   icon={Users}         color="text-indigo-600" />
           <Tarjeta label="Facturado este mes"  value={formatCOP(data?.facturado_mes ?? 0)} icon={TrendingUp} color="text-emerald-600" />
           <Tarjeta

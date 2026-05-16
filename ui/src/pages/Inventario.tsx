@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Search, Plus, Pencil, Trash2, ArrowDownCircle, ArrowUpCircle, RefreshCw, X, PackageOpen } from 'lucide-react'
+import { Breadcrumb } from '../components/Breadcrumb'
 import {
   useInsumos, useMovimientos,
   useCrearInsumo, useActualizarInsumo, useDesactivarInsumo, useRegistrarMovimiento,
@@ -14,7 +15,7 @@ const TIPO_ICON = { entrada: ArrowDownCircle, salida: ArrowUpCircle, ajuste: Ref
 const TIPO_COLOR: Record<string, string> = {
   entrada: 'text-green-600',
   salida: 'text-red-500',
-  ajuste: 'text-blue-600',
+  ajuste: 'text-[var(--hce-primary)]',
 }
 
 function fmtFecha(iso: string | null) {
@@ -217,7 +218,7 @@ function ModalMovimiento({ insumo, onCerrar }: { insumo: Insumo; onCerrar: () =>
               onClick={() => setTipoMov(t)}
               className={`flex-1 text-xs py-1.5 rounded-md border font-medium capitalize transition-colors ${
                 tipoMov === t
-                  ? 'border-[var(--hce-primary)] bg-blue-50 text-[var(--hce-primary)]'
+                  ? 'border-[var(--hce-primary)] bg-[var(--hce-primary-soft)] text-[var(--hce-primary)]'
                   : 'border-[var(--hce-border)] text-[var(--hce-text-muted)] hover:border-slate-300'
               }`}
             >
@@ -314,7 +315,8 @@ export default function Inventario() {
   const desactivar = useDesactivarInsumo()
 
   return (
-    <div className="page-hce space-y-6" style={{ maxWidth: '80rem' }}>
+    <div className="page-hce space-y-6">
+      <Breadcrumb items={[{ label: 'Inicio', to: '/' }, { label: 'Inventario' }]} />
       <div className="page-header">
         <div>
           <h2 className="page-title">Inventario de insumos</h2>

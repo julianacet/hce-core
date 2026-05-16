@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router'
 import {
   Search, Plus, Filter, Trash2, ClipboardList,
 } from 'lucide-react'
+import { Breadcrumb } from '../components/Breadcrumb'
 import { useEncuentrosPaginados, exportarEncuentros } from '../api/encuentros'
 import { SortButton, type SortDir } from '../components/SortButton'
 import { descargarCSV, descargarXLSX } from '../utils/csv'
@@ -119,6 +120,7 @@ export default function EncuentrosGlobal() {
 
   return (
     <div className="page-hce">
+      <Breadcrumb items={[{ label: 'Inicio', to: '/' }, { label: 'Consultas' }]} />
       <div className="page-header">
         <div>
           <h2 className="page-title">Consultas</h2>
@@ -162,7 +164,7 @@ export default function EncuentrosGlobal() {
             >
               <Filter size={14} />
               Filtros
-              {hayFiltros && <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0" />}
+              {hayFiltros && <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: 'var(--hce-primary)' }} />}
             </button>
           </div>
 

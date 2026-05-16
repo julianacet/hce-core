@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { FileCode2, AlertCircle } from 'lucide-react'
+import { Breadcrumb } from '../components/Breadcrumb'
 import { useMedico } from '../context/MedicoContext'
 import {
   useRipsMensualResumen,
@@ -52,6 +53,7 @@ export default function RipsMensual() {
 
   return (
     <div className="page-hce space-y-6">
+      <Breadcrumb items={[{ label: 'Inicio', to: '/' }, { label: 'RIPS Mensual' }]} />
       <div className="page-header">
         <div>
           <h2 className="page-title">RIPS Mensual</h2>

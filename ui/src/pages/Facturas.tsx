@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router'
 import { Plus, Search, Filter, Trash2, Receipt, ChevronRight } from 'lucide-react'
+import { Breadcrumb } from '../components/Breadcrumb'
 import { useDebounced } from '../hooks/useDebounced'
 import { DEBOUNCE_FILTROS_MS } from '../utils/constants'
 import { useFacturasPaginadas, exportarFacturas } from '../api/facturas'
@@ -112,6 +113,7 @@ export default function Facturas() {
 
   return (
     <div className="page-hce">
+      <Breadcrumb items={[{ label: 'Inicio', to: '/' }, { label: 'Facturación' }]} />
       <div className="page-header">
         <div>
           <h2 className="page-title">Facturación</h2>
@@ -151,7 +153,7 @@ export default function Facturas() {
             >
               <Filter size={14} />
               Filtros
-              {hayFiltros && <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0" />}
+              {hayFiltros && <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: 'var(--hce-primary)' }} />}
             </button>
           </div>
 

@@ -19,7 +19,7 @@ const TIPO_LABEL: Record<string, string> = {
 
 const TIPO_STYLE: Record<string, string> = {
   impresion: 'bg-violet-50 border-violet-200 text-violet-800',
-  principal: 'bg-blue-50 border-blue-200 text-blue-800',
+  principal: 'bg-[var(--hce-primary-soft)] border-[var(--hce-primary)] text-[var(--hce-primary)]',
   secundario: 'bg-slate-50 border-slate-200 text-slate-700',
   nota: 'bg-amber-50 border-amber-200 text-amber-800',
 }

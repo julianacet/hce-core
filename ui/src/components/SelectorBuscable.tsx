@@ -94,7 +94,7 @@ export function SelectorBuscable({
               <li
                 key={o.codigo}
                 onMouseDown={() => seleccionar(o)}
-                className={`px-3 py-2 cursor-pointer hover:bg-slate-50 ${o.codigo === value ? 'bg-blue-50 text-blue-700' : ''}`}
+                className={`px-3 py-2 cursor-pointer hover:bg-slate-50 ${o.codigo === value ? 'bg-[var(--hce-primary-soft)] text-[var(--hce-primary)]' : ''}`}
               >
                 <span className="font-mono text-xs text-slate-400 mr-2">{o.codigo}</span>
                 {o.nombre}

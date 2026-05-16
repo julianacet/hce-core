@@ -1,5 +1,6 @@
 import { useNavigate, useParams } from 'react-router'
 import { Download, Printer, ChevronLeft } from 'lucide-react'
+import { Breadcrumb } from '../components/Breadcrumb'
 import { PDFDownloadLink, pdf } from '@react-pdf/renderer'
 import { useState } from 'react'
 import { useFactura, useAnularFactura } from '../api/facturas'
@@ -64,6 +65,7 @@ export default function DetalleFactura() {
 
   return (
     <div className="page-hce">
+      <Breadcrumb items={[{ label: 'Inicio', to: '/' }, { label: 'Facturación', to: '/facturas' }, { label: 'Factura' }]} />
       <div className="space-y-4 max-w-2xl">
         {/* Header */}
         <div className="bg-white rounded-xl border border-slate-200 px-5 py-4 flex items-center justify-between">
@@ -126,7 +128,7 @@ export default function DetalleFactura() {
             <tbody className="divide-y divide-slate-100">
               {factura.items.map((item) => (
                 <tr key={item.id}>
-                  <td className="px-4 py-3 font-mono text-xs text-blue-700">{item.codigo_cups}</td>
+                  <td className="px-4 py-3 font-mono text-xs" style={{ color: 'var(--hce-primary)' }}>{item.codigo_cups}</td>
                   <td className="px-4 py-3 text-sm text-slate-700">{item.descripcion}</td>
                   <td className="px-4 py-3 text-right text-sm text-slate-600">{item.cantidad}</td>
                   <td className="px-4 py-3 text-right text-sm text-slate-600">{formatCOP(item.valor_unitario)}</td>

@@ -91,7 +91,7 @@ export function BuscadorPaciente({ selectedDocumento, onSelect }: Props) {
           >
             <Filter size={14} />
             Filtros
-            {hayFiltros && <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0" />}
+            {hayFiltros && <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: 'var(--hce-primary)' }} />}
           </button>
         </div>
 

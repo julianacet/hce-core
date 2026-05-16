@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Building2, Plus, Search, Phone, Mail, Globe, X, Pencil, ChevronRight } from 'lucide-react'
+import { Breadcrumb } from '../components/Breadcrumb'
 import {
   useProveedores,
   useCrearProveedor,
@@ -13,7 +14,7 @@ import {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 const TIPO_COLOR: Record<string, string> = {
-  insumos_medicos:     'bg-blue-100 text-blue-700',
+  insumos_medicos:     'bg-[var(--hce-primary-soft)] text-[var(--hce-primary)]',
   medicamentos:        'bg-green-100 text-green-700',
   equipos_medicos:     'bg-purple-100 text-purple-700',
   laboratorio:         'bg-yellow-100 text-yellow-700',
@@ -345,6 +346,7 @@ export default function Proveedores() {
 
   return (
     <div className="page-hce space-y-5">
+      <Breadcrumb items={[{ label: 'Inicio', to: '/' }, { label: 'Proveedores' }]} />
 
       {/* Header */}
       <div className="page-header">
@@ -431,7 +433,7 @@ export default function Proveedores() {
                   <button key={p.id}
                     onClick={() => { setSeleccionado(p); setVista('detalle') }}
                     className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${
-                      seleccionado?.id === p.id ? 'bg-blue-50' : 'hover:bg-slate-50'
+                      seleccionado?.id === p.id ? 'bg-[var(--hce-primary-soft)]' : 'hover:bg-slate-50'
                     } ${!p.esta_activo ? 'opacity-50' : ''}`}>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate" style={{ color: 'var(--hce-text)' }}>

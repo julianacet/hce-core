@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router'
+import { Breadcrumb } from '../components/Breadcrumb'
 import { UserRound } from 'lucide-react'
 import { type Paciente } from '../api/pacientes'
 import { useCrearEncuentro, type EncuentroInput } from '../api/encuentros'
@@ -57,6 +58,7 @@ export default function NuevaConsulta() {
 
   return (
     <div className="page-hce">
+      <Breadcrumb items={[{ label: 'Inicio', to: '/' }, { label: 'Consultas', to: '/nueva-consulta' }, { label: 'Nueva consulta' }]} />
       <div className="page-header">
         <div>
           <h2 className="page-title">Nueva consulta</h2>

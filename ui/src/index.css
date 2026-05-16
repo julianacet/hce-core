@@ -8,6 +8,7 @@
   --hce-primary:       #1d4ed8;
   --hce-primary-text:  #ffffff;
   --hce-primary-hover: #1e40af;
+  --hce-primary-soft:  color-mix(in srgb, var(--hce-primary) 10%, transparent);
 
   /* Sidebar */
   --hce-sidebar:       #1e3a5f;

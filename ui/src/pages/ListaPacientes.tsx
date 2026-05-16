@@ -3,6 +3,7 @@ import { useDebounced } from '../hooks/useDebounced'
 import { DEBOUNCE_FILTROS_MS } from '../utils/constants'
 import { useNavigate } from 'react-router'
 import { Search, UserPlus, Filter, Trash2, ChevronRight, Users } from 'lucide-react'
+import { Breadcrumb } from '../components/Breadcrumb'
 import { SortButton } from '../components/SortButton'
 import { usePacientesPaginados, exportarPacientes } from '../api/pacientes'
 import { SelectorEps } from '../components/SelectorEps'
@@ -131,6 +132,7 @@ export default function ListaPacientes() {
 
   return (
     <div className="page-hce">
+      <Breadcrumb items={[{ label: 'Inicio', to: '/' }, { label: 'Pacientes' }]} />
       <div className="page-header">
         <div>
           <h2 className="page-title">Pacientes</h2>
@@ -173,7 +175,7 @@ export default function ListaPacientes() {
             >
               <Filter size={14} />
               Filtros
-              {hayFiltros && <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0" />}
+              {hayFiltros && <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: 'var(--hce-primary)' }} />}
             </button>
           </div>
 

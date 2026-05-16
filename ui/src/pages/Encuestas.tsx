@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import { ClipboardList, BarChart2, CheckCircle2 } from 'lucide-react'
+import { Breadcrumb } from '../components/Breadcrumb'
 import { SortButton, type SortDir } from '../components/SortButton'
 import { useTabParam } from '../hooks/useTabParam'
 import { useEncuestas, useEncuestaResumen, useCrearEncuesta } from '../api/encuestas'
@@ -36,9 +37,12 @@ function PuntajeSelector({
           title={ETIQUETAS[n]}
           className={`w-9 h-9 rounded-md text-sm font-semibold border transition-colors ${
             value === n
-              ? 'bg-blue-700 border-blue-700 text-white'
-              : 'border-slate-200 text-slate-500 hover:border-blue-400 hover:text-blue-600'
+              ? 'text-white'
+              : 'border-slate-200 text-slate-500'
           }`}
+          style={value === n
+            ? { backgroundColor: 'var(--hce-primary)', borderColor: 'var(--hce-primary)' }
+            : undefined}
         >
           {n}
         </button>
@@ -155,10 +159,11 @@ function TabRegistrar() {
               type="button"
               onClick={() => setForm((f) => ({ ...f, recomendaria: true }))}
               className={`px-5 py-2 rounded-md text-sm font-medium border transition-colors ${
-                form.recomendaria
-                  ? 'bg-blue-700 border-blue-700 text-white'
-                  : 'border-slate-200 text-slate-600 hover:border-blue-400'
+                form.recomendaria ? 'text-white' : 'border-slate-200 text-slate-600'
               }`}
+              style={form.recomendaria
+                ? { backgroundColor: 'var(--hce-primary)', borderColor: 'var(--hce-primary)' }
+                : undefined}
             >
               Sí
             </button>
@@ -166,10 +171,11 @@ function TabRegistrar() {
               type="button"
               onClick={() => setForm((f) => ({ ...f, recomendaria: false }))}
               className={`px-5 py-2 rounded-md text-sm font-medium border transition-colors ${
-                !form.recomendaria
-                  ? 'bg-blue-700 border-blue-700 text-white'
-                  : 'border-slate-200 text-slate-600 hover:border-blue-400'
+                !form.recomendaria ? 'text-white' : 'border-slate-200 text-slate-600'
               }`}
+              style={!form.recomendaria
+                ? { backgroundColor: 'var(--hce-primary)', borderColor: 'var(--hce-primary)' }
+                : undefined}
             >
               No
             </button>
@@ -203,7 +209,7 @@ function TabRegistrar() {
 
 function Barra({ valor, max = 5 }: { valor: number; max?: number }) {
   const pct = Math.round((valor / max) * 100)
-  const color = pct >= 80 ? 'bg-green-500' : pct >= 60 ? 'bg-blue-500' : 'bg-amber-500'
+  const color = pct >= 80 ? 'bg-green-500' : pct >= 60 ? 'bg-[var(--hce-primary)]' : 'bg-amber-500'
   return (
     <div className="flex items-center gap-3">
       <div className="flex-1 h-2 rounded-full bg-slate-100">
@@ -378,6 +384,7 @@ export default function Encuestas() {
 
   return (
     <div className="page-hce space-y-6">
+      <Breadcrumb items={[{ label: 'Inicio', to: '/' }, { label: 'Encuestas' }]} />
       <div className="page-header">
         <div>
           <h2 className="page-title">Encuestas de satisfacción</h2>

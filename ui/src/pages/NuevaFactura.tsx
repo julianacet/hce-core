@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router'
 import { Search, Plus, Trash2, X } from 'lucide-react'
+import { Breadcrumb } from '../components/Breadcrumb'
 import { type Paciente } from '../api/pacientes'
 import { useCups, type CupsCodigo } from '../api/cups'
 import { useCrearFactura, type FacturaItemInput } from '../api/facturas'
@@ -64,6 +65,7 @@ export default function NuevaFactura() {
 
   return (
     <div className="page-hce">
+      <Breadcrumb items={[{ label: 'Inicio', to: '/' }, { label: 'Facturación', to: '/facturas' }, { label: 'Nueva factura' }]} />
       <div className="page-header">
         <div>
           <h2 className="page-title">Nueva factura</h2>
@@ -79,7 +81,7 @@ export default function NuevaFactura() {
         {paciente ? (
           <div className="card-hce p-5">
             <p className="section-title">Paciente</p>
-            <div className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg px-4 py-3">
+            <div className="flex items-center justify-between rounded-lg px-4 py-3" style={{ backgroundColor: 'var(--hce-primary-soft)', border: '1px solid var(--hce-primary)' }}>
               <div>
                 <p className="text-sm font-medium text-slate-800">{nombreCompleto(paciente)}</p>
                 <p className="text-xs text-slate-500 mt-0.5">
@@ -130,9 +132,9 @@ export default function NuevaFactura() {
                       key={cups.codigo}
                       type="button"
                       onClick={() => agregarCups(cups)}
-                      className="w-full px-4 py-2.5 flex items-center gap-3 hover:bg-blue-50 transition-colors text-left border-b border-slate-100 last:border-0"
+                      className="w-full px-4 py-2.5 flex items-center gap-3 hover:bg-[var(--hce-primary-soft)] transition-colors text-left border-b border-slate-100 last:border-0"
                     >
-                      <span className="text-xs font-mono font-medium text-blue-700 shrink-0">{cups.codigo}</span>
+                      <span className="text-xs font-mono font-medium shrink-0" style={{ color: 'var(--hce-primary)' }}>{cups.codigo}</span>
                       <span className="text-sm text-slate-700 truncate">{cups.descripcion}</span>
                       <Plus size={14} className="text-slate-400 shrink-0 ml-auto" />
                     </button>
@@ -159,7 +161,7 @@ export default function NuevaFactura() {
                     <tbody className="divide-y divide-slate-100">
                       {items.map((item) => (
                         <tr key={item._key}>
-                          <td className="px-4 py-3 font-mono text-xs text-blue-700">{item.codigo_cups}</td>
+                          <td className="px-4 py-3 font-mono text-xs" style={{ color: 'var(--hce-primary)' }}>{item.codigo_cups}</td>
                           <td className="px-4 py-3">
                             <input
                               type="text"

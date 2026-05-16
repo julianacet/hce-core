@@ -1,10 +1,9 @@
 import { useParams } from 'react-router'
-import { Activity, Printer } from 'lucide-react'
+import { Printer } from 'lucide-react'
 import { useState } from 'react'
 import { useTabParam } from '../../hooks/useTabParam'
 import { pdf } from '@react-pdf/renderer'
 import { useEncuentro, type ValorNormalNotas } from '../../api/encuentros'
-import { useAuditoriaEncuentro } from '../../api/auditoria'
 import { usePaciente } from '../../api/pacientes'
 import { useMedico } from '../../context/MedicoContext'
 import FormulaPDF, { type Medicamento } from '../../components/pdf/FormulaPDF'
@@ -28,11 +27,6 @@ const TABS: { key: Tab; label: string }[] = [
 
 const ALL_TAB_KEYS = TABS.map(t => t.key) as readonly Tab[]
 
-const colorAccion: Record<'INSERT' | 'UPDATE' | 'DELETE', string> = {
-  INSERT: 'bg-green-100 text-green-700',
-  UPDATE: 'bg-yellow-100 text-yellow-700',
-  DELETE: 'bg-red-100 text-red-700',
-}
 
 export default function DetalleEncuentro() {
   const { id, encId } = useParams()
@@ -43,7 +37,6 @@ export default function DetalleEncuentro() {
   const [notaTexto, setNotaTexto] = useState('')
 
   const { data: e, isLoading, isError } = useEncuentro(id ?? '', encId ?? '')
-  const { data: logs = [] } = useAuditoriaEncuentro(encId ?? '')
   const { data: paciente } = usePaciente(id ?? '')
   const { data: campos = [] } = useCamposClinicosActivos()
   const { data: formulas = [] } = useFormulas(id ?? '', encId ?? '')
@@ -368,7 +361,7 @@ export default function DetalleEncuentro() {
                   {e.diagnosticos.map(d => (
                     <div key={d.id} className="flex items-baseline gap-2 text-sm">
                       <span className={`text-xs px-2 py-0.5 rounded-full shrink-0 ${
-                        d.tipo === 'principal' ? 'bg-blue-100 text-blue-700'
+                        d.tipo === 'principal' ? 'bg-[var(--hce-primary-soft)] text-[var(--hce-primary)]'
                         : d.tipo === 'secundario' ? 'bg-slate-100 text-slate-600'
                         : 'bg-amber-100 text-amber-700'
                       }`}>
@@ -442,32 +435,6 @@ export default function DetalleEncuentro() {
         </div>
       </div>
 
-      {/* Historial de cambios */}
-      <div className="card-hce overflow-hidden">
-        <div className="flex items-center gap-2 px-5 py-4 border-b border-slate-100">
-          <Activity size={16} className="text-slate-400" />
-          <h3 className="card-title">Historial de cambios</h3>
-        </div>
-        <div className="divide-y divide-slate-100">
-          {logs.length === 0 && (
-            <div className="px-5 py-6 text-center text-sm text-slate-400">Sin registros de cambios.</div>
-          )}
-          {logs.map(log => (
-            <div key={log.id} className="px-5 py-3 flex items-start gap-4 text-sm">
-              <span className={`mt-0.5 text-xs font-medium px-2 py-0.5 rounded-full shrink-0 ${colorAccion[log.accion] ?? 'bg-slate-100 text-slate-600'}`}>
-                {log.accion}
-              </span>
-              <div className="flex-1 min-w-0 text-xs text-slate-400 truncate">
-                {log.datos_nuevos ?? log.datos_anteriores ?? '—'}
-              </div>
-              <div className="text-right shrink-0">
-                <p className="text-xs text-slate-400">{log.usuario_id ?? '—'}</p>
-                <p className="text-xs text-slate-400">{new Date(log.fecha_cambio).toLocaleString('es-CO')}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
 
     </div>
   )
