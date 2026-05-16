@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { Search, Filter, Trash2, Check, ChevronRight } from 'lucide-react'
+import { Link } from 'react-router'
+import { Search, Filter, Trash2, Check, ChevronRight, UserPlus } from 'lucide-react'
 import { usePacientesPaginados, type Paciente } from '../api/pacientes'
 import { SelectorEps } from './SelectorEps'
 import { useDebounced } from '../hooks/useDebounced'
@@ -165,8 +166,20 @@ export function BuscadorPaciente({ selectedDocumento, onSelect }: Props) {
             <div className="px-5 py-6 text-center text-sm text-red-500">Error al cargar. Intente de nuevo.</div>
           )}
           {!isLoading && !isError && resultados.length === 0 && (
-            <div className="px-5 py-6 text-center text-sm" style={{ color: 'var(--hce-text-muted)' }}>
-              {(qDebounced || hayFiltros) ? 'Sin resultados para esa búsqueda.' : 'Escriba para buscar un paciente.'}
+            <div className="px-5 py-6 text-center space-y-3">
+              <p className="text-sm" style={{ color: 'var(--hce-text-muted)' }}>
+                {(qDebounced || hayFiltros) ? 'Sin resultados para esa búsqueda.' : 'Escriba para buscar un paciente.'}
+              </p>
+              {(qDebounced || hayFiltros) && (
+                <Link
+                  to="/pacientes/nuevo"
+                  className="inline-flex items-center gap-1.5 text-sm font-medium hover:underline"
+                  style={{ color: 'var(--hce-primary)' }}
+                >
+                  <UserPlus size={15} />
+                  Crear paciente nuevo
+                </Link>
+              )}
             </div>
           )}
           {resultados.map(p => {

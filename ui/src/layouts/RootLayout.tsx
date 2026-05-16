@@ -13,17 +13,35 @@ export default function RootLayout() {
     navigate('/login')
   }
 
-  const navItems = [
-    { to: '/', label: 'Inicio', icon: LayoutDashboard, end: true },
-    { to: '/agenda', label: 'Agenda', icon: CalendarDays },
-    { to: '/nueva-consulta', label: 'Nueva consulta', icon: UserSearch },
-    { to: '/pacientes', label: 'Pacientes', icon: Users },
-    { to: '/facturas', label: 'Facturación', icon: Receipt },
-    { to: '/rips-mensual', label: 'RIPS Mensual', icon: FileCode2 },
-    { to: '/encuestas', label: 'Encuestas', icon: Star },
-    { to: '/inventario', label: 'Inventario', icon: Package },
-    { to: '/eventos-adversos', label: 'Eventos adversos', icon: AlertTriangle },
-    { to: '/proveedores', label: 'Proveedores', icon: Building2 },
+  const navGroups = [
+    {
+      label: null,
+      items: [{ to: '/', label: 'Inicio', icon: LayoutDashboard, end: true }],
+    },
+    {
+      label: 'Atención al paciente',
+      items: [
+        { to: '/nueva-consulta', label: 'Consultas', icon: UserSearch },
+        { to: '/pacientes', label: 'Pacientes', icon: Users },
+        { to: '/agenda', label: 'Agenda', icon: CalendarDays },
+      ],
+    },
+    {
+      label: 'Facturación y reportes',
+      items: [
+        { to: '/facturas', label: 'Facturación', icon: Receipt },
+        { to: '/rips-mensual', label: 'RIPS Mensual', icon: FileCode2 },
+      ],
+    },
+    {
+      label: 'Gestión del consultorio',
+      items: [
+        { to: '/inventario', label: 'Inventario', icon: Package },
+        { to: '/proveedores', label: 'Proveedores', icon: Building2 },
+        { to: '/eventos-adversos', label: 'Eventos adversos', icon: AlertTriangle },
+        { to: '/encuestas', label: 'Encuestas', icon: Star },
+      ],
+    },
   ]
 
   return (
@@ -42,42 +60,60 @@ export default function RootLayout() {
         </div>
 
         {/* Navegación principal */}
-        <nav className="flex-1 px-3 py-4 flex flex-col gap-1">
-          {navItems.map(({ to, label, icon: Icon, end }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={end}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors ${
-                  isActive ? 'text-white font-medium' : 'text-white/60 hover:bg-white/10 hover:text-white'
-                }`
-              }
-              style={({ isActive }) =>
-                isActive ? { backgroundColor: tema.colorPrimario } : {}
-              }
-            >
-              <Icon size={16} />
-              {label}
-            </NavLink>
+        <nav className="flex-1 px-3 py-4 flex flex-col overflow-y-auto">
+          {navGroups.map((group, i) => (
+            <div key={i} className={i > 0 ? 'mt-5' : ''}>
+              {group.label && (
+                <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-white/40">
+                  {group.label}
+                </p>
+              )}
+              <div className={`flex flex-col gap-0.5 ${group.label ? 'pl-2' : ''}`}>
+                {group.items.map(({ to, label, icon: Icon, end }) => (
+                  <NavLink
+                    key={to}
+                    to={to}
+                    end={end}
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors ${
+                        isActive ? 'text-white font-medium' : 'text-white/60 hover:bg-white/10 hover:text-white'
+                      }`
+                    }
+                    style={({ isActive }) =>
+                      isActive ? { backgroundColor: tema.colorPrimario } : {}
+                    }
+                  >
+                    <Icon size={16} />
+                    {label}
+                  </NavLink>
+                ))}
+              </div>
+            </div>
           ))}
 
           {/* Solo admin */}
           {tieneRol('admin') && (
-            <NavLink
-              to="/admin"
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors mt-2 ${
-                  isActive ? 'text-white font-medium' : 'text-white/60 hover:bg-white/10 hover:text-white'
-                }`
-              }
-              style={({ isActive }) =>
-                isActive ? { backgroundColor: tema.colorPrimario } : {}
-              }
-            >
-              <ShieldCheck size={16} />
-              Administración
-            </NavLink>
+            <div className="mt-5">
+              <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-white/40">
+                Sistema
+              </p>
+              <div className="pl-2">
+              <NavLink
+                to="/admin"
+                className={({ isActive }) =>
+                  `flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors ${
+                    isActive ? 'text-white font-medium' : 'text-white/60 hover:bg-white/10 hover:text-white'
+                  }`
+                }
+                style={({ isActive }) =>
+                  isActive ? { backgroundColor: tema.colorPrimario } : {}
+                }
+              >
+                <ShieldCheck size={16} />
+                Administración
+              </NavLink>
+              </div>
+            </div>
           )}
         </nav>
 

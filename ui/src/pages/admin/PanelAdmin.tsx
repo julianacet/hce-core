@@ -57,6 +57,7 @@ import {
   type MedicamentoPredefinido,
   type MedicamentoInput,
 } from '../../api/medicamentos_predefinidos'
+import { AuditoriaAdmin } from './AuditoriaAdmin'
 
 const PALETAS = [
   {
@@ -1525,6 +1526,7 @@ export default function PanelAdmin() {
           { id: 'usuarios',        label: 'Usuarios' },
           { id: 'eventos',         label: 'Eventos adversos' },
           { id: 'medicamentos',    label: 'Medicamentos' },
+          { id: 'auditoria',       label: 'Auditoría' },
         ] as const).map(({ id, label }) => (
           <button
             key={id}
@@ -1542,6 +1544,7 @@ export default function PanelAdmin() {
       {tab === 'antecedentes' && <AntecedentesAdmin onAbierto={setFormularioAbierto} />}
       {tab === 'campos' && <CamposClinicosAdmin onAbierto={setFormularioAbierto} />}
       {tab === 'medicamentos' && <MedicamentosAdmin onAbierto={setFormularioAbierto} />}
+      {tab === 'auditoria' && <AuditoriaAdmin />}
 
       {tab === 'apariencia' && <form onSubmit={guardar} className="space-y-6">
 
