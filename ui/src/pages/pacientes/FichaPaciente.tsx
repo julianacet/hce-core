@@ -6,6 +6,7 @@ import { useOcupacion } from '../../api/ocupaciones'
 import { useEpsInfo } from '../../api/eps'
 import { nombrePais } from '../../data/paises'
 import PacienteFormFields from '../../components/PacienteFormFields'
+import { fmtFechaNacimiento } from '../../utils/paciente'
 
 export default function FichaPaciente() {
   const { id } = useParams()
@@ -84,7 +85,7 @@ export default function FichaPaciente() {
       ['Segundo nombre', p.nombre_segundo],
       ['Primer apellido', p.apellido_primero],
       ['Segundo apellido', p.apellido_segundo],
-      ['Fecha de nacimiento', new Date(p.fecha_nacimiento).toLocaleDateString('es-CO')],
+      ['Fecha de nacimiento', fmtFechaNacimiento(p.fecha_nacimiento)],
       ['Edad', `${p.edad} años`],
       ['Género', p.genero_nombre],
       ['Estado civil', p.estado_civil_nombre],

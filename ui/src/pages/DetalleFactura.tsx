@@ -123,54 +123,68 @@ export default function DetalleFactura() {
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Destructiva */}
             {factura.estado === 'activa' && (
-              <button
-                onClick={handleAnular}
-                disabled={anular.isPending}
-                className="flex items-center gap-2 text-sm px-4 py-2 rounded-md border border-red-300 text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50"
-              >
-                Anular
-              </button>
+              <>
+                <button
+                  onClick={handleAnular}
+                  disabled={anular.isPending}
+                  className="flex items-center gap-2 text-sm px-4 py-2 rounded-md border border-red-300 text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50"
+                >
+                  Anular
+                </button>
+                <div className="w-px h-6 bg-slate-200" />
+              </>
             )}
 
-            {/* Térmica */}
-            <button
-              onClick={imprimirTermica}
-              disabled={imprimiendoTermica}
-              className="flex items-center gap-2 text-sm px-4 py-2 rounded-md border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors disabled:opacity-50"
-            >
-              <Receipt size={14} />
-              {imprimiendoTermica ? 'Preparando...' : 'Térmica'}
-            </button>
-            <PDFDownloadLink
-              document={docTermica}
-              fileName={`factura_termica_${factura.paciente_documento}_${Date.now()}.pdf`}
-            >
-              {({ loading }) => (
-                <button disabled={loading} className="flex items-center gap-2 text-sm px-4 py-2 rounded-md border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors disabled:opacity-50">
-                  <Download size={14} />
-                  {loading ? '...' : 'PDF térmica'}
-                </button>
-              )}
-            </PDFDownloadLink>
+            {/* Térmica: imprimir | descargar */}
+            <div className="flex rounded-md border border-slate-200 divide-x divide-slate-200 overflow-hidden">
+              <button
+                onClick={imprimirTermica}
+                disabled={imprimiendoTermica}
+                className="flex items-center gap-1.5 text-sm px-3 py-2 text-slate-600 hover:bg-slate-50 transition-colors disabled:opacity-50"
+              >
+                <Receipt size={14} />
+                {imprimiendoTermica ? 'Preparando…' : 'Térmica'}
+              </button>
+              <PDFDownloadLink
+                document={docTermica}
+                fileName={`factura_termica_${factura.paciente_documento}_${Date.now()}.pdf`}
+              >
+                {({ loading }) => (
+                  <button disabled={loading} title="Descargar PDF térmica"
+                    className="flex items-center px-2.5 py-2 text-slate-500 hover:bg-slate-50 transition-colors disabled:opacity-50">
+                    <Download size={13} />
+                  </button>
+                )}
+              </PDFDownloadLink>
+            </div>
 
-            {/* Normal */}
-            <button onClick={imprimir} disabled={imprimiendo}
-              className="flex items-center gap-2 text-sm px-4 py-2 rounded-md border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors disabled:opacity-50">
-              <Printer size={14} />
-              {imprimiendo ? 'Preparando...' : 'Imprimir'}
-            </button>
-            <PDFDownloadLink
-              document={docPDF}
-              fileName={`factura_${factura.paciente_documento}_${Date.now()}.pdf`}
-            >
-              {({ loading }) => (
-                <button disabled={loading} className="btn-primary disabled:opacity-50">
-                  <Download size={14} />
-                  {loading ? 'Generando...' : 'Descargar PDF'}
-                </button>
-              )}
-            </PDFDownloadLink>
+            {/* Regular: imprimir | descargar */}
+            <div className="flex rounded-md border border-slate-200 divide-x divide-slate-200 overflow-hidden">
+              <button
+                onClick={imprimir}
+                disabled={imprimiendo}
+                className="flex items-center gap-1.5 text-sm px-3 py-2 text-slate-600 hover:bg-slate-50 transition-colors disabled:opacity-50"
+              >
+                <Printer size={14} />
+                {imprimiendo ? 'Preparando…' : 'Imprimir'}
+              </button>
+              <PDFDownloadLink
+                document={docPDF}
+                fileName={`factura_${factura.paciente_documento}_${Date.now()}.pdf`}
+              >
+                {({ loading }) => (
+                  <button disabled={loading}
+                    className="flex items-center gap-1.5 text-sm px-3 py-2 font-medium transition-colors disabled:opacity-50"
+                    style={{ backgroundColor: 'var(--hce-primary)', color: '#fff' }}
+                  >
+                    <Download size={13} />
+                    {loading ? 'Generando…' : 'PDF'}
+                  </button>
+                )}
+              </PDFDownloadLink>
+            </div>
           </div>
         </div>
 

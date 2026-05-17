@@ -18,3 +18,17 @@ export function calcularEdad(fechaStr: string): number | null {
   if (m < 0 || (m === 0 && hoy.getDate() < nac.getDate())) edad--
   return edad >= 0 ? edad : null
 }
+
+// Convierte un string "YYYY-MM-DD" a fecha local sin el desfase UTC.
+// new Date("YYYY-MM-DD") parsea como UTC medianoche → muestra día anterior en UTC-5.
+export function parseFechaLocal(iso: string): Date {
+  const [y, m, d] = iso.slice(0, 10).split('-').map(Number)
+  return new Date(y, m - 1, d)
+}
+
+export function fmtFechaNacimiento(iso: string | null | undefined): string {
+  if (!iso) return '—'
+  return parseFechaLocal(iso).toLocaleDateString('es-CO', {
+    day: '2-digit', month: 'long', year: 'numeric',
+  })
+}

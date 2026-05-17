@@ -7,7 +7,7 @@ import { useCrearEncuentro, type EncuentroInput } from '../api/encuentros'
 import { crearFormulas } from '../api/formulas'
 import EncuentroForm, { type FormulaData } from '../components/EncuentroForm'
 import { BuscadorPaciente } from '../components/BuscadorPaciente'
-import { nombreCompleto } from '../utils/paciente'
+import { nombreCompleto, fmtFechaNacimiento } from '../utils/paciente'
 
 export default function NuevaConsulta() {
   const navigate = useNavigate()
@@ -125,7 +125,7 @@ export default function NuevaConsulta() {
             nombre: nombreCompleto(paciente),
             documento: paciente.numero_documento,
             tipoDocumento: paciente.tipo_documento,
-            fechaNacimiento: new Date(paciente.fecha_nacimiento).toLocaleDateString('es-CO'),
+            fechaNacimiento: fmtFechaNacimiento(paciente.fecha_nacimiento),
           } : undefined}
           onSubmit={handleSubmit}
           isPending={crear.isPending}

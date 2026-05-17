@@ -3,14 +3,9 @@ import { Plus, Trash2, Printer, Download } from 'lucide-react'
 import { pdf } from '@react-pdf/renderer'
 import FormulaPDF, { type Medicamento } from './pdf/FormulaPDF'
 import { useMedico } from '../context/MedicoContext'
+import { useTema } from '../context/TemaContext'
 import { useMedicamentosPredefinidos, type MedicamentoPredefinido } from '../api/medicamentos_predefinidos'
 
-export { type Medicamento }
-
-export const medVacio: Medicamento = {
-  nombre: '', concentracion: '', formaFarmaceutica: '',
-  dosis: '', frecuencia: '', duracion: '', cantidad: '', indicaciones: '',
-}
 
 function InputMed({
   tipo, value, onChange, onSelect,
@@ -85,6 +80,7 @@ type Props = {
 
 export default function FormulaTab({ medsPos, setMedsPos, medsNoPos, setMedsNoPos, paciente, diagnostico }: Props) {
   const { medico } = useMedico()
+  const { tema } = useTema()
   const [tab, setTab] = useState<'pos' | 'no_pos'>('pos')
   const [imprimiendo, setImprimiendo] = useState(false)
   const [descargando, setDescargando] = useState(false)
@@ -104,6 +100,8 @@ export default function FormulaTab({ medsPos, setMedsPos, medsNoPos, setMedsNoPo
       incluirFirma={!!medico.firmaBase64}
       fecha={fecha}
       tipo={tab}
+      colorPrimario={tema.colorPrimario}
+      logoBase64={tema.logoBase64}
     />
   ) : null
 

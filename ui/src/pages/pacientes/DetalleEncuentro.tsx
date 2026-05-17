@@ -6,12 +6,13 @@ import { pdf } from '@react-pdf/renderer'
 import { useEncuentro, type ValorNormalNotas } from '../../api/encuentros'
 import { usePaciente } from '../../api/pacientes'
 import { useMedico } from '../../context/MedicoContext'
+import { useTema } from '../../context/TemaContext'
 import FormulaPDF, { type Medicamento } from '../../components/pdf/FormulaPDF'
 import { useCamposClinicosActivos } from '../../api/campos_clinicos'
 import { useFormulas, type FormulaGuardada } from '../../api/formulas'
 import { useNotasEncuentro, useCrearNotaEncuentro } from '../../api/notas_encuentro'
 import AntecedentesTab from '../../components/AntecedentesTab'
-import { nombreCompleto } from '../../utils/paciente'
+import { nombreCompleto, fmtFechaNacimiento } from '../../utils/paciente'
 
 type Tab = 'motivo' | 'signos' | 'revision' | 'examen' | 'diagnosticos' | 'antecedentes' | 'formula'
 
@@ -31,6 +32,7 @@ const ALL_TAB_KEYS = TABS.map(t => t.key) as readonly Tab[]
 export default function DetalleEncuentro() {
   const { id, encId } = useParams()
   const { medico } = useMedico()
+  const { tema } = useTema()
   const [tab, setTab] = useTabParam('tab', 'motivo' as Tab, ALL_TAB_KEYS)
   const [imprimiendoFormulaId, setImprimiendoFormulaId] = useState<string | null>(null)
   const [notaAbierta, setNotaAbierta] = useState(false)
@@ -46,7 +48,7 @@ export default function DetalleEncuentro() {
   if (isLoading) return <div className="p-6 text-sm text-slate-400">Cargando consulta...</div>
   if (isError || !e) return <div className="p-6 text-sm text-red-500">Error al cargar la consulta.</div>
 
-  const diagnostico = [e.codigo_diagnostico_principal, e.descripcion_diagnostico].filter(Boolean).join(' - ')
+  const diagnostico = e.codigo_diagnostico_principal ?? ''
   const pacienteNombre = paciente ? nombreCompleto(paciente) : id ?? ''
 
   async function handleReimprimirFormula(formula: FormulaGuardada) {
@@ -72,12 +74,14 @@ export default function DetalleEncuentro() {
             nombre: pacienteNombre,
             documento: paciente?.numero_documento ?? id ?? '',
             tipoDocumento: paciente?.tipo_documento ?? '',
-            fechaNacimiento: paciente ? new Date(paciente.fecha_nacimiento).toLocaleDateString('es-CO') : '',
+            fechaNacimiento: fmtFechaNacimiento(paciente?.fecha_nacimiento),
           }}
           diagnostico={diagnostico}
           medicamentos={meds}
           incluirFirma={!!medico.firmaBase64}
           fecha={fechaFormula}
+          colorPrimario={tema.colorPrimario}
+          logoBase64={tema.logoBase64}
         />
       ).toBlob()
       const url = URL.createObjectURL(blob)

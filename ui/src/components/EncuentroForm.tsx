@@ -8,7 +8,8 @@ import DiagnosticoSearch from './DiagnosticoSearch'
 import { SignosVitalesForm, ExamenFisicoForm, RevisionSistemasForm } from './CampoClinicoForm'
 import AntecedentesTab from './AntecedentesTab'
 import { NavigationGuard } from './NavigationGuard'
-import FormulaTab, { type Medicamento, medVacio } from './FormulaTab'
+import FormulaTab from './FormulaTab'
+import { type Medicamento, medVacio } from './pdf/FormulaPDF'
 
 type FormState = {
   motivo_consulta: string
@@ -436,8 +437,8 @@ export default function EncuentroForm({
             setMedsNoPos={setMedsNoPos}
             paciente={paciente ?? null}
             diagnostico={
-              diagnosticos.find(d => d.tipo === 'principal')?.descripcion ??
-              impresion?.descripcion ?? ''
+              diagnosticos.find(d => d.tipo === 'principal')?.codigo ??
+              impresion?.codigo ?? ''
             }
           />
         )}
