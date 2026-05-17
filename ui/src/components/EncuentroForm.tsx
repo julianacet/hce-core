@@ -306,23 +306,18 @@ export default function EncuentroForm({
                   <select name="finalidad_consulta" value={form.finalidad_consulta} onChange={handleChange} className="input-hce">
                     <option value="10">Consulta de primera vez</option>
                     <option value="11">Consulta de control</option>
-                    <option value="12">Urgencias</option>
                   </select>
                 </div>
                 <div>
                   <label className="label-hce">Causa externa</label>
                   <select name="causa_externa" value={form.causa_externa} onChange={handleChange} className="input-hce">
                     <option value="13">Enfermedad general</option>
-                    <option value="01">Accidente de trabajo</option>
-                    <option value="02">Accidente de tránsito</option>
                   </select>
                 </div>
                 <div>
                   <label className="label-hce">Vía de ingreso</label>
                   <select name="via_ingreso" value={form.via_ingreso} onChange={handleChange} className="input-hce">
                     <option value="02">Consulta externa</option>
-                    <option value="01">Urgencias</option>
-                    <option value="03">Hospitalización</option>
                   </select>
                 </div>
               </div>

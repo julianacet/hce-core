@@ -21,7 +21,6 @@ const FINALIDADES = [
   { value: '', label: 'Todas las finalidades' },
   { value: '10', label: 'Primera vez' },
   { value: '11', label: 'Control / seguimiento' },
-  { value: '12', label: 'Urgencias' },
 ]
 
 function formatFecha(iso: string) {

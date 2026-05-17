@@ -4,6 +4,8 @@ import { useTabParam } from '../../hooks/useTabParam'
 import { PDFViewer, pdf } from '@react-pdf/renderer'
 import { Plus, Trash2, Download, Printer, ChevronLeft, Eye, EyeOff } from 'lucide-react'
 import { useMedico } from '../../context/MedicoContext'
+import { useTema } from '../../context/TemaContext'
+import { fmtFechaNacimiento } from '../../utils/paciente'
 import FormulaPDF, { type Medicamento } from '../../components/pdf/FormulaPDF'
 import { usePaciente } from '../../api/pacientes'
 import { useEncuentro } from '../../api/encuentros'
@@ -95,6 +97,7 @@ export default function NuevaFormula() {
   const { id, encId } = useParams()
   const navigate = useNavigate()
   const { medico } = useMedico()
+  const { tema } = useTema()
 
   const { data: pacienteData, isLoading: cargandoPaciente } = usePaciente(id ?? '')
   const { data: encuentroData, isLoading: cargandoEncuentro } = useEncuentro(id ?? '', encId ?? '')
@@ -103,12 +106,10 @@ export default function NuevaFormula() {
     nombre: nombreCompleto(pacienteData),
     documento: pacienteData.numero_documento,
     tipoDocumento: pacienteData.tipo_documento,
-    fechaNacimiento: new Date(pacienteData.fecha_nacimiento).toLocaleDateString('es-CO'),
+    fechaNacimiento: fmtFechaNacimiento(pacienteData.fecha_nacimiento),
   } : null
 
-  const diagnostico = encuentroData
-    ? [encuentroData.codigo_diagnostico_principal, encuentroData.descripcion_diagnostico].filter(Boolean).join(' - ')
-    : ''
+  const diagnostico = encuentroData?.codigo_diagnostico_principal ?? ''
 
   const crearFormulaPos = useCrearFormula(id ?? '', encId ?? '')
   const crearFormulaNoPos = useCrearFormula(id ?? '', encId ?? '')
@@ -146,6 +147,8 @@ export default function NuevaFormula() {
       incluirFirma={incluirFirma}
       fecha={fecha}
       tipo={tab}
+      colorPrimario={tema.colorPrimario}
+      logoBase64={tema.logoBase64}
     />
   ) : null
 

@@ -716,7 +716,7 @@ const FORM_PREGUNTA_INICIAL: FormPregunta = {
   texto: '',
   tipo_respuesta: 'booleano',
   opciones: null,
-  tiene_detalle: false,
+  tiene_detalle: true,
   placeholder_detalle: '',
   solo_genero: '',
   orden: 0,
@@ -753,7 +753,7 @@ function AntecedentesAdmin({ onAbierto }: { onAbierto?: (v: boolean) => void }) 
       texto: p.texto,
       tipo_respuesta: p.tipo_respuesta,
       opciones: p.opciones,
-      tiene_detalle: p.tiene_detalle,
+      tiene_detalle: true,
       placeholder_detalle: p.placeholder_detalle ?? '',
       solo_genero: p.solo_genero ?? '',
       orden: p.orden,
@@ -877,16 +877,10 @@ function AntecedentesAdmin({ onAbierto }: { onAbierto?: (v: boolean) => void }) 
 
           <div className="grid grid-cols-3 gap-4">
             <div className="col-span-2">
-              <label className="flex items-center gap-2 text-sm cursor-pointer mb-1" style={{ color: 'var(--hce-text)' }}>
-                <input type="checkbox" checked={form.tiene_detalle}
-                  onChange={e => setForm(f => ({ ...f, tiene_detalle: e.target.checked }))} />
-                Mostrar campo de detalle cuando la respuesta es "Sí"
-              </label>
-              {form.tiene_detalle && (
-                <input className="input-hce text-sm" value={form.placeholder_detalle ?? ''}
-                  onChange={e => setForm(f => ({ ...f, placeholder_detalle: e.target.value }))}
-                  placeholder="Texto guía del detalle (opcional)" />
-              )}
+              <label className="label-hce">Texto guía del campo de detalle (opcional)</label>
+              <input className="input-hce text-sm" value={form.placeholder_detalle ?? ''}
+                onChange={e => setForm(f => ({ ...f, placeholder_detalle: e.target.value }))}
+                placeholder="Ej: Especifique cuál medicamento y dosis" />
             </div>
             <div>
               <label className="label-hce">Solo mostrar para género</label>
@@ -956,7 +950,7 @@ function PreguntaRow({ pregunta, onEditar }: { pregunta: AntecedentePregunta; on
             <span className="px-1.5 py-0.5 rounded text-xs bg-slate-100 text-slate-400">Inactiva</span>
           )}
         </div>
-        {pregunta.tiene_detalle && pregunta.placeholder_detalle && (
+        {pregunta.placeholder_detalle && (
           <p className="text-xs mt-0.5 text-slate-400 truncate">Detalle: {pregunta.placeholder_detalle}</p>
         )}
       </div>

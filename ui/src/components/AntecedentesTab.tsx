@@ -10,6 +10,11 @@ import {
 
 type AnswerState = { valor: string; detalle: string }
 
+// Anchos de columna de la fila de pregunta (suman ~100% con el gap)
+const W_LABEL    = '42%'
+const W_RESPUESTA = '22%'
+// La columna de detalle ocupa el resto (flex-1)
+
 const ESTADOS_BOOLEANO = [
   { value: 'si',        label: 'Sí' },
   { value: 'no',        label: 'No' },
@@ -28,23 +33,14 @@ function normalizarBooleano(v: string): string {
 }
 
 const CATEGORIAS = [
-  { key: 'personal',       label: 'Personales patológicos' },
-  { key: 'familiar',       label: 'Familiares' },
-  { key: 'farmacologico',  label: 'Farmacológicos — medicamentos actuales' },
-  { key: 'alergico',       label: 'Alérgicos' },
-  { key: 'quirurgico',     label: 'Quirúrgicos' },
-  { key: 'habito',         label: 'Hábitos y tóxicos' },
-  { key: 'gineco',         label: 'Gineco-obstétrico' },
+  { key: 'personal',      label: 'Personales' },
+  { key: 'familiar',      label: 'Familiares' },
+  { key: 'farmacologico', label: 'Farmacológicos' },
+  { key: 'alergico',      label: 'Alérgicos' },
+  { key: 'quirurgico',    label: 'Quirúrgicos' },
+  { key: 'habito',        label: 'Hábitos' },
+  { key: 'gineco',        label: 'Gineco-obstétrico' },
 ]
-
-function Seccion({ titulo, children }: { titulo: string; children: React.ReactNode }) {
-  return (
-    <div className="border border-slate-200 rounded-xl p-5 space-y-4">
-      <h4 className="text-sm font-semibold text-slate-600">{titulo}</h4>
-      {children}
-    </div>
-  )
-}
 
 // ── Read-only display ─────────────────────────────────────────────────────────
 
@@ -58,7 +54,7 @@ function PreguntaReadOnly({ pregunta, answer }: { pregunta: PreguntaConRespuesta
     if (!items.length) return null
     const campos = opciones as ListaCampo[]
     return (
-      <div className="space-y-1.5 border-b border-slate-100 pb-3 last:border-0 last:pb-0">
+      <div className="py-2.5 border-b border-slate-100 last:border-0 last:pb-0 space-y-1.5">
         <p className="text-sm text-slate-500">{pregunta.texto}</p>
         <div className="flex flex-wrap gap-1.5">
           {items.map((item, i) => (
@@ -74,12 +70,12 @@ function PreguntaReadOnly({ pregunta, answer }: { pregunta: PreguntaConRespuesta
   const display = tipo_respuesta === 'booleano' ? (LABELS_BOOLEANO[answer.valor] ?? answer.valor) : answer.valor
 
   return (
-    <div className="flex gap-4 items-start border-b border-slate-100 pb-3 last:border-0 last:pb-0">
-      <span className="text-sm text-slate-500 flex-1">{pregunta.texto}</span>
-      <div className="text-right shrink-0">
-        <span className="text-sm text-slate-800">{display}</span>
-        {answer.detalle && <p className="text-xs text-slate-400 mt-0.5">{answer.detalle}</p>}
-      </div>
+    <div className="flex items-baseline gap-3 py-2.5 border-b border-slate-100 last:border-0 last:pb-0">
+      <span className="text-sm text-slate-500 shrink-0" style={{ width: W_LABEL }}>{pregunta.texto}</span>
+      <span className="text-sm text-slate-800 shrink-0" style={{ width: W_RESPUESTA }}>{display}</span>
+      {answer.detalle && (
+        <span className="flex-1 text-xs text-slate-400 leading-relaxed">{answer.detalle}</span>
+      )}
     </div>
   )
 }
@@ -94,7 +90,6 @@ function ListaField({ campos, valor, onChange }: {
   const items: Record<string, string>[] = (() => {
     try { return JSON.parse(valor || '[]') } catch { return [] }
   })()
-
   const [draft, setDraft] = useState<Record<string, string>>({})
 
   function agregar() {
@@ -151,67 +146,76 @@ function PreguntaField({ pregunta, answer, onValor, onDetalle }: {
   onValor: (v: string) => void
   onDetalle: (v: string) => void
 }) {
-  const { tipo_respuesta, tiene_detalle, placeholder_detalle, opciones } = pregunta
-  const mostrarDetalle = tiene_detalle && answer.valor === 'si'
+  const { tipo_respuesta, placeholder_detalle, opciones } = pregunta
 
-  return (
-    <div className="space-y-2 border-b border-slate-100 pb-4 last:border-0 last:pb-0">
-      <p className="text-sm text-slate-700">{pregunta.texto}</p>
-
-      {tipo_respuesta === 'booleano' && (
-        <select
-          className="input-hce text-sm w-44"
-          value={answer.valor}
-          onChange={e => { onValor(e.target.value); if (!e.target.value) onDetalle('') }}
-        >
-          <option value="">— sin responder —</option>
-          {ESTADOS_BOOLEANO.map(({ value, label }) => (
-            <option key={value} value={value}>{label}</option>
-          ))}
-        </select>
-      )}
-
-      {tipo_respuesta === 'opciones' && (
-        <select className="input-hce text-sm max-w-xs"
-          value={answer.valor}
-          onChange={e => onValor(e.target.value)}>
-          <option value="">— seleccionar —</option>
-          {(opciones as string[]).map(op => (
-            <option key={op} value={op}>{op}</option>
-          ))}
-        </select>
-      )}
-
-      {tipo_respuesta === 'texto' && (
-        <input className="input-hce text-sm" value={answer.valor}
-          onChange={e => onValor(e.target.value)} />
-      )}
-
-      {tipo_respuesta === 'numero' && (
-        <input type="text" inputMode="decimal" className="input-hce text-sm w-32" value={answer.valor}
-          onChange={e => onValor(e.target.value.replace(',', '.'))} />
-      )}
-
-      {tipo_respuesta === 'fecha' && (
-        <input type="date" className="input-hce text-sm w-44" value={answer.valor}
-          onChange={e => onValor(e.target.value)} />
-      )}
-
-      {tipo_respuesta === 'lista' && (
+  // Lista ocupa toda la fila — layout propio
+  if (tipo_respuesta === 'lista') {
+    return (
+      <div className="py-2.5 border-b border-slate-100 last:border-0 last:pb-0 space-y-2">
+        <p className="text-sm text-slate-700">{pregunta.texto}</p>
         <ListaField
           campos={opciones as ListaCampo[]}
           valor={answer.valor}
           onChange={onValor} />
-      )}
+      </div>
+    )
+  }
 
-      {mostrarDetalle && (
+  function renderInput() {
+    if (tipo_respuesta === 'booleano') return (
+      <select
+        className="input-hce text-sm"
+        value={answer.valor}
+        onChange={e => onValor(e.target.value)}
+      >
+        <option value="">— sin responder —</option>
+        {ESTADOS_BOOLEANO.map(({ value, label }) => (
+          <option key={value} value={value}>{label}</option>
+        ))}
+      </select>
+    )
+    if (tipo_respuesta === 'opciones') return (
+      <select className="input-hce text-sm"
+        value={answer.valor}
+        onChange={e => onValor(e.target.value)}>
+        <option value="">— seleccionar —</option>
+        {(opciones as string[]).map(op => (
+          <option key={op} value={op}>{op}</option>
+        ))}
+      </select>
+    )
+    if (tipo_respuesta === 'numero') return (
+      <input type="text" inputMode="decimal" className="input-hce text-sm"
+        value={answer.valor}
+        onChange={e => onValor(e.target.value.replace(',', '.'))} />
+    )
+    if (tipo_respuesta === 'fecha') return (
+      <input type="date" className="input-hce text-sm"
+        value={answer.valor}
+        onChange={e => onValor(e.target.value)} />
+    )
+    // texto
+    return (
+      <input className="input-hce text-sm" value={answer.valor}
+        onChange={e => onValor(e.target.value)} />
+    )
+  }
+
+  return (
+    <div className="flex items-center gap-3 py-2.5 border-b border-slate-100 last:border-0 last:pb-0">
+      <p className="text-sm text-slate-700 shrink-0 leading-snug" style={{ width: W_LABEL }}>{pregunta.texto}</p>
+      <div className="shrink-0" style={{ width: W_RESPUESTA }}>
+        {renderInput()}
+      </div>
+      <div className="flex-1">
         <textarea
-          className="input-hce text-sm resize-none"
-          rows={2}
-          placeholder={placeholder_detalle ?? 'Detalles...'}
+          className="input-hce text-sm resize-none w-full"
+          rows={1}
+          placeholder={placeholder_detalle || 'Observaciones…'}
           value={answer.detalle}
-          onChange={e => onDetalle(e.target.value)} />
-      )}
+          onChange={e => onDetalle(e.target.value)}
+        />
+      </div>
     </div>
   )
 }
@@ -231,6 +235,7 @@ export default function AntecedentesTab({
   const guardar = useGuardarAntecedentes(documento)
   const [answers, setAnswers] = useState<Record<string, AnswerState>>({})
   const [guardado, setGuardado] = useState(false)
+  const [subTab, setSubTab] = useState<string>('')
   const dataRef = useRef<typeof data | null>(null)
   const initialized = useRef(false)
 
@@ -276,18 +281,27 @@ export default function AntecedentesTab({
   const esGineco = genero === 'F' || genero === 'X'
   const cats = CATEGORIAS.filter(c => c.key !== 'gineco' || esGineco)
 
-  const categoriasVisibles = cats
+  // En modo lectura solo mostramos tabs con al menos una respuesta
+  const tabs = cats
     .map(({ key, label }) => {
-      const preguntas = (data?.[key] ?? []).filter(p =>
-        readOnly ? !!answers[p.id]?.valor : true
-      )
-      return { key, label, preguntas }
+      const preguntas = data?.[key] ?? []
+      const tieneRespuestas = preguntas.some(p => !!answers[p.id]?.valor)
+      return { key, label, preguntas, tieneRespuestas }
     })
-    .filter(c => c.preguntas.length > 0)
+    .filter(c => c.preguntas.length > 0 && (!readOnly || c.tieneRespuestas))
 
-  if (readOnly && categoriasVisibles.length === 0) {
+  if (readOnly && tabs.length === 0) {
     return <p className="text-sm text-slate-400">Sin antecedentes registrados para este paciente.</p>
   }
+
+  const tabActivo = subTab && tabs.some(t => t.key === subTab)
+    ? subTab
+    : tabs[0]?.key ?? ''
+
+  const preguntasActivas = tabs.find(t => t.key === tabActivo)?.preguntas ?? []
+  const preguntasVisibles = readOnly
+    ? preguntasActivas.filter(p => !!answers[p.id]?.valor)
+    : preguntasActivas
 
   return (
     <div className="space-y-4">
@@ -297,25 +311,47 @@ export default function AntecedentesTab({
         </p>
       )}
 
-      {categoriasVisibles.map(({ key, label, preguntas }) => (
-        <Seccion key={key} titulo={label}>
-          {preguntas.map(p => readOnly ? (
-            <PreguntaReadOnly
-              key={p.id}
-              pregunta={p}
-              answer={answers[p.id] ?? { valor: '', detalle: '' }}
-            />
-          ) : (
-            <PreguntaField
-              key={p.id}
-              pregunta={p}
-              answer={answers[p.id] ?? { valor: '', detalle: '' }}
-              onValor={v => setValor(p.id, v)}
-              onDetalle={d => setDetalle(p.id, d)}
-            />
-          ))}
-        </Seccion>
-      ))}
+      {/* Sub-tabs de categoría */}
+      <div className="flex border-b border-slate-200">
+        {tabs.map(({ key, label, tieneRespuestas }) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => setSubTab(key)}
+            className="flex-1 py-2 text-xs whitespace-nowrap font-medium transition-colors border-b-2 -mb-px flex items-center justify-center gap-1.5"
+            style={{
+              borderBottomColor: tabActivo === key ? 'var(--hce-primary)' : 'transparent',
+              color: tabActivo === key ? 'var(--hce-primary)' : 'var(--hce-text-muted)',
+            }}
+          >
+            {label}
+            {!readOnly && tieneRespuestas && (
+              <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: 'var(--hce-primary)' }} />
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* Preguntas de la categoría activa */}
+      <div className="space-y-0">
+        {preguntasVisibles.length === 0 ? (
+          <p className="text-sm text-slate-400">Sin datos registrados en esta categoría.</p>
+        ) : preguntasVisibles.map(p => readOnly ? (
+          <PreguntaReadOnly
+            key={p.id}
+            pregunta={p}
+            answer={answers[p.id] ?? { valor: '', detalle: '' }}
+          />
+        ) : (
+          <PreguntaField
+            key={p.id}
+            pregunta={p}
+            answer={answers[p.id] ?? { valor: '', detalle: '' }}
+            onValor={v => setValor(p.id, v)}
+            onDetalle={d => setDetalle(p.id, d)}
+          />
+        ))}
+      </div>
 
       {!readOnly && (
         <div className="flex justify-end items-center h-5">

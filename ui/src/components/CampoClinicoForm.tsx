@@ -89,136 +89,47 @@ export function SignosVitalesForm({ campos, values, onChange, disabled }: Signos
   )
 }
 
-// ── Revisión por sistemas ─────────────────────────────────────────────────────
+// ── Tabla clínica (revisión por sistemas + examen físico) ─────────────────────
 
-interface RevisionProps {
+type ValoresTabla = Record<string, string | ValorNormalNotas>
+
+interface TablaClinicaConfig {
+  colItem: string
+  colDetalle: string
+  labelPos: string
+  labelNeg: string
+  placeholderDetalle: string
+}
+
+interface TablaClinicaProps {
   campos: CampoClinico[]
-  values: Record<string, ValorNormalNotas>
-  onChange: (values: Record<string, ValorNormalNotas>) => void
+  values: ValoresTabla
+  onChange: (values: ValoresTabla) => void
   disabled?: boolean
+  config: TablaClinicaConfig
+  /** Render texto-type fields as free-text textareas above the table */
+  conCamposTexto?: boolean
 }
 
-export function RevisionSistemasForm({ campos, values, onChange, disabled }: RevisionProps) {
-  const activos = campos.filter((c) => c.seccion === 'revision_sistemas' && c.esta_activo)
-
-  function setEstado(clave: string, niega: boolean) {
-    if (disabled) return
-    const prev = values[clave]
-    onChange({ ...values, [clave]: { normal: niega, notas: prev?.notas ?? '' } })
-  }
-
-  function setDetalle(clave: string, notas: string) {
-    if (disabled) return
-    const prev = values[clave]
-    onChange({ ...values, [clave]: { normal: prev?.normal ?? true, notas } })
-  }
-
-  function getNiega(clave: string): boolean {
-    return values[clave]?.normal ?? true
-  }
-
-  function getDetalle(clave: string): string {
-    return values[clave]?.notas ?? ''
-  }
-
-  if (activos.length === 0) {
-    return (
-      <p className="text-sm text-slate-400">
-        No hay preguntas de revisión por sistemas configuradas.
-      </p>
-    )
-  }
-
-  return (
-    <div>
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b" style={{ borderColor: 'var(--hce-border)', background: 'var(--hce-fondo)' }}>
-            <th className="text-left text-xs font-medium uppercase tracking-wide text-slate-500 py-2.5 pr-4 w-56">Síntoma</th>
-            <th className="text-left text-xs font-medium uppercase tracking-wide text-slate-500 py-2.5 pr-4 w-44">Estado</th>
-            <th className="text-left text-xs font-medium uppercase tracking-wide text-slate-500 py-2.5">Detalle</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-slate-100">
-          {activos.map((c) => {
-            const niega = getNiega(c.clave)
-            const detalle = getDetalle(c.clave)
-            return (
-              <tr key={c.clave} className="align-top">
-                <td className="py-2.5 pr-4 text-slate-700">{c.nombre}</td>
-                <td className="py-2.5 pr-4">
-                  <div className="flex rounded-md border border-slate-200 overflow-hidden w-fit">
-                    <button
-                      type="button"
-                      onClick={() => setEstado(c.clave, true)}
-                      disabled={disabled}
-                      className={`px-3 py-1 text-xs font-medium transition-colors ${
-                        niega
-                          ? 'bg-green-600 text-white'
-                          : 'bg-white text-slate-500 hover:bg-slate-50'
-                      } disabled:cursor-not-allowed`}
-                    >
-                      Niega
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setEstado(c.clave, false)}
-                      disabled={disabled}
-                      className={`px-3 py-1 text-xs font-medium transition-colors border-l border-slate-200 ${
-                        !niega
-                          ? 'bg-amber-500 text-white'
-                          : 'bg-white text-slate-500 hover:bg-slate-50'
-                      } disabled:cursor-not-allowed`}
-                    >
-                      Refiere
-                    </button>
-                  </div>
-                </td>
-                <td className="py-2.5">
-                  {!niega ? (
-                    <textarea
-                      rows={1}
-                      value={detalle}
-                      onChange={(e) => setDetalle(c.clave, e.target.value)}
-                      placeholder="Descripción del síntoma…"
-                      disabled={disabled}
-                      className="input-hce w-full resize-none text-sm"
-                      autoFocus={!disabled && detalle === ''}
-                    />
-                  ) : (
-                    detalle && <span className="text-slate-500 text-xs">{detalle}</span>
-                  )}
-                </td>
-              </tr>
-            )
-          })}
-        </tbody>
-      </table>
-    </div>
-  )
-}
-
-// ── Examen físico ─────────────────────────────────────────────────────────────
-
-interface ExamenProps {
-  campos: CampoClinico[]
-  values: Record<string, string | ValorNormalNotas>
-  onChange: (values: Record<string, string | ValorNormalNotas>) => void
-  disabled?: boolean
-}
-
-export function ExamenFisicoForm({ campos, values, onChange, disabled }: ExamenProps) {
-  const activos = campos.filter((c) => c.seccion === 'examen_fisico' && c.esta_activo)
+function TablaClinicaForm({
+  campos,
+  values,
+  onChange,
+  disabled,
+  config,
+  conCamposTexto = false,
+}: TablaClinicaProps) {
+  const { colItem, colDetalle, labelPos, labelNeg, placeholderDetalle } = config
 
   function setTexto(clave: string, valor: string) {
     onChange({ ...values, [clave]: valor })
   }
 
-  function setEstado(clave: string, normal: boolean) {
+  function setEstado(clave: string, pos: boolean) {
     if (disabled) return
     const prev = values[clave]
     const notas = typeof prev === 'object' ? (prev as ValorNormalNotas).notas ?? '' : ''
-    onChange({ ...values, [clave]: { normal, notas } })
+    onChange({ ...values, [clave]: { normal: pos, notas } })
   }
 
   function setNotas(clave: string, notas: string) {
@@ -227,7 +138,7 @@ export function ExamenFisicoForm({ campos, values, onChange, disabled }: ExamenP
     onChange({ ...values, [clave]: { normal, notas } })
   }
 
-  function getNormal(clave: string): boolean {
+  function getEstado(clave: string): boolean {
     const v = values[clave]
     if (typeof v === 'object') return (v as ValorNormalNotas).normal ?? true
     return true
@@ -239,9 +150,14 @@ export function ExamenFisicoForm({ campos, values, onChange, disabled }: ExamenP
     return ''
   }
 
-  // Campos de texto (aspecto general) se muestran aparte, antes de la tabla
-  const camposTexto = activos.filter((c) => c.tipo === 'texto')
-  const camposTabla = activos.filter((c) => c.tipo !== 'texto')
+  const camposTexto = conCamposTexto ? campos.filter((c) => c.tipo === 'texto') : []
+  const camposTabla = conCamposTexto ? campos.filter((c) => c.tipo !== 'texto') : campos
+
+  if (campos.length === 0) {
+    return (
+      <p className="text-sm text-slate-400">No hay campos configurados para esta sección.</p>
+    )
+  }
 
   return (
     <div className="space-y-4">
@@ -263,21 +179,24 @@ export function ExamenFisicoForm({ campos, values, onChange, disabled }: ExamenP
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b" style={{ borderColor: 'var(--hce-border)', background: 'var(--hce-fondo)' }}>
-              <th className="text-left text-xs font-medium uppercase tracking-wide text-slate-500 py-2.5 pr-4 w-56">Segmento</th>
+              <th className="text-left text-xs font-medium uppercase tracking-wide text-slate-500 py-2.5 pr-4 w-56">{colItem}</th>
               <th className="text-left text-xs font-medium uppercase tracking-wide text-slate-500 py-2.5 pr-4 w-44">Estado</th>
-              <th className="text-left text-xs font-medium uppercase tracking-wide text-slate-500 py-2.5">Detalle / Hallazgo</th>
+              <th className="text-left text-xs font-medium uppercase tracking-wide text-slate-500 py-2.5">{colDetalle}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {camposTabla.map((c) => {
               if (c.tipo === 'opciones') {
+                const val = typeof values[c.clave] === 'object'
+                  ? (values[c.clave] as ValorNormalNotas).notas ?? ''
+                  : (values[c.clave] as string | undefined) ?? ''
                 return (
                   <tr key={c.clave} className="align-top">
                     <td className="py-2.5 pr-4 text-slate-700">{c.nombre}</td>
                     <td colSpan={2} className="py-2.5">
                       <select
                         className="input-hce text-sm max-w-xs"
-                        value={typeof values[c.clave] === 'string' ? (values[c.clave] as string) : ''}
+                        value={val}
                         onChange={(e) => setTexto(c.clave, e.target.value)}
                         disabled={disabled}
                       >
@@ -291,7 +210,7 @@ export function ExamenFisicoForm({ campos, values, onChange, disabled }: ExamenP
                 )
               }
 
-              const normal = getNormal(c.clave)
+              const pos = getEstado(c.clave)
               const notas = getNotas(c.clave)
 
               return (
@@ -304,40 +223,38 @@ export function ExamenFisicoForm({ campos, values, onChange, disabled }: ExamenP
                         onClick={() => setEstado(c.clave, true)}
                         disabled={disabled}
                         className={`px-3 py-1 text-xs font-medium transition-colors ${
-                          normal
+                          pos
                             ? 'bg-green-600 text-white'
                             : 'bg-white text-slate-500 hover:bg-slate-50'
                         } disabled:cursor-not-allowed`}
                       >
-                        Normal
+                        {labelPos}
                       </button>
                       <button
                         type="button"
                         onClick={() => setEstado(c.clave, false)}
                         disabled={disabled}
                         className={`px-3 py-1 text-xs font-medium transition-colors border-l border-slate-200 ${
-                          !normal
+                          !pos
                             ? 'bg-amber-500 text-white'
                             : 'bg-white text-slate-500 hover:bg-slate-50'
                         } disabled:cursor-not-allowed`}
                       >
-                        Anormal
+                        {labelNeg}
                       </button>
                     </div>
                   </td>
                   <td className="py-2.5">
-                    {!normal ? (
+                    {disabled ? (
+                      notas && <span className="text-slate-500 text-xs">{notas}</span>
+                    ) : (
                       <textarea
                         rows={1}
                         value={notas}
                         onChange={(e) => setNotas(c.clave, e.target.value)}
-                        placeholder="Hallazgos…"
-                        disabled={disabled}
+                        placeholder={placeholderDetalle}
                         className="input-hce w-full resize-none text-sm"
-                        autoFocus={!disabled && notas === ''}
                       />
-                    ) : (
-                      notas && <span className="text-slate-500 text-xs">{notas}</span>
                     )}
                   </td>
                 </tr>
@@ -347,5 +264,66 @@ export function ExamenFisicoForm({ campos, values, onChange, disabled }: ExamenP
         </table>
       )}
     </div>
+  )
+}
+
+// ── Revisión por sistemas ─────────────────────────────────────────────────────
+
+const CONFIG_REVISION: TablaClinicaConfig = {
+  colItem: 'Síntoma',
+  colDetalle: 'Detalle',
+  labelPos: 'Niega',
+  labelNeg: 'Refiere',
+  placeholderDetalle: 'Descripción del síntoma…',
+}
+
+interface RevisionProps {
+  campos: CampoClinico[]
+  values: Record<string, ValorNormalNotas>
+  onChange: (values: Record<string, ValorNormalNotas>) => void
+  disabled?: boolean
+}
+
+export function RevisionSistemasForm({ campos, values, onChange, disabled }: RevisionProps) {
+  const activos = campos.filter((c) => c.seccion === 'revision_sistemas' && c.esta_activo)
+  return (
+    <TablaClinicaForm
+      campos={activos}
+      values={values as ValoresTabla}
+      onChange={(v) => onChange(v as Record<string, ValorNormalNotas>)}
+      disabled={disabled}
+      config={CONFIG_REVISION}
+    />
+  )
+}
+
+// ── Examen físico ─────────────────────────────────────────────────────────────
+
+const CONFIG_EXAMEN: TablaClinicaConfig = {
+  colItem: 'Segmento',
+  colDetalle: 'Detalle / Hallazgo',
+  labelPos: 'Normal',
+  labelNeg: 'Anormal',
+  placeholderDetalle: 'Hallazgos…',
+}
+
+interface ExamenProps {
+  campos: CampoClinico[]
+  values: Record<string, string | ValorNormalNotas>
+  onChange: (values: Record<string, string | ValorNormalNotas>) => void
+  disabled?: boolean
+}
+
+export function ExamenFisicoForm({ campos, values, onChange, disabled }: ExamenProps) {
+  const activos = campos.filter((c) => c.seccion === 'examen_fisico' && c.esta_activo)
+  return (
+    <TablaClinicaForm
+      campos={activos}
+      values={values}
+      onChange={onChange}
+      disabled={disabled}
+      config={CONFIG_EXAMEN}
+      conCamposTexto
+    />
   )
 }
