@@ -1,5 +1,5 @@
 import type { CampoClinico } from '../api/campos_clinicos'
-import type { ValorNormalNotas } from '../api/encuentros'
+import type { ValorNormalNotas, ValoresClinicos } from '../api/encuentros'
 
 // ── Signos vitales ────────────────────────────────────────────────────────────
 
@@ -91,7 +91,7 @@ export function SignosVitalesForm({ campos, values, onChange, disabled }: Signos
 
 // ── Tabla clínica (revisión por sistemas + examen físico) ─────────────────────
 
-type ValoresTabla = Record<string, string | ValorNormalNotas>
+type ValoresTabla = ValoresClinicos
 
 interface TablaClinicaConfig {
   colItem: string
@@ -187,16 +187,19 @@ function TablaClinicaForm({
           <tbody className="divide-y divide-slate-100">
             {camposTabla.map((c) => {
               if (c.tipo === 'opciones') {
-                const val = typeof values[c.clave] === 'object'
-                  ? (values[c.clave] as ValorNormalNotas).notas ?? ''
-                  : (values[c.clave] as string | undefined) ?? ''
+                const raw = values[c.clave]
+                const opcion = typeof raw === 'object'
+                  ? ((raw as ValorNormalNotas).notas || ((raw as ValorNormalNotas).normal ? (c.opciones?.[0] ?? '') : (c.opciones?.[1] ?? '')))
+                  : (raw as string | undefined) ?? ''
+                const notasClave = c.clave + '_notas'
+                const notas = (values[notasClave] as string | undefined) ?? ''
                 return (
                   <tr key={c.clave} className="align-top">
                     <td className="py-2.5 pr-4 text-slate-700">{c.nombre}</td>
-                    <td colSpan={2} className="py-2.5">
+                    <td className="py-2.5 pr-4">
                       <select
-                        className="input-hce text-sm max-w-xs"
-                        value={val}
+                        className="input-hce text-sm"
+                        value={opcion}
                         onChange={(e) => setTexto(c.clave, e.target.value)}
                         disabled={disabled}
                       >
@@ -205,6 +208,19 @@ function TablaClinicaForm({
                           <option key={op} value={op}>{op}</option>
                         ))}
                       </select>
+                    </td>
+                    <td className="py-2.5">
+                      {disabled ? (
+                        notas && <span className="text-slate-500 text-xs">{notas}</span>
+                      ) : (
+                        <textarea
+                          rows={1}
+                          value={notas}
+                          onChange={(e) => setTexto(notasClave, e.target.value)}
+                          placeholder={placeholderDetalle}
+                          className="input-hce w-full resize-none text-sm"
+                        />
+                      )}
                     </td>
                   </tr>
                 )
@@ -279,8 +295,8 @@ const CONFIG_REVISION: TablaClinicaConfig = {
 
 interface RevisionProps {
   campos: CampoClinico[]
-  values: Record<string, ValorNormalNotas>
-  onChange: (values: Record<string, ValorNormalNotas>) => void
+  values: ValoresClinicos
+  onChange: (values: ValoresClinicos) => void
   disabled?: boolean
 }
 
@@ -289,8 +305,8 @@ export function RevisionSistemasForm({ campos, values, onChange, disabled }: Rev
   return (
     <TablaClinicaForm
       campos={activos}
-      values={values as ValoresTabla}
-      onChange={(v) => onChange(v as Record<string, ValorNormalNotas>)}
+      values={values}
+      onChange={onChange}
       disabled={disabled}
       config={CONFIG_REVISION}
     />
@@ -309,8 +325,8 @@ const CONFIG_EXAMEN: TablaClinicaConfig = {
 
 interface ExamenProps {
   campos: CampoClinico[]
-  values: Record<string, string | ValorNormalNotas>
-  onChange: (values: Record<string, string | ValorNormalNotas>) => void
+  values: ValoresClinicos
+  onChange: (values: ValoresClinicos) => void
   disabled?: boolean
 }
 

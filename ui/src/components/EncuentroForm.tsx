@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { ChevronLeft, ChevronRight, X } from 'lucide-react'
-import { useEncuentros, type DiagnosticoItem, type ValorNormalNotas, type EncuentroInput } from '../api/encuentros'
+import { useEncuentros, type DiagnosticoItem, type ValoresClinicos, type EncuentroInput } from '../api/encuentros'
 import { useCamposClinicosActivos } from '../api/campos_clinicos'
 import { useBuscarDiagnosticos } from '../api/diagnosticos'
 import { DEBOUNCE_MS } from '../utils/constants'
@@ -168,8 +168,8 @@ export default function EncuentroForm({
 
   const [form, setForm] = useState<FormState>({ ...FORM_INICIAL, ...(draft?.form ?? {}) })
   const [signos, setSignos] = useState<Record<string, string>>(draft?.signos ?? {})
-  const [revision, setRevision] = useState<Record<string, ValorNormalNotas>>(draft?.revision ?? {})
-  const [examen, setExamen] = useState<Record<string, string | ValorNormalNotas>>(draft?.examen ?? {})
+  const [revision, setRevision] = useState<ValoresClinicos>(draft?.revision ?? {})
+  const [examen, setExamen] = useState<ValoresClinicos>(draft?.examen ?? {})
   const [diagnosticos, setDiagnosticos] = useState<DiagnosticoItem[]>(draft?.diagnosticos ?? [])
   const [impresion, setImpresion] = useState<DiagnosticoItem | null>(draft?.impresion ?? null)
   const [tipoDiagnosticoPrincipal, setTipoDiagnosticoPrincipal] = useState<string>(draft?.tipoDiagnosticoPrincipal ?? '01')

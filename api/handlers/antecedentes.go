@@ -162,11 +162,11 @@ func (h *AntecedentesHandler) crearPregunta(w http.ResponseWriter, r *http.Reque
 	err := h.db.QueryRow(r.Context(), `
 		INSERT INTO antecedente_pregunta
 		    (categoria, texto, tipo_respuesta, opciones, tiene_detalle, placeholder_detalle, solo_genero, orden)
-		VALUES ($1,$2,$3,$4::jsonb,$5,$6,$7,$8)
+		VALUES ($1,$2,$3,$4::jsonb,TRUE,$5,$6,$7)
 		RETURNING id, categoria, texto, tipo_respuesta, opciones,
 		          tiene_detalle, placeholder_detalle, solo_genero, orden, esta_activo`,
 		inp.Categoria, inp.Texto, inp.TipoRespuesta, optsJSON,
-		inp.TieneDetalle, inp.PlaceholderDetalle, inp.SoloGenero, inp.Orden,
+		inp.PlaceholderDetalle, inp.SoloGenero, inp.Orden,
 	).Scan(
 		&p.ID, &p.Categoria, &p.Texto, &p.TipoRespuesta, &optsBytes,
 		&p.TieneDetalle, &p.PlaceholderDetalle, &p.SoloGenero, &p.Orden, &p.EstaActivo,
@@ -200,12 +200,12 @@ func (h *AntecedentesHandler) actualizarPregunta(w http.ResponseWriter, r *http.
 	err := h.db.QueryRow(r.Context(), `
 		UPDATE antecedente_pregunta
 		SET categoria=$1, texto=$2, tipo_respuesta=$3, opciones=$4::jsonb,
-		    tiene_detalle=$5, placeholder_detalle=$6, solo_genero=$7, orden=$8
-		WHERE id=$9
+		    tiene_detalle=TRUE, placeholder_detalle=$5, solo_genero=$6, orden=$7
+		WHERE id=$8
 		RETURNING id, categoria, texto, tipo_respuesta, opciones,
 		          tiene_detalle, placeholder_detalle, solo_genero, orden, esta_activo`,
 		inp.Categoria, inp.Texto, inp.TipoRespuesta, optsJSON,
-		inp.TieneDetalle, inp.PlaceholderDetalle, inp.SoloGenero, inp.Orden, id,
+		inp.PlaceholderDetalle, inp.SoloGenero, inp.Orden, id,
 	).Scan(
 		&p.ID, &p.Categoria, &p.Texto, &p.TipoRespuesta, &optsBytes,
 		&p.TieneDetalle, &p.PlaceholderDetalle, &p.SoloGenero, &p.Orden, &p.EstaActivo,

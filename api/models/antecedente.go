@@ -20,7 +20,6 @@ type AntecedentePreguntaInput struct {
 	Texto              string          `json:"texto"`
 	TipoRespuesta      string          `json:"tipo_respuesta"`
 	Opciones           json.RawMessage `json:"opciones"`
-	TieneDetalle       bool            `json:"tiene_detalle"`
 	PlaceholderDetalle *string         `json:"placeholder_detalle"`
 	SoloGenero         *string         `json:"solo_genero"`
 	Orden              int             `json:"orden"`
