@@ -42,7 +42,7 @@ type Props = {
   onCancelar?: () => void
 }
 
-type TabKey = 'motivo' | 'antecedentes' | 'signos' | 'revision' | 'examen' | 'diagnosticos' | 'formula'
+type TabKey = 'motivo' | 'antecedentes' | 'signos' | 'revision' | 'examen' | 'analisis' | 'diagnosticos' | 'formula'
 
 const FORM_INICIAL: FormState = {
   motivo_consulta: '',
@@ -60,6 +60,7 @@ const TAB_LABELS: Record<TabKey, string> = {
   signos: 'Signos vitales',
   revision: 'Rev. por sistemas',
   examen: 'Examen físico',
+  analisis: 'Análisis',
   diagnosticos: 'Diagnósticos',
   formula: 'Fórmula',
 }
@@ -207,6 +208,7 @@ export default function EncuentroForm({
     ...(camposSignos.length > 0 ? ['signos' as TabKey] : []),
     ...(camposRevision.length > 0 ? ['revision' as TabKey] : []),
     ...(camposExamen.length > 0 ? ['examen' as TabKey] : []),
+    'analisis',
     'diagnosticos',
     'formula',
   ]
@@ -383,6 +385,20 @@ export default function EncuentroForm({
           <ExamenFisicoForm campos={camposExamen} values={examen} onChange={setExamen} />
         )}
 
+        {activeTab === 'analisis' && (
+          <div>
+            <label className="label-hce">Análisis <span className="text-slate-400 font-normal">(opcional)</span></label>
+            <textarea
+              name="plan_manejo"
+              value={form.plan_manejo}
+              onChange={handleChange}
+              rows={8}
+              className="input-hce"
+              placeholder="Análisis clínico, correlación entre la anamnesis, examen físico y hallazgos…"
+            />
+          </div>
+        )}
+
         {activeTab === 'diagnosticos' && (
           <>
             <div className="space-y-2">
@@ -396,17 +412,6 @@ export default function EncuentroForm({
             <div className="border-t border-slate-100 pt-4 space-y-2">
               <label className="label-hce">Diagnósticos confirmados</label>
               <DiagnosticoSearch value={diagnosticos} onChange={setDiagnosticos} />
-            </div>
-
-            <div>
-              <label className="label-hce">Plan de manejo <span className="text-slate-400 font-normal">(opcional)</span></label>
-              <textarea
-                name="plan_manejo"
-                value={form.plan_manejo}
-                onChange={handleChange}
-                rows={3}
-                className="input-hce"
-              />
             </div>
 
             <div>
