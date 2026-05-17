@@ -27,12 +27,14 @@ export function NavigationGuard({ when }: { when: boolean }) {
         </p>
         <div className="flex gap-2 justify-end">
           <button
+            type="button"
             onClick={() => blocker.reset()}
             className="px-4 py-2 text-sm rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 transition-colors"
           >
             Seguir editando
           </button>
           <button
+            type="button"
             onClick={() => blocker.proceed()}
             className="px-4 py-2 text-sm rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors"
           >
