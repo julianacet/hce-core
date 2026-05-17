@@ -1,5 +1,5 @@
 import { Outlet, NavLink, useNavigate } from 'react-router'
-import { LayoutDashboard, UserSearch, Users, Settings, ShieldCheck, LogOut, FileCode2, Star, Package, AlertTriangle, Building2, CalendarDays, Receipt } from 'lucide-react'
+import { LayoutDashboard, UserSearch, Users, ShieldCheck, LogOut, FileCode2, Star, Package, AlertTriangle, Building2, CalendarDays, Receipt, Activity } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useTema } from '../context/TemaContext'
 
@@ -97,43 +97,42 @@ export default function RootLayout() {
               <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-white/40">
                 Sistema
               </p>
-              <div className="pl-2">
-              <NavLink
-                to="/admin"
-                className={({ isActive }) =>
-                  `flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors ${
-                    isActive ? 'text-white font-medium' : 'text-white/60 hover:bg-white/10 hover:text-white'
-                  }`
-                }
-                style={({ isActive }) =>
-                  isActive ? { backgroundColor: tema.colorPrimario } : {}
-                }
-              >
-                <ShieldCheck size={16} />
-                Administración
-              </NavLink>
+              <div className="pl-2 flex flex-col gap-0.5">
+                <NavLink
+                  to="/admin"
+                  className={({ isActive }) =>
+                    `flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors ${
+                      isActive ? 'text-white font-medium' : 'text-white/60 hover:bg-white/10 hover:text-white'
+                    }`
+                  }
+                  style={({ isActive }) =>
+                    isActive ? { backgroundColor: tema.colorPrimario } : {}
+                  }
+                >
+                  <ShieldCheck size={16} />
+                  Administración
+                </NavLink>
+                <NavLink
+                  to="/historial"
+                  className={({ isActive }) =>
+                    `flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors ${
+                      isActive ? 'text-white font-medium' : 'text-white/60 hover:bg-white/10 hover:text-white'
+                    }`
+                  }
+                  style={({ isActive }) =>
+                    isActive ? { backgroundColor: tema.colorPrimario } : {}
+                  }
+                >
+                  <Activity size={16} />
+                  Historial de actividad
+                </NavLink>
               </div>
             </div>
           )}
         </nav>
 
-        {/* Footer: configuración + usuario + logout */}
+        {/* Footer: usuario + logout */}
         <div className="px-3 py-4 border-t border-white/10 space-y-1">
-          <NavLink
-            to="/configuracion"
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors ${
-                isActive ? 'text-white font-medium' : 'text-white/60 hover:bg-white/10 hover:text-white'
-              }`
-            }
-            style={({ isActive }) =>
-              isActive ? { backgroundColor: tema.colorPrimario } : {}
-            }
-          >
-            <Settings size={16} />
-            Configuración
-          </NavLink>
-
           {/* Info del usuario */}
           <div className="px-3 py-2">
             <p className="text-xs text-white font-medium truncate">{usuario?.nombre}</p>

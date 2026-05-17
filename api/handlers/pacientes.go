@@ -68,7 +68,7 @@ type queryRower interface {
 // GET /pacientes?q=texto  (legacy — búsqueda/autocompletado, retorna array)
 // GET /pacientes?page=1&limit=25&orden=nombre&dir=asc&q=&tipo_usuario=  (paginado, retorna {pacientes, total})
 func (h *PacienteHandler) listar(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Query().Get("page") != "" {
+	if r.URL.Query().Get("page") != "" || r.URL.Query().Get("export") == "1" {
 		h.listarPaginado(w, r)
 		return
 	}

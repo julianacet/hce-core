@@ -9,6 +9,7 @@ export type LogAuditoria = {
   datos_anteriores?: string
   datos_nuevos?: string
   usuario_id?: string
+  nombre_usuario?: string
   fecha_cambio: string
 }
 

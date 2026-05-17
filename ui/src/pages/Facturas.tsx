@@ -120,12 +120,6 @@ export default function Facturas() {
           <p className="page-desc">Facturas emitidas a pacientes</p>
         </div>
         <div className="flex gap-2">
-          <ExportButtons
-            onCsv={descargarCsv}
-            onExcel={descargarExcel}
-            descargando={descargando}
-            disabled={total === 0}
-          />
           <button onClick={() => navigate('/facturas/nueva')} className="btn-primary">
             <Plus size={15} />
             Nueva factura
@@ -169,9 +163,12 @@ export default function Facturas() {
                   <input type="date" className="input-hce" value={filtros.hasta} onChange={e => setFiltro('hasta', e.target.value)} />
                 </div>
               </div>
-              <button className="btn-ghost text-xs text-slate-400 hover:text-slate-600" onClick={limpiarFiltros}>
-                <Trash2 size={13} /> Limpiar filtros
-              </button>
+              <div className="flex items-center justify-between">
+                <button className="btn-ghost text-xs text-slate-400 hover:text-slate-600" onClick={limpiarFiltros}>
+                  <Trash2 size={13} /> Limpiar filtros
+                </button>
+                <ExportButtons onCsv={descargarCsv} onExcel={descargarExcel} descargando={descargando} disabled={total === 0} />
+              </div>
             </div>
           )}
         </div>

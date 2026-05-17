@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react'
 import { apiFetch } from '../api/client'
+import { type ConfigImpresion, DEFAULTS_IMPRESION } from '../utils/impresion'
 
 export type DatosMedico = {
   nombre: string
@@ -14,6 +15,7 @@ export type DatosMedico = {
   codPrestador: string
   firmaBase64: string | null
   primerControlGratis: boolean
+  impresion: ConfigImpresion
 }
 
 const DEFAULTS: DatosMedico = {
@@ -29,6 +31,7 @@ const DEFAULTS: DatosMedico = {
   correoElectronico: '',
   firmaBase64: null,
   primerControlGratis: true,
+  impresion: DEFAULTS_IMPRESION,
 }
 
 type MedicoContextType = {
@@ -41,7 +44,13 @@ const MedicoContext = createContext<MedicoContextType | null>(null)
 function fromCache(): DatosMedico {
   try {
     const raw = localStorage.getItem('hce_medico')
-    return raw ? { ...DEFAULTS, ...JSON.parse(raw) } : DEFAULTS
+    if (!raw) return DEFAULTS
+    const parsed = JSON.parse(raw)
+    return {
+      ...DEFAULTS,
+      ...parsed,
+      impresion: { ...DEFAULTS_IMPRESION, ...parsed.impresion },
+    }
   } catch {
     return DEFAULTS
   }

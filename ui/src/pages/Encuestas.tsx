@@ -1,9 +1,8 @@
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import { ClipboardList, BarChart2, CheckCircle2 } from 'lucide-react'
 import { Breadcrumb } from '../components/Breadcrumb'
-import { SortButton, type SortDir } from '../components/SortButton'
 import { useTabParam } from '../hooks/useTabParam'
-import { useEncuestas, useEncuestaResumen, useCrearEncuesta } from '../api/encuestas'
+import { useEncuestaResumen, useCrearEncuesta } from '../api/encuestas'
 import type { EncuestaInput } from '../api/encuestas'
 
 type Tab = 'registrar' | 'resultados'
@@ -222,41 +221,10 @@ function Barra({ valor, max = 5 }: { valor: number; max?: number }) {
   )
 }
 
-type OrdenEncuesta = 'fecha' | 'documento' | 'facilidad_cita' | 'tiempo_espera' | 'calidad_atencion' |
-  'comunicacion_medico' | 'claridad_informacion' | 'comodidad_instalaciones' | 'satisfaccion_general' | 'recomendaria'
-
 function TabResultados() {
   const { data: resumen, isLoading: cargandoRes } = useEncuestaResumen()
-  const { data: encuestas = [], isLoading: cargandoLista } = useEncuestas()
-  const [orden, setOrden] = useState<OrdenEncuesta>('fecha')
-  const [dir, setDir] = useState<SortDir>('desc')
 
-  function ordenarPor(col: OrdenEncuesta) {
-    if (orden === col) {
-      setDir(d => d === 'asc' ? 'desc' : 'asc')
-    } else {
-      setOrden(col)
-      setDir('desc')
-    }
-  }
-
-  const encuestasOrdenadas = useMemo(() => {
-    return [...encuestas].sort((a, b) => {
-      let cmp = 0
-      if (orden === 'fecha') {
-        cmp = a.fecha_atencion < b.fecha_atencion ? -1 : a.fecha_atencion > b.fecha_atencion ? 1 : 0
-      } else if (orden === 'documento') {
-        cmp = (a.paciente_documento ?? '').localeCompare(b.paciente_documento ?? '', 'es')
-      } else if (orden === 'recomendaria') {
-        cmp = (a.recomendaria === b.recomendaria ? 0 : a.recomendaria ? 1 : -1)
-      } else {
-        cmp = (a[orden] as number) - (b[orden] as number)
-      }
-      return dir === 'asc' ? cmp : -cmp
-    })
-  }, [encuestas, orden, dir])
-
-  if (cargandoRes || cargandoLista) {
+  if (cargandoRes) {
     return <div className="text-sm text-slate-400 py-6">Cargando resultados...</div>
   }
 
@@ -309,72 +277,6 @@ function TabResultados() {
         </div>
       </div>
 
-      {/* Tabla de respuestas */}
-      <div className="card-hce overflow-hidden">
-        <div className="px-5 py-4 border-b border-slate-100">
-          <h3 className="card-title">Respuestas individuales</h3>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs">
-            <thead className="thead-sticky border-b" style={{ borderColor: 'var(--hce-border)' }}>
-              <tr>
-                <th className="th-hce px-4">
-                  <SortButton activo={orden === 'fecha'} dir={dir} onClick={() => ordenarPor('fecha')}>Fecha atención</SortButton>
-                </th>
-                <th className="th-hce px-4">
-                  <SortButton activo={orden === 'documento'} dir={dir} onClick={() => ordenarPor('documento')}>Documento</SortButton>
-                </th>
-                <th className="th-hce px-2 text-center" title="Facilidad cita">
-                  <SortButton activo={orden === 'facilidad_cita'} dir={dir} onClick={() => ordenarPor('facilidad_cita')}>FC</SortButton>
-                </th>
-                <th className="th-hce px-2 text-center" title="Tiempo espera">
-                  <SortButton activo={orden === 'tiempo_espera'} dir={dir} onClick={() => ordenarPor('tiempo_espera')}>TE</SortButton>
-                </th>
-                <th className="th-hce px-2 text-center" title="Calidad atención">
-                  <SortButton activo={orden === 'calidad_atencion'} dir={dir} onClick={() => ordenarPor('calidad_atencion')}>CA</SortButton>
-                </th>
-                <th className="th-hce px-2 text-center" title="Comunicación médico">
-                  <SortButton activo={orden === 'comunicacion_medico'} dir={dir} onClick={() => ordenarPor('comunicacion_medico')}>CM</SortButton>
-                </th>
-                <th className="th-hce px-2 text-center" title="Claridad información">
-                  <SortButton activo={orden === 'claridad_informacion'} dir={dir} onClick={() => ordenarPor('claridad_informacion')}>CI</SortButton>
-                </th>
-                <th className="th-hce px-2 text-center" title="Comodidad instalaciones">
-                  <SortButton activo={orden === 'comodidad_instalaciones'} dir={dir} onClick={() => ordenarPor('comodidad_instalaciones')}>CO</SortButton>
-                </th>
-                <th className="th-hce px-2 text-center" title="Satisfacción general">
-                  <SortButton activo={orden === 'satisfaccion_general'} dir={dir} onClick={() => ordenarPor('satisfaccion_general')}>SG</SortButton>
-                </th>
-                <th className="th-hce px-2 text-center">
-                  <SortButton activo={orden === 'recomendaria'} dir={dir} onClick={() => ordenarPor('recomendaria')}>¿Rec.?</SortButton>
-                </th>
-                <th className="th-hce px-4">Comentarios</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {encuestasOrdenadas.map((enc) => (
-                <tr key={enc.id} className="hover:bg-slate-50">
-                  <td className="px-4 py-2 text-slate-700">{enc.fecha_atencion}</td>
-                  <td className="px-4 py-2 text-slate-500">{enc.paciente_documento ?? '—'}</td>
-                  {[enc.facilidad_cita, enc.tiempo_espera, enc.calidad_atencion,
-                    enc.comunicacion_medico, enc.claridad_informacion,
-                    enc.comodidad_instalaciones, enc.satisfaccion_general].map((v, i) => (
-                    <td key={i} className="px-2 py-2 text-center font-medium text-slate-700">{v}</td>
-                  ))}
-                  <td className="px-2 py-2 text-center">
-                    <span className={`px-2 py-0.5 rounded-full font-medium ${enc.recomendaria ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>
-                      {enc.recomendaria ? 'Sí' : 'No'}
-                    </span>
-                  </td>
-                  <td className="px-4 py-2 text-slate-500 max-w-[200px] truncate">
-                    {enc.comentarios ?? '—'}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
     </div>
   )
 }

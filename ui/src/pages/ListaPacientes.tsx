@@ -139,12 +139,6 @@ export default function ListaPacientes() {
           <p className="page-desc">Listado general de pacientes registrados</p>
         </div>
         <div className="flex gap-2">
-          <ExportButtons
-            onCsv={descargarCsv}
-            onExcel={descargarExcel}
-            descargando={descargando}
-            disabled={total === 0}
-          />
           <button onClick={() => navigate('/pacientes/nuevo')} className="btn-primary">
             <UserPlus size={15} />
             Nuevo paciente
@@ -231,10 +225,13 @@ export default function ListaPacientes() {
                   </div>
                 </div>
               </div>
-              <button className="btn-ghost text-xs text-slate-400 hover:text-slate-600" onClick={limpiarFiltros}>
-                <Trash2 size={13} />
-                Limpiar filtros
-              </button>
+              <div className="flex items-center justify-between">
+                <button className="btn-ghost text-xs text-slate-400 hover:text-slate-600" onClick={limpiarFiltros}>
+                  <Trash2 size={13} />
+                  Limpiar filtros
+                </button>
+                <ExportButtons onCsv={descargarCsv} onExcel={descargarExcel} descargando={descargando} disabled={total === 0} />
+              </div>
             </div>
           )}
         </div>

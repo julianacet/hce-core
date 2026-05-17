@@ -187,7 +187,7 @@ export default function DetalleEncuentro() {
           <div className="space-y-3">
             {notas.map(n => (
               <div key={n.id} className="border-l-2 border-slate-200 pl-3 space-y-0.5">
-                <p className="text-sm leading-relaxed" style={{ color: 'var(--hce-text)' }}>{n.texto}</p>
+                <p className="text-sm leading-relaxed break-words whitespace-pre-wrap" style={{ color: 'var(--hce-text)' }}>{n.texto}</p>
                 <p className="text-xs text-slate-400">
                   {n.creado_por} · {new Date(n.fecha_creacion).toLocaleString('es-CO')}
                 </p>
@@ -199,7 +199,7 @@ export default function DetalleEncuentro() {
 
       {/* Tab bar único */}
       <div className="card-hce overflow-hidden">
-        <div className="flex overflow-x-auto border-b" style={{ borderColor: 'var(--hce-border)' }}>
+        <div className="flex overflow-x-auto border-b" style={{ borderColor: 'var(--hce-border)', overflowY: 'hidden' }}>
           {TABS.map(({ key, label }) => (
             <button
               key={key}
@@ -227,13 +227,13 @@ export default function DetalleEncuentro() {
               {e.motivo_consulta ? (
                 <div>
                   <p className="text-xs text-slate-400 mb-1">Motivo de consulta</p>
-                  <p className="text-sm leading-relaxed" style={{ color: 'var(--hce-text)' }}>{e.motivo_consulta}</p>
+                  <p className="text-sm leading-relaxed break-words whitespace-pre-wrap" style={{ color: 'var(--hce-text)' }}>{e.motivo_consulta}</p>
                 </div>
               ) : null}
               {e.descripcion_ingreso ? (
                 <div>
                   <p className="text-xs text-slate-400 mb-1">Descripción general del paciente</p>
-                  <p className="text-sm leading-relaxed" style={{ color: 'var(--hce-text)' }}>{e.descripcion_ingreso}</p>
+                  <p className="text-sm leading-relaxed break-words whitespace-pre-wrap" style={{ color: 'var(--hce-text)' }}>{e.descripcion_ingreso}</p>
                 </div>
               ) : null}
               {!e.motivo_consulta && !e.descripcion_ingreso && (
@@ -304,7 +304,7 @@ export default function DetalleEncuentro() {
                 >
                   <div>
                     <span className="text-sm" style={{ color: 'var(--hce-text)' }}>{c.nombre}</span>
-                    {detalle && <p className="text-xs text-slate-400 mt-0.5">{detalle}</p>}
+                    {detalle && <p className="text-xs text-slate-400 mt-0.5 break-words whitespace-pre-wrap">{detalle}</p>}
                   </div>
                   <span className={`text-xs font-medium px-2 py-0.5 rounded-full ml-6 mt-0.5 ${
                     v.normal ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
@@ -334,7 +334,7 @@ export default function DetalleEncuentro() {
                   filas.push(
                     <div key={c.clave} className="py-2.5 border-b border-slate-100 last:border-0">
                       <p className="text-xs text-slate-400 mb-0.5">{c.nombre}</p>
-                      <p className="text-sm leading-relaxed" style={{ color: 'var(--hce-text)' }}>{val}</p>
+                      <p className="text-sm leading-relaxed break-words whitespace-pre-wrap" style={{ color: 'var(--hce-text)' }}>{val}</p>
                     </div>
                   )
                 }
@@ -348,7 +348,7 @@ export default function DetalleEncuentro() {
                   >
                     <div>
                       <span className="text-sm" style={{ color: 'var(--hce-text)' }}>{c.nombre}</span>
-                      {detalle && <p className="text-xs text-slate-400 mt-0.5">{detalle}</p>}
+                      {detalle && <p className="text-xs text-slate-400 mt-0.5 break-words whitespace-pre-wrap">{detalle}</p>}
                     </div>
                     <span className={`text-xs font-medium px-2 py-0.5 rounded-full ml-6 mt-0.5 ${
                       v.normal ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
@@ -366,28 +366,47 @@ export default function DetalleEncuentro() {
           {/* Diagnósticos */}
           {tab === 'diagnosticos' && (
             <div className="space-y-4">
-              {e.diagnosticos && e.diagnosticos.length > 0 ? (
-                <div>
-                  {e.diagnosticos.map(d => (
-                    <div key={d.id}
-                      className="grid items-start py-2.5 border-b border-slate-100 last:border-0"
-                      style={{ gridTemplateColumns: 'auto 1fr' }}
-                    >
-                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full mr-4 mt-0.5 shrink-0 ${
-                        d.tipo === 'principal' ? 'bg-[var(--hce-primary-soft)] text-[var(--hce-primary)]'
-                        : d.tipo === 'secundario' ? 'bg-slate-100 text-slate-600'
-                        : 'bg-amber-100 text-amber-700'
-                      }`}>
-                        {d.tipo === 'principal' ? 'Principal' : d.tipo === 'secundario' ? 'Secundario' : 'Nota'}
+              {e.diagnosticos && e.diagnosticos.length > 0 ? (() => {
+                const impresiones = e.diagnosticos!.filter(d => d.tipo === 'impresion')
+                const confirmados = e.diagnosticos!.filter(d => d.tipo !== 'impresion')
+
+                function FilaDx({ d }: { d: typeof e.diagnosticos![0] }) {
+                  const badge =
+                    d.tipo === 'impresion'  ? { label: 'Impresión',  cls: 'bg-violet-100 text-violet-700' } :
+                    d.tipo === 'principal'  ? { label: 'Principal',   cls: 'bg-[var(--hce-primary-soft)] text-[var(--hce-primary)]' } :
+                    d.tipo === 'secundario' ? { label: 'Secundario',  cls: 'bg-slate-100 text-slate-600' } :
+                                             { label: 'Nota',         cls: 'bg-amber-100 text-amber-700' }
+                  return (
+                    <div className="grid items-start py-2.5 border-b border-slate-100 last:border-0"
+                      style={{ gridTemplateColumns: 'auto 1fr' }}>
+                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full mr-4 mt-0.5 shrink-0 ${badge.cls}`}>
+                        {badge.label}
                       </span>
                       <div>
                         <span className="text-sm" style={{ color: 'var(--hce-text)' }}>{d.descripcion}</span>
                         {d.codigo && <p className="text-xs text-slate-400 mt-0.5 font-mono">{d.codigo}</p>}
                       </div>
                     </div>
-                  ))}
-                </div>
-              ) : diagnostico ? (
+                  )
+                }
+
+                return (
+                  <div className="space-y-4">
+                    {impresiones.length > 0 && (
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-1">Impresión diagnóstica</p>
+                        {impresiones.map(d => <FilaDx key={d.id} d={d} />)}
+                      </div>
+                    )}
+                    {confirmados.length > 0 && (
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-1">Diagnósticos confirmados</p>
+                        {confirmados.map(d => <FilaDx key={d.id} d={d} />)}
+                      </div>
+                    )}
+                  </div>
+                )
+              })() : diagnostico ? (
                 <div>
                   <p className="text-xs text-slate-400 mb-1">Diagnóstico principal</p>
                   <p className="text-sm" style={{ color: 'var(--hce-text)' }}>{diagnostico}</p>
@@ -398,7 +417,7 @@ export default function DetalleEncuentro() {
               {e.plan_manejo && (
                 <div>
                   <p className="text-xs text-slate-400 mb-1">Plan de manejo</p>
-                  <p className="text-sm leading-relaxed" style={{ color: 'var(--hce-text)' }}>{e.plan_manejo}</p>
+                  <p className="text-sm leading-relaxed break-words whitespace-pre-wrap" style={{ color: 'var(--hce-text)' }}>{e.plan_manejo}</p>
                 </div>
               )}
             </div>

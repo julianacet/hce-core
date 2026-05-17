@@ -1,7 +1,15 @@
 import { useState, useRef, useEffect } from 'react'
 import { useTabParam } from '../../hooks/useTabParam'
 import { useTema, DEFAULTS, type Tema } from '../../context/TemaContext'
+import { useMedico, type DatosMedico } from '../../context/MedicoContext'
 import { Upload, Trash2, CheckCircle, RotateCcw, Plus, Pencil, X, ShieldCheck, Stethoscope, Users, AlertTriangle, ExternalLink, ClipboardList, Activity, Info, PowerOff, Power, Pill, Moon } from 'lucide-react'
+import {
+  LABEL_TAMANO, LABEL_TERMICA,
+  type TamanoDocumento, type TamanoTermica,
+} from '../../utils/impresion'
+
+const TAMANOS_DOC: TamanoDocumento[] = ['A4', 'Carta', 'MediaCarta', 'A5']
+const TAMANOS_TERMICA: TamanoTermica[] = ['Termica80', 'Termica58']
 import { RowMenu } from '../../components/RowMenu'
 import { NavigationGuard } from '../../components/NavigationGuard'
 import { useConfirmar } from '../../components/ModalConfirmar'
@@ -57,7 +65,6 @@ import {
   type MedicamentoPredefinido,
   type MedicamentoInput,
 } from '../../api/medicamentos_predefinidos'
-import { AuditoriaAdmin } from './AuditoriaAdmin'
 import { Breadcrumb } from '../../components/Breadcrumb'
 
 const PALETAS = [
@@ -1439,15 +1446,21 @@ function MedicamentosAdmin({ onAbierto }: { onAbierto?: (v: boolean) => void }) 
 
 export default function PanelAdmin() {
   const { tema, guardarTema } = useTema()
+  const { medico, guardar: guardarMedico } = useMedico()
   const [form, setForm] = useState<Tema>(tema)
+  const [formMedico, setFormMedico] = useState<DatosMedico>(medico)
   const [guardado, setGuardado] = useState(false)
   const [guardando, setGuardando] = useState(false)
   const [errorTema, setErrorTema] = useState<string | null>(null)
+  const [guardadoPerfil, setGuardadoPerfil] = useState(false)
+  const [guardandoPerfil, setGuardandoPerfil] = useState(false)
+  const [errorPerfil, setErrorPerfil] = useState<string | null>(null)
   const [formularioAbierto, setFormularioAbierto] = useState(false)
+  const inputFirma = useRef<HTMLInputElement>(null)
   const [tab, setTab] = useTabParam(
     'tab',
-    'apariencia' as const,
-    ['apariencia', 'consentimientos', 'usuarios', 'eventos', 'antecedentes', 'campos', 'medicamentos'] as const,
+    'perfil' as const,
+    ['perfil', 'impresion', 'apariencia', 'consentimientos', 'usuarios', 'eventos', 'antecedentes', 'campos', 'medicamentos'] as const,
   )
   const inputLogo = useRef<HTMLInputElement>(null)
 
@@ -1486,6 +1499,38 @@ export default function PanelAdmin() {
     setForm(DEFAULTS)
   }
 
+  function handleMedico(e: React.ChangeEvent<HTMLInputElement>) {
+    setFormMedico((prev) => ({ ...prev, [e.target.name]: e.target.value }))
+  }
+
+  function handleFirma(e: React.ChangeEvent<HTMLInputElement>) {
+    const archivo = e.target.files?.[0]
+    if (!archivo) return
+    const reader = new FileReader()
+    reader.onload = (ev) => setFormMedico((prev) => ({ ...prev, firmaBase64: ev.target?.result as string }))
+    reader.readAsDataURL(archivo)
+  }
+
+  function quitarFirma() {
+    setFormMedico((prev) => ({ ...prev, firmaBase64: null }))
+    if (inputFirma.current) inputFirma.current.value = ''
+  }
+
+  async function guardarPerfil(e: React.FormEvent) {
+    e.preventDefault()
+    setGuardandoPerfil(true)
+    setErrorPerfil(null)
+    try {
+      await guardarMedico(formMedico)
+      setGuardadoPerfil(true)
+      setTimeout(() => setGuardadoPerfil(false), 2500)
+    } catch (err) {
+      setErrorPerfil((err as Error)?.message ?? 'Error al guardar.')
+    } finally {
+      setGuardandoPerfil(false)
+    }
+  }
+
   async function guardar(e: React.FormEvent) {
     e.preventDefault()
     setGuardando(true)
@@ -1519,8 +1564,10 @@ export default function PanelAdmin() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 mb-6 border-b border-slate-200">
+      <div className="flex gap-1 mb-6 border-b border-slate-200 flex-wrap">
         {([
+          { id: 'perfil',          label: 'Perfil médico' },
+          { id: 'impresion',       label: 'Impresión' },
           { id: 'apariencia',      label: 'Apariencia' },
           { id: 'consentimientos', label: 'Consentimientos' },
           { id: 'antecedentes',    label: 'Antecedentes' },
@@ -1528,7 +1575,6 @@ export default function PanelAdmin() {
           { id: 'usuarios',        label: 'Usuarios' },
           { id: 'eventos',         label: 'Eventos adversos' },
           { id: 'medicamentos',    label: 'Medicamentos' },
-          { id: 'auditoria',       label: 'Auditoría' },
         ] as const).map(({ id, label }) => (
           <button
             key={id}
@@ -1540,13 +1586,167 @@ export default function PanelAdmin() {
         ))}
       </div>
 
+      {tab === 'perfil' && (
+        <form onSubmit={guardarPerfil} className="space-y-6">
+          <div className="card-hce p-5 space-y-4">
+            <h3 className="card-title">Datos del consultorio</h3>
+            <div>
+              <label className="label-hce">Nombre del consultorio</label>
+              <input name="nombreConsultorio" value={formMedico.nombreConsultorio} onChange={handleMedico} placeholder="Ej: Consultorio Médico Dr. García" className="input-hce" />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="label-hce">Nombre completo del médico</label>
+                <input name="nombre" value={formMedico.nombre} onChange={handleMedico} placeholder="Dr. Juan García López" className="input-hce" />
+              </div>
+              <div>
+                <label className="label-hce">Especialidad</label>
+                <input name="especialidad" value={formMedico.especialidad} onChange={handleMedico} placeholder="Médico General" className="input-hce" />
+              </div>
+            </div>
+            <div>
+              <label className="label-hce">Tarjeta profesional</label>
+              <input name="tarjetaProfesional" value={formMedico.tarjetaProfesional} onChange={handleMedico} placeholder="TP 123456-45" className="input-hce" />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="label-hce">Dirección</label>
+                <input name="direccion" value={formMedico.direccion} onChange={handleMedico} placeholder="Calle 123 # 45-67, Consultorio 201" className="input-hce" />
+              </div>
+              <div>
+                <label className="label-hce">Ciudad</label>
+                <input name="ciudad" value={formMedico.ciudad} onChange={handleMedico} placeholder="Bogotá D.C." className="input-hce" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="label-hce">Teléfono</label>
+                <input name="telefono" value={formMedico.telefono} onChange={handleMedico} placeholder="601 234 5678" className="input-hce" />
+              </div>
+              <div>
+                <label className="label-hce">Correo electrónico</label>
+                <input name="correoElectronico" value={formMedico.correoElectronico} onChange={handleMedico} type="email" placeholder="medico@gmail.com" className="input-hce" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="label-hce">NIT del consultorio</label>
+                <input name="nit" value={formMedico.nit} onChange={handleMedico} placeholder="900123456-7" className="input-hce" />
+                <p className="text-xs mt-1" style={{ color: 'var(--hce-text-muted)' }}>Requerido para RIPS y factura electrónica</p>
+              </div>
+              <div>
+                <label className="label-hce">Código habilitación (MinSalud)</label>
+                <input name="codPrestador" value={formMedico.codPrestador} onChange={handleMedico} placeholder="1234567890" maxLength={10} className="input-hce" />
+                <p className="text-xs mt-1" style={{ color: 'var(--hce-text-muted)' }}>10 dígitos — código de prestador ante el MinSalud</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="card-hce p-5 space-y-3">
+            <h3 className="card-title">Reglas del consultorio</h3>
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={!!formMedico.primerControlGratis}
+                onChange={(e) => setFormMedico((prev) => ({ ...prev, primerControlGratis: e.target.checked }))}
+                className="mt-0.5 rounded"
+              />
+              <div>
+                <p className="text-sm font-medium" style={{ color: 'var(--hce-text)' }}>Primer control sin cargo</p>
+                <p className="text-xs mt-0.5" style={{ color: 'var(--hce-text-muted)' }}>El primer control después de cualquier consulta no se factura.</p>
+              </div>
+            </label>
+          </div>
+
+          <div className="card-hce p-5 space-y-4">
+            <div>
+              <h3 className="card-title">Firma del médico</h3>
+              <p className="text-xs mt-0.5" style={{ color: 'var(--hce-text-muted)' }}>Imagen escaneada o fotografiada de la firma. Se incluye en fórmulas y facturas.</p>
+            </div>
+            {formMedico.firmaBase64 ? (
+              <div className="space-y-3">
+                <div className="rounded-lg p-4 flex items-center justify-center h-24" style={{ backgroundColor: 'var(--hce-bg)', border: '1px solid var(--hce-border)' }}>
+                  <img src={formMedico.firmaBase64} alt="Firma" className="max-h-16 object-contain" />
+                </div>
+                <button type="button" onClick={quitarFirma} className="flex items-center gap-2 text-sm text-red-500 hover:text-red-700 transition-colors">
+                  <Trash2 size={14} /> Quitar firma
+                </button>
+              </div>
+            ) : (
+              <label className="flex flex-col items-center justify-center rounded-lg p-8 cursor-pointer transition-colors border-2 border-dashed border-[var(--hce-border)] hover:border-[var(--hce-primary)]">
+                <Upload size={22} className="mb-2" style={{ color: 'var(--hce-text-muted)' }} />
+                <span className="text-sm" style={{ color: 'var(--hce-text-muted)' }}>Haga clic para subir la imagen de su firma</span>
+                <span className="text-xs mt-1" style={{ color: 'var(--hce-text-muted)' }}>PNG, JPG — fondo blanco o transparente</span>
+                <input ref={inputFirma} type="file" accept="image/*" onChange={handleFirma} className="hidden" />
+              </label>
+            )}
+          </div>
+
+          {errorPerfil && <p className="form-error">{errorPerfil}</p>}
+          <div className="flex items-center justify-end gap-3">
+            {guardadoPerfil && !guardandoPerfil && (
+              <span className="flex items-center gap-1.5 text-sm text-green-600">
+                <CheckCircle size={15} /> Guardado correctamente
+              </span>
+            )}
+            <button type="submit" disabled={guardandoPerfil} className="btn-primary disabled:opacity-60">
+              {guardandoPerfil ? 'Guardando...' : 'Guardar perfil'}
+            </button>
+          </div>
+        </form>
+      )}
+
+      {tab === 'impresion' && (
+        <form onSubmit={guardarPerfil} className="space-y-6">
+          <div className="card-hce p-5 space-y-4">
+            <h3 className="card-title">Tamaño de página por documento</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="label-hce">Factura</label>
+                <select value={formMedico.impresion.factura} onChange={(e) => setFormMedico((prev) => ({ ...prev, impresion: { ...prev.impresion, factura: e.target.value as TamanoDocumento } }))} className="input-hce">
+                  {TAMANOS_DOC.map((t) => <option key={t} value={t}>{LABEL_TAMANO[t]}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="label-hce">Térmica (factura)</label>
+                <select value={formMedico.impresion.termicaFactura} onChange={(e) => setFormMedico((prev) => ({ ...prev, impresion: { ...prev.impresion, termicaFactura: e.target.value as TamanoTermica } }))} className="input-hce">
+                  {TAMANOS_TERMICA.map((t) => <option key={t} value={t}>{LABEL_TERMICA[t]}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="label-hce">Fórmula médica</label>
+                <select value={formMedico.impresion.formula} onChange={(e) => setFormMedico((prev) => ({ ...prev, impresion: { ...prev.impresion, formula: e.target.value as TamanoDocumento } }))} className="input-hce">
+                  {TAMANOS_DOC.map((t) => <option key={t} value={t}>{LABEL_TAMANO[t]}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="label-hce">Consentimiento informado</label>
+                <select value={formMedico.impresion.consentimiento} onChange={(e) => setFormMedico((prev) => ({ ...prev, impresion: { ...prev.impresion, consentimiento: e.target.value as TamanoDocumento } }))} className="input-hce">
+                  {TAMANOS_DOC.map((t) => <option key={t} value={t}>{LABEL_TAMANO[t]}</option>)}
+                </select>
+              </div>
+            </div>
+          </div>
+          {errorPerfil && <p className="form-error">{errorPerfil}</p>}
+          <div className="flex items-center justify-end gap-3">
+            {guardadoPerfil && !guardandoPerfil && (
+              <span className="flex items-center gap-1.5 text-sm text-green-600">
+                <CheckCircle size={15} /> Guardado correctamente
+              </span>
+            )}
+            <button type="submit" disabled={guardandoPerfil} className="btn-primary disabled:opacity-60">
+              {guardandoPerfil ? 'Guardando...' : 'Guardar'}
+            </button>
+          </div>
+        </form>
+      )}
+
       {tab === 'consentimientos' && <PlantillasAdmin onAbierto={setFormularioAbierto} />}
       {tab === 'usuarios' && <UsuariosAdmin onAbierto={setFormularioAbierto} />}
       {tab === 'eventos' && <TiposEventoAdversoAdmin onAbierto={setFormularioAbierto} />}
       {tab === 'antecedentes' && <AntecedentesAdmin onAbierto={setFormularioAbierto} />}
       {tab === 'campos' && <CamposClinicosAdmin onAbierto={setFormularioAbierto} />}
       {tab === 'medicamentos' && <MedicamentosAdmin onAbierto={setFormularioAbierto} />}
-      {tab === 'auditoria' && <AuditoriaAdmin />}
 
       {tab === 'apariencia' && <form onSubmit={guardar} className="space-y-6">
 

@@ -121,13 +121,14 @@ type Props = {
   incluirFirma: boolean
   fecha: string
   tipo?: 'pos' | 'no_pos'
+  tamano?: string | [number, number]
 }
 
-export default function FormulaPDF({ medico, paciente, diagnostico, medicamentos, incluirFirma, fecha, tipo }: Props) {
+export default function FormulaPDF({ medico, paciente, diagnostico, medicamentos, incluirFirma, fecha, tipo, tamano = 'A4' }: Props) {
   const tituloFormula = tipo === 'no_pos' ? 'FÓRMULA MÉDICA NO POS' : 'FÓRMULA MÉDICA POS'
   return (
     <Document>
-      <Page size="A4" style={s.page}>
+      <Page size={tamano} style={s.page}>
 
         {/* Banner */}
         <View style={s.banner}>

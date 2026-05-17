@@ -32,11 +32,12 @@ func (h *AuditoriaHandler) general(w http.ResponseWriter, r *http.Request) {
 	limit, offset := paginacion(r)
 
 	rows, err := h.db.Query(r.Context(), `
-		SELECT id, nombre_tabla, registro_id, accion,
-		       datos_anteriores::text, datos_nuevos::text,
-		       usuario_id, fecha_cambio
-		FROM log_auditoria
-		ORDER BY fecha_cambio DESC
+		SELECT l.id, l.nombre_tabla, l.registro_id, l.accion,
+		       l.datos_anteriores::text, l.datos_nuevos::text,
+		       l.usuario_id, u.nombre_usuario, l.fecha_cambio
+		FROM log_auditoria l
+		LEFT JOIN usuario u ON u.id = l.usuario_id::uuid
+		ORDER BY l.fecha_cambio DESC
 		LIMIT $1 OFFSET $2`,
 		limit, offset,
 	)
@@ -59,8 +60,9 @@ func (h *AuditoriaHandler) porPaciente(w http.ResponseWriter, r *http.Request) {
 	rows, err := h.db.Query(r.Context(), `
 		SELECT l.id, l.nombre_tabla, l.registro_id, l.accion,
 		       l.datos_anteriores::text, l.datos_nuevos::text,
-		       l.usuario_id, l.fecha_cambio
+		       l.usuario_id, u.nombre_usuario, l.fecha_cambio
 		FROM log_auditoria l
+		LEFT JOIN usuario u ON u.id = l.usuario_id::uuid
 		WHERE (
 			-- Cambios directos en el paciente
 			(l.nombre_tabla = 'paciente' AND (l.datos_nuevos->>'numero_documento' = $1 OR l.datos_anteriores->>'numero_documento' = $1))
@@ -97,8 +99,9 @@ func (h *AuditoriaHandler) porEncuentro(w http.ResponseWriter, r *http.Request) 
 	rows, err := h.db.Query(r.Context(), `
 		SELECT l.id, l.nombre_tabla, l.registro_id, l.accion,
 		       l.datos_anteriores::text, l.datos_nuevos::text,
-		       l.usuario_id, l.fecha_cambio
+		       l.usuario_id, u.nombre_usuario, l.fecha_cambio
 		FROM log_auditoria l
+		LEFT JOIN usuario u ON u.id = l.usuario_id::uuid
 		WHERE (
 			(l.nombre_tabla = 'encuentro_clinico' AND (l.datos_nuevos->>'encuentro_id' = $1 OR l.datos_anteriores->>'encuentro_id' = $1))
 			OR
@@ -132,7 +135,7 @@ func escanearLogs(rows interface {
 		if err := rows.Scan(
 			&l.ID, &l.NombreTabla, &l.RegistroID, &l.Accion,
 			&datosAnt, &datosNuev,
-			&l.UsuarioID, &l.FechaCambio,
+			&l.UsuarioID, &l.NombreUsuario, &l.FechaCambio,
 		); err != nil {
 			responderError(w, http.StatusInternalServerError, "error al leer log")
 			return nil

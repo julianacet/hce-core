@@ -10,5 +10,6 @@ type LogAuditoria struct {
 	DatosAnteriores *string    `json:"datos_anteriores"`
 	DatosNuevos     *string    `json:"datos_nuevos"`
 	UsuarioID       *string    `json:"usuario_id"`
+	NombreUsuario   *string    `json:"nombre_usuario"`
 	FechaCambio     time.Time  `json:"fecha_cambio"`
 }

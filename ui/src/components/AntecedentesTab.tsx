@@ -188,8 +188,8 @@ function PreguntaField({ pregunta, answer, onValor, onDetalle }: {
       )}
 
       {tipo_respuesta === 'numero' && (
-        <input type="number" className="input-hce text-sm w-32" value={answer.valor}
-          onChange={e => onValor(e.target.value)} />
+        <input type="text" inputMode="decimal" className="input-hce text-sm w-32" value={answer.valor}
+          onChange={e => onValor(e.target.value.replace(',', '.'))} />
       )}
 
       {tipo_respuesta === 'fecha' && (

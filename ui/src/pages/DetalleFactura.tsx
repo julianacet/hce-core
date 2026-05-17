@@ -1,5 +1,5 @@
 import { useNavigate, useParams } from 'react-router'
-import { Download, Printer, ChevronLeft } from 'lucide-react'
+import { Download, Printer, ChevronLeft, Receipt } from 'lucide-react'
 import { Breadcrumb } from '../components/Breadcrumb'
 import { PDFDownloadLink, pdf } from '@react-pdf/renderer'
 import { useState } from 'react'
@@ -8,6 +8,8 @@ import { usePaciente } from '../api/pacientes'
 import { useMedico } from '../context/MedicoContext'
 import { useTema } from '../context/TemaContext'
 import FacturaPDF from '../components/pdf/FacturaPDF'
+import FacturaTermicaPDF from '../components/pdf/FacturaTermicaPDF'
+import { TAMANO_PAGINA } from '../utils/impresion'
 
 function formatCOP(valor: number) {
   return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(valor)
@@ -19,6 +21,7 @@ export default function DetalleFactura() {
   const { medico } = useMedico()
   const { tema } = useTema()
   const [imprimiendo, setImprimiendo] = useState(false)
+  const [imprimiendoTermica, setImprimiendoTermica] = useState(false)
 
   const { data: factura, isLoading, isError } = useFactura(facturaId ?? '')
   const { data: paciente } = usePaciente(factura?.paciente_documento ?? '')
@@ -38,6 +41,8 @@ export default function DetalleFactura() {
         .filter(Boolean).join(' ')
     : factura.paciente_nombre ?? factura.paciente_documento
 
+  const tamano = TAMANO_PAGINA[medico.impresion.factura]
+
   const docPDF = (
     <FacturaPDF
       medico={medico}
@@ -47,6 +52,18 @@ export default function DetalleFactura() {
       diagnostico=""
       colorPrimario={tema.colorPrimario}
       logoBase64={tema.logoBase64}
+      tamano={tamano}
+    />
+  )
+
+  const docTermica = (
+    <FacturaTermicaPDF
+      medico={medico}
+      factura={factura}
+      pacienteNombre={pacienteNombre}
+      paciente={paciente}
+      logoBase64={tema.logoBase64}
+      tamanoTermica={medico.impresion.termicaFactura}
     />
   )
 
@@ -68,6 +85,24 @@ export default function DetalleFactura() {
     }
   }
 
+  async function imprimirTermica() {
+    setImprimiendoTermica(true)
+    try {
+      const blob = await pdf(docTermica).toBlob()
+      const url = URL.createObjectURL(blob)
+      const ventana = window.open(url)
+      if (ventana) {
+        ventana.addEventListener('load', () => {
+          ventana.focus()
+          ventana.print()
+          ventana.addEventListener('afterprint', () => URL.revokeObjectURL(url))
+        })
+      }
+    } finally {
+      setImprimiendoTermica(false)
+    }
+  }
+
   return (
     <div className="page-hce">
       <Breadcrumb items={[{ label: 'Inicio', to: '/' }, { label: 'Facturación', to: '/facturas' }, { label: 'Factura' }]} />
@@ -80,9 +115,7 @@ export default function DetalleFactura() {
               <ChevronLeft size={20} />
             </button>
             <div>
-              <div className="flex items-center gap-2">
-                <h3 className="card-title">Factura</h3>
-              </div>
+              <h3 className="card-title">Factura</h3>
               <p className="text-xs text-slate-400 mt-0.5">
                 {new Date(factura.fecha_creacion).toLocaleString('es-CO')} · {pacienteNombre}
               </p>
@@ -99,6 +132,29 @@ export default function DetalleFactura() {
                 Anular
               </button>
             )}
+
+            {/* Térmica */}
+            <button
+              onClick={imprimirTermica}
+              disabled={imprimiendoTermica}
+              className="flex items-center gap-2 text-sm px-4 py-2 rounded-md border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors disabled:opacity-50"
+            >
+              <Receipt size={14} />
+              {imprimiendoTermica ? 'Preparando...' : 'Térmica'}
+            </button>
+            <PDFDownloadLink
+              document={docTermica}
+              fileName={`factura_termica_${factura.paciente_documento}_${Date.now()}.pdf`}
+            >
+              {({ loading }) => (
+                <button disabled={loading} className="flex items-center gap-2 text-sm px-4 py-2 rounded-md border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors disabled:opacity-50">
+                  <Download size={14} />
+                  {loading ? '...' : 'PDF térmica'}
+                </button>
+              )}
+            </PDFDownloadLink>
+
+            {/* Normal */}
             <button onClick={imprimir} disabled={imprimiendo}
               className="flex items-center gap-2 text-sm px-4 py-2 rounded-md border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors disabled:opacity-50">
               <Printer size={14} />

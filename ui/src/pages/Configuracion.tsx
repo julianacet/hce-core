@@ -2,6 +2,13 @@ import { useState, useRef } from 'react'
 import { useMedico, type DatosMedico } from '../context/MedicoContext'
 import { Breadcrumb } from '../components/Breadcrumb'
 import { Upload, Trash2, CheckCircle } from 'lucide-react'
+import {
+  LABEL_TAMANO, LABEL_TERMICA,
+  type TamanoDocumento, type TamanoTermica,
+} from '../utils/impresion'
+
+const TAMANOS_DOC: TamanoDocumento[] = ['A4', 'Carta', 'MediaCarta', 'A5']
+const TAMANOS_TERMICA: TamanoTermica[] = ['Termica80', 'Termica58']
 
 export default function Configuracion() {
   const { medico, guardar } = useMedico()
@@ -204,6 +211,77 @@ export default function Configuracion() {
               <input ref={inputFirma} type="file" accept="image/*" onChange={handleFirma} className="hidden" />
             </label>
           )}
+        </div>
+
+        {/* Impresión */}
+        <div className="card-hce p-5 space-y-4">
+          <h3 className="card-title">Tamaño de página por documento</h3>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="label-hce">Factura</label>
+              <select
+                value={form.impresion.factura}
+                onChange={(e) => setForm((prev) => ({
+                  ...prev,
+                  impresion: { ...prev.impresion, factura: e.target.value as TamanoDocumento },
+                }))}
+                className="input-hce"
+              >
+                {TAMANOS_DOC.map((t) => (
+                  <option key={t} value={t}>{LABEL_TAMANO[t]}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="label-hce">Térmica (factura)</label>
+              <select
+                value={form.impresion.termicaFactura}
+                onChange={(e) => setForm((prev) => ({
+                  ...prev,
+                  impresion: { ...prev.impresion, termicaFactura: e.target.value as TamanoTermica },
+                }))}
+                className="input-hce"
+              >
+                {TAMANOS_TERMICA.map((t) => (
+                  <option key={t} value={t}>{LABEL_TERMICA[t]}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="label-hce">Fórmula médica</label>
+              <select
+                value={form.impresion.formula}
+                onChange={(e) => setForm((prev) => ({
+                  ...prev,
+                  impresion: { ...prev.impresion, formula: e.target.value as TamanoDocumento },
+                }))}
+                className="input-hce"
+              >
+                {TAMANOS_DOC.map((t) => (
+                  <option key={t} value={t}>{LABEL_TAMANO[t]}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="label-hce">Consentimiento informado</label>
+              <select
+                value={form.impresion.consentimiento}
+                onChange={(e) => setForm((prev) => ({
+                  ...prev,
+                  impresion: { ...prev.impresion, consentimiento: e.target.value as TamanoDocumento },
+                }))}
+                className="input-hce"
+              >
+                {TAMANOS_DOC.map((t) => (
+                  <option key={t} value={t}>{LABEL_TAMANO[t]}</option>
+                ))}
+              </select>
+            </div>
+          </div>
         </div>
 
         {error && <p className="form-error">{error}</p>}

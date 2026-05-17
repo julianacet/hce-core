@@ -127,12 +127,6 @@ export default function EncuentrosGlobal() {
           <p className="page-desc">Todas las consultas clínicas registradas</p>
         </div>
         <div className="flex gap-2">
-          <ExportButtons
-            onCsv={descargarCsv}
-            onExcel={descargarExcel}
-            descargando={descargando}
-            disabled={total === 0}
-          />
           <button
             onClick={() => navigate('/nueva-consulta/nuevo')}
             className="btn-primary"
@@ -202,12 +196,15 @@ export default function EncuentrosGlobal() {
                   />
                 </div>
               </div>
-              <button
-                className="btn-ghost text-xs text-slate-400 hover:text-slate-600"
-                onClick={limpiarFiltros}
-              >
-                <Trash2 size={13} /> Limpiar filtros
-              </button>
+              <div className="flex items-center justify-between">
+                <button
+                  className="btn-ghost text-xs text-slate-400 hover:text-slate-600"
+                  onClick={limpiarFiltros}
+                >
+                  <Trash2 size={13} /> Limpiar filtros
+                </button>
+                <ExportButtons onCsv={descargarCsv} onExcel={descargarExcel} descargando={descargando} disabled={total === 0} />
+              </div>
             </div>
           )}
         </div>

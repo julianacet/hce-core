@@ -25,11 +25,13 @@ type Props = {
   diagnostico: string
   colorPrimario?: string
   logoBase64?: string | null
+  tamano?: string | [number, number]
 }
 
 export default function FacturaPDF({
   medico, factura, pacienteNombre, paciente, diagnostico,
   colorPrimario = '#1d4ed8', logoBase64 = null,
+  tamano = [396, 612],
 }: Props) {
   const fecha = new Date(factura.fecha_creacion).toLocaleDateString('es-CO', {
     day: '2-digit', month: 'long', year: 'numeric',
@@ -200,7 +202,7 @@ export default function FacturaPDF({
 
   return (
     <Document>
-      <Page size="A4" style={s.page}>
+      <Page size={tamano} style={s.page}>
 
         {/* Header: logo + info consultorio + badge estado */}
         <View style={s.header}>

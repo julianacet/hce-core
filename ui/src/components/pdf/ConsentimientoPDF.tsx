@@ -59,6 +59,7 @@ type Props = {
   tipoDocumento: string
   contenidoRenderizado: string
   fecha: string
+  tamano?: string | [number, number]
 }
 
 export default function ConsentimientoPDF({
@@ -68,10 +69,11 @@ export default function ConsentimientoPDF({
   tipoDocumento,
   contenidoRenderizado,
   fecha,
+  tamano = 'A4',
 }: Props) {
   return (
     <Document>
-      <Page size="A4" style={s.page}>
+      <Page size={tamano} style={s.page}>
 
         {/* Banner */}
         <View style={s.banner}>

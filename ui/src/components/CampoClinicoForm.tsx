@@ -11,9 +11,11 @@ interface SignosProps {
 }
 
 export function SignosVitalesForm({ campos, values, onChange, disabled }: SignosProps) {
-  function set(clave: string, valor: string) {
+  const DECIMALES = new Set(['temperatura', 'peso', 'talla', 'glucometria', 'saturacion'])
+
+  function set(clave: string, raw: string) {
     if (disabled) return
-    onChange({ ...values, [clave]: valor })
+    onChange({ ...values, [clave]: raw.replace(',', '.') })
   }
 
   const activos = campos.filter((c) => c.seccion === 'signos_vitales' && c.esta_activo)
@@ -40,7 +42,7 @@ export function SignosVitalesForm({ campos, values, onChange, disabled }: Signos
               <label className="label-hce">Tensión arterial (mmHg)</label>
               <div className="flex items-center gap-2">
                 <input
-                  type="number" placeholder="Sistólica" min={40} max={300}
+                  type="text" inputMode="numeric" placeholder="Sistólica"
                   value={values['ta_sistolica'] ?? ''}
                   onChange={(e) => set('ta_sistolica', e.target.value)}
                   disabled={disabled}
@@ -48,7 +50,7 @@ export function SignosVitalesForm({ campos, values, onChange, disabled }: Signos
                 />
                 <span className="text-slate-400 shrink-0">/</span>
                 <input
-                  type="number" placeholder="Diastólica" min={20} max={200}
+                  type="text" inputMode="numeric" placeholder="Diastólica"
                   value={values['ta_diastolica'] ?? ''}
                   onChange={(e) => set('ta_diastolica', e.target.value)}
                   disabled={disabled}
@@ -65,7 +67,8 @@ export function SignosVitalesForm({ campos, values, onChange, disabled }: Signos
               {c.nombre}{c.unidad ? ` (${c.unidad})` : ''}
             </label>
             <input
-              type="number" step={c.clave === 'temperatura' || c.clave === 'peso' || c.clave === 'talla' ? '0.1' : '1'}
+              type="text"
+              inputMode={DECIMALES.has(c.clave) ? 'decimal' : 'numeric'}
               value={values[c.clave] ?? ''}
               onChange={(e) => set(c.clave, e.target.value)}
               disabled={disabled}
