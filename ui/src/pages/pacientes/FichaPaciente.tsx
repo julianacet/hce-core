@@ -37,6 +37,9 @@ export default function FichaPaciente() {
       estado_civil: p!.estado_civil ?? '',
       ocupacion: p!.ocupacion ?? '',
       direccion: p!.direccion ?? '',
+      nivel_escolaridad_id: p!.nivel_escolaridad_id,
+      grupo_sanguineo: p!.grupo_sanguineo ?? '',
+      rh_factor: p!.rh_factor ?? '',
       telefono: p!.telefono ?? '',
       correo_electronico: p!.correo_electronico ?? '',
       nombre_responsable: p!.nombre_responsable ?? '',
@@ -54,7 +57,7 @@ export default function FichaPaciente() {
     setEditando(true)
   }
 
-  function set(campo: keyof PacienteInput, valor: string | boolean) {
+  function set(campo: keyof PacienteInput, valor: string | boolean | number | undefined) {
     setForm((prev) => ({ ...prev, [campo]: valor }))
   }
 
@@ -62,6 +65,7 @@ export default function FichaPaciente() {
     e.preventDefault()
     const camposOpcionales: (keyof PacienteInput)[] = [
       'nombre_segundo', 'apellido_segundo', 'estado_civil', 'ocupacion', 'direccion',
+      'grupo_sanguineo', 'rh_factor',
       'telefono', 'correo_electronico', 'nombre_responsable', 'telefono_responsable',
       'parentesco_responsable', 'codigo_eps',
     ]
@@ -89,6 +93,8 @@ export default function FichaPaciente() {
       ['Edad', `${p.edad} años`],
       ['Género', p.genero_nombre],
       ['Estado civil', p.estado_civil_nombre],
+      ['Nivel de escolaridad', p.nivel_escolaridad_nombre],
+      ['Grupo sanguíneo / RH', p.grupo_sanguineo && p.rh_factor ? `${p.grupo_sanguineo} ${p.rh_factor}` : (p.grupo_sanguineo ?? p.rh_factor)],
       ['Ocupación', ocupacionData?.nombre ?? p.ocupacion],
       ['Municipio de residencia', municipioNombre ?? p.codigo_municipio_residencia],
       ['País de origen', nombrePais(p.codigo_pais_origen)],

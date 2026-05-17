@@ -31,6 +31,7 @@ const nullUltimaAtencion = `,
 	NULL::timestamptz AS ultima_atencion`
 
 const extraColumnasPaciente = `,
+	(SELECT ne.nombre FROM nivel_escolaridad ne WHERE ne.id = nivel_escolaridad_id) AS nivel_escolaridad_nombre,
 	CASE genero WHEN 'M' THEN 'Masculino' WHEN 'F' THEN 'Femenino' WHEN 'X' THEN 'Otro / Intersexual' ELSE genero END AS genero_nombre,
 	CASE estado_civil WHEN '01' THEN 'Soltero/a' WHEN '02' THEN 'Casado/a' WHEN '03' THEN 'Unión libre' WHEN '04' THEN 'Separado/a' WHEN '05' THEN 'Divorciado/a' WHEN '06' THEN 'Viudo/a' ELSE estado_civil END AS estado_civil_nombre,
 	CASE tipo_usuario WHEN '01' THEN 'Contributivo' WHEN '02' THEN 'Subsidiado' WHEN '03' THEN 'Vinculado' WHEN '04' THEN 'Particular' WHEN '05' THEN 'Indígena' WHEN '06' THEN 'No asegurado' ELSE tipo_usuario END AS tipo_usuario_nombre,
@@ -48,6 +49,7 @@ func PacientesRouter(db *pgxpool.Pool) http.Handler {
 
 	r.Get("/", h.listar)
 	r.Post("/", h.crear)
+	r.Get("/niveles-escolaridad", h.listarNivelesEscolaridad)
 	r.Route("/{documento}", func(r chi.Router) {
 		r.Get("/", h.obtener)
 		r.Put("/", h.actualizar)
@@ -57,6 +59,28 @@ func PacientesRouter(db *pgxpool.Pool) http.Handler {
 	})
 
 	return r
+}
+
+// GET /pacientes/niveles-escolaridad
+func (h *PacienteHandler) listarNivelesEscolaridad(w http.ResponseWriter, r *http.Request) {
+	rows, err := h.db.Query(r.Context(), `SELECT id, nombre FROM nivel_escolaridad ORDER BY orden`)
+	if err != nil {
+		responderError(w, http.StatusInternalServerError, "error al consultar")
+		return
+	}
+	defer rows.Close()
+	type Nivel struct {
+		ID     int16  `json:"id"`
+		Nombre string `json:"nombre"`
+	}
+	niveles := []Nivel{}
+	for rows.Next() {
+		var n Nivel
+		if err := rows.Scan(&n.ID, &n.Nombre); err == nil {
+			niveles = append(niveles, n)
+		}
+	}
+	responderJSON(w, http.StatusOK, niveles)
 }
 
 // queryRower es satisfecho tanto por *pgxpool.Pool como por pgx.Tx,
@@ -82,6 +106,7 @@ func (h *PacienteHandler) listar(w http.ResponseWriter, r *http.Request) {
 		       nombre_responsable, telefono_responsable, parentesco_responsable,
 		       codigo_pais_origen, codigo_municipio_residencia, zona_residencia,
 		       tipo_usuario, codigo_etnia, codigo_discapacidad, codigo_eps,
+		       nivel_escolaridad_id, grupo_sanguineo, rh_factor,
 		       telefono, correo_electronico, politica_datos_aceptada,
 		       fecha_creacion, creado_por,
 		       EXTRACT(YEAR FROM AGE(NOW(), fecha_nacimiento))::int AS edad` +
@@ -152,6 +177,7 @@ func (h *PacienteHandler) obtener(w http.ResponseWriter, r *http.Request) {
 		       nombre_responsable, telefono_responsable, parentesco_responsable,
 		       codigo_pais_origen, codigo_municipio_residencia, zona_residencia,
 		       tipo_usuario, codigo_etnia, codigo_discapacidad, codigo_eps,
+		       nivel_escolaridad_id, grupo_sanguineo, rh_factor,
 		       telefono, correo_electronico, politica_datos_aceptada,
 		       fecha_creacion, creado_por,
 		       EXTRACT(YEAR FROM AGE(NOW(), fecha_nacimiento))::int AS edad`+
@@ -378,6 +404,7 @@ func (h *PacienteHandler) listarPaginado(w http.ResponseWriter, r *http.Request)
 		       nombre_responsable, telefono_responsable, parentesco_responsable,
 		       codigo_pais_origen, codigo_municipio_residencia, zona_residencia,
 		       tipo_usuario, codigo_etnia, codigo_discapacidad, codigo_eps,
+		       nivel_escolaridad_id, grupo_sanguineo, rh_factor,
 		       telefono, correo_electronico, politica_datos_aceptada,
 		       fecha_creacion, creado_por,
 		       EXTRACT(YEAR FROM AGE(NOW(), fecha_nacimiento))::int AS edad` +
@@ -441,9 +468,10 @@ func escanearPaciente(row scanner) (models.Paciente, error) {
 		&p.NombreResponsable, &p.TelefonoResponsable, &p.ParentescoResponsable,
 		&p.CodigoPaisOrigen, &p.CodigoMunicipioResidencia, &p.ZonaResidencia,
 		&p.TipoUsuario, &p.CodigoEtnia, &p.CodigoDiscapacidad, &p.CodigoEps,
+		&p.NivelEscolaridadID, &p.GrupoSanguineo, &p.RhFactor,
 		&p.Telefono, &p.CorreoElectronico, &p.PoliticaDatosAceptada,
 		&p.FechaCreacion, &p.CreadoPor, &p.Edad,
-		&p.GeneroNombre, &p.EstadoCivilNombre, &p.TipoUsuarioNombre,
+		&p.NivelEscolaridadNombre, &p.GeneroNombre, &p.EstadoCivilNombre, &p.TipoUsuarioNombre,
 		&p.ZonaResidenciaNombre, &p.EtniaNombre, &p.DiscapacidadNombre,
 		&p.UltimaAtencion,
 	)
@@ -461,6 +489,7 @@ func insertarPaciente(ctx context.Context, db queryRower, input models.PacienteI
 			tipo_documento, numero_documento, nombre_primero, nombre_segundo,
 			apellido_primero, apellido_segundo, fecha_nacimiento, genero,
 			estado_civil, ocupacion, direccion,
+			nivel_escolaridad_id, grupo_sanguineo, rh_factor,
 			nombre_responsable, telefono_responsable, parentesco_responsable,
 			codigo_pais_origen, codigo_municipio_residencia, zona_residencia,
 			tipo_usuario, codigo_etnia, codigo_discapacidad, codigo_eps,
@@ -470,7 +499,7 @@ func insertarPaciente(ctx context.Context, db queryRower, input models.PacienteI
 			$2, $3, $4, $5, $6, $7, $8, $9,
 			$10, $11, $12, $13, $14, $15,
 			$16, $17, $18, $19, $20, $21, $22,
-			$23, $24, $25, $26
+			$23, $24, $25, $26, $27, $28, $29
 		)
 		RETURNING id, numero_version, es_ultima_version, esta_activo,
 		          tipo_documento, numero_documento, nombre_primero, nombre_segundo,
@@ -479,6 +508,7 @@ func insertarPaciente(ctx context.Context, db queryRower, input models.PacienteI
 		          nombre_responsable, telefono_responsable, parentesco_responsable,
 		          codigo_pais_origen, codigo_municipio_residencia, zona_residencia,
 		          tipo_usuario, codigo_etnia, codigo_discapacidad, codigo_eps,
+		          nivel_escolaridad_id, grupo_sanguineo, rh_factor,
 		          telefono, correo_electronico, politica_datos_aceptada,
 		          fecha_creacion, creado_por,
 		          EXTRACT(YEAR FROM AGE(NOW(), fecha_nacimiento))::int AS edad`+
@@ -487,6 +517,7 @@ func insertarPaciente(ctx context.Context, db queryRower, input models.PacienteI
 		input.TipoDocumento, input.NumeroDocumento, input.NombrePrimero, input.NombreSegundo,
 		input.ApellidoPrimero, input.ApellidoSegundo, input.FechaNacimiento, input.Genero,
 		input.EstadoCivil, input.Ocupacion, input.Direccion,
+		input.NivelEscolaridadID, input.GrupoSanguineo, input.RhFactor,
 		input.NombreResponsable, input.TelefonoResponsable, input.ParentescoResponsable,
 		input.CodigoPaisOrigen, input.CodigoMunicipioResidencia, input.ZonaResidencia,
 		input.TipoUsuario, input.CodigoEtnia, input.CodigoDiscapacidad, input.CodigoEps,

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { PacienteInput } from '../api/pacientes'
+import { useNivelesEscolaridad } from '../api/pacientes'
 import { SelectorMunicipioCol, SelectorPais } from './SelectorUbicacion'
 import { SelectorOcupacion } from './SelectorOcupacion'
 import { SelectorEps } from './SelectorEps'
@@ -27,7 +28,7 @@ function Campo({ label, required, children }: { label: string; required?: boolea
 
 type Props = {
   form: Partial<PacienteInput>
-  onChange: (campo: keyof PacienteInput, valor: string | boolean) => void
+  onChange: (campo: keyof PacienteInput, valor: string | boolean | number | undefined) => void
   ocupacionNombre: string
   onOcupacionNombreChange: (nombre: string) => void
   showPoliticaDatos?: boolean
@@ -36,10 +37,11 @@ type Props = {
 export default function PacienteFormFields({
   form, onChange, ocupacionNombre, onOcupacionNombreChange, showPoliticaDatos = false,
 }: Props) {
-  const set = (campo: keyof PacienteInput, valor: string | boolean) => onChange(campo, valor)
+  const set = (campo: keyof PacienteInput, valor: string | boolean | number | undefined) => onChange(campo, valor)
   const [acompananteAbierto, setAcompananteAbierto] = useState(false)
   const [etniaDiscAbierta, setEtniaDscAbierta] = useState(false)
   const edad = form.fecha_nacimiento ? calcularEdad(form.fecha_nacimiento) : null
+  const { data: nivelesEscolaridad = [] } = useNivelesEscolaridad()
 
   return (
     <>
@@ -113,6 +115,31 @@ export default function PacienteFormFields({
               <option value="04">Separado/a</option>
               <option value="05">Divorciado/a</option>
               <option value="06">Viudo/a</option>
+            </select>
+          </Campo>
+          <Campo label="Nivel de escolaridad">
+            <select
+              value={form.nivel_escolaridad_id ?? ''}
+              onChange={e => set('nivel_escolaridad_id', e.target.value ? Number(e.target.value) : undefined)}
+              className="input-hce"
+            >
+              <option value="">— Seleccionar —</option>
+              {nivelesEscolaridad.map(n => (
+                <option key={n.id} value={n.id}>{n.nombre}</option>
+              ))}
+            </select>
+          </Campo>
+          <Campo label="Grupo sanguíneo">
+            <select value={form.grupo_sanguineo ?? ''} onChange={e => set('grupo_sanguineo', e.target.value)} className="input-hce">
+              <option value="">— Seleccionar —</option>
+              {['A', 'B', 'AB', 'O'].map(g => <option key={g} value={g}>{g}</option>)}
+            </select>
+          </Campo>
+          <Campo label="Factor RH">
+            <select value={form.rh_factor ?? ''} onChange={e => set('rh_factor', e.target.value)} className="input-hce">
+              <option value="">— Seleccionar —</option>
+              <option value="+">Positivo (+)</option>
+              <option value="-">Negativo (−)</option>
             </select>
           </Campo>
           <div className="col-span-2">

@@ -2,6 +2,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiFetch } from './client'
 import { PACIENTES_KEY, PACIENTES_PAGINADOS_KEY } from './keys'
 
+export type NivelEscolaridad = { id: number; nombre: string }
+
 export type Paciente = {
   id: string
   numero_documento: string
@@ -15,6 +17,9 @@ export type Paciente = {
   estado_civil?: string
   ocupacion?: string
   direccion?: string
+  nivel_escolaridad_id?: number
+  grupo_sanguineo?: string
+  rh_factor?: string
   nombre_responsable?: string
   telefono_responsable?: string
   parentesco_responsable?: string
@@ -33,6 +38,7 @@ export type Paciente = {
   creado_por: string
   edad: number
   // Computed labels returned by the API (codes are kept for form values)
+  nivel_escolaridad_nombre?: string
   genero_nombre: string
   estado_civil_nombre?: string
   tipo_usuario_nombre: string
@@ -44,9 +50,17 @@ export type Paciente = {
 
 export type PacienteInput = Omit<Paciente,
   'id' | 'numero_version' | 'es_ultima_version' | 'esta_activo' | 'fecha_creacion' | 'creado_por' | 'edad' |
-  'genero_nombre' | 'estado_civil_nombre' | 'tipo_usuario_nombre' | 'zona_residencia_nombre' | 'etnia_nombre' | 'discapacidad_nombre' |
-  'ultima_atencion'
+  'nivel_escolaridad_nombre' | 'genero_nombre' | 'estado_civil_nombre' | 'tipo_usuario_nombre' |
+  'zona_residencia_nombre' | 'etnia_nombre' | 'discapacidad_nombre' | 'ultima_atencion'
 >
+
+export function useNivelesEscolaridad() {
+  return useQuery({
+    queryKey: ['niveles-escolaridad'],
+    queryFn: () => apiFetch<NivelEscolaridad[]>('/pacientes/niveles-escolaridad'),
+    staleTime: Infinity,
+  })
+}
 
 export type PacientesPaginados = {
   pacientes: Paciente[]

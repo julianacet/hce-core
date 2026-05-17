@@ -18,6 +18,9 @@ type Paciente struct {
 	EstadoCivil               *string    `json:"estado_civil"`
 	Ocupacion                 *string    `json:"ocupacion"`
 	Direccion                 *string    `json:"direccion"`
+	NivelEscolaridadID        *int16     `json:"nivel_escolaridad_id"`
+	GrupoSanguineo            *string    `json:"grupo_sanguineo"`
+	RhFactor                  *string    `json:"rh_factor"`
 	NombreResponsable         *string    `json:"nombre_responsable"`
 	TelefonoResponsable       *string    `json:"telefono_responsable"`
 	ParentescoResponsable     *string    `json:"parentesco_responsable"`
@@ -35,8 +38,9 @@ type Paciente struct {
 	CreadoPor                 string     `json:"creado_por"`
 	Edad                      int        `json:"edad"`
 	// Computed labels — codes are kept for forms, names are for display
-	GeneroNombre         string  `json:"genero_nombre"`
-	EstadoCivilNombre    *string `json:"estado_civil_nombre"`
+	NivelEscolaridadNombre *string `json:"nivel_escolaridad_nombre"`
+	GeneroNombre           string  `json:"genero_nombre"`
+	EstadoCivilNombre      *string `json:"estado_civil_nombre"`
 	TipoUsuarioNombre    string  `json:"tipo_usuario_nombre"`
 	ZonaResidenciaNombre string  `json:"zona_residencia_nombre"`
 	EtniaNombre          string  `json:"etnia_nombre"`
@@ -58,6 +62,9 @@ type PacienteInput struct {
 	EstadoCivil               *string `json:"estado_civil"`
 	Ocupacion                 *string `json:"ocupacion"`
 	Direccion                 *string `json:"direccion"`
+	NivelEscolaridadID        *int16  `json:"nivel_escolaridad_id"`
+	GrupoSanguineo            *string `json:"grupo_sanguineo"`
+	RhFactor                  *string `json:"rh_factor"`
 	NombreResponsable         *string `json:"nombre_responsable"`
 	TelefonoResponsable       *string `json:"telefono_responsable"`
 	ParentescoResponsable     *string `json:"parentesco_responsable"`

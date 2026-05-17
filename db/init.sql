@@ -41,6 +41,25 @@ CREATE TABLE usuario (
 -- 4. Paciente  (SCD2 — cada actualización genera nueva versión)
 -- ============================================================
 
+CREATE TABLE IF NOT EXISTS nivel_escolaridad (
+    id     SMALLINT PRIMARY KEY,
+    nombre TEXT NOT NULL,
+    orden  SMALLINT NOT NULL DEFAULT 0
+);
+
+INSERT INTO nivel_escolaridad (id, nombre, orden) VALUES
+    (1,  'Sin escolaridad',           1),
+    (2,  'Preescolar',                2),
+    (3,  'Primaria incompleta',       3),
+    (4,  'Primaria completa',         4),
+    (5,  'Bachillerato incompleto',   5),
+    (6,  'Bachillerato completo',     6),
+    (7,  'Técnico o tecnológico',     7),
+    (8,  'Universitario incompleto',  8),
+    (9,  'Universitario completo',    9),
+    (10, 'Posgrado',                 10)
+ON CONFLICT DO NOTHING;
+
 CREATE TABLE paciente (
     id                UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
     numero_version    INTEGER     NOT NULL DEFAULT 1,
@@ -55,10 +74,13 @@ CREATE TABLE paciente (
     fecha_nacimiento  DATE        NOT NULL,
     genero            CHAR(1)     NOT NULL CHECK (genero IN ('M', 'F', 'X')),
 
-    -- Datos personales obligatorios (Res. 1995/1999)
-    estado_civil  VARCHAR(2),   -- 01 soltero, 02 casado, 03 unión libre…
-    ocupacion     TEXT,
-    direccion     TEXT,
+    -- Datos personales
+    estado_civil          VARCHAR(2),   -- 01 soltero, 02 casado, 03 unión libre…
+    ocupacion             TEXT,
+    direccion             TEXT,
+    nivel_escolaridad_id  SMALLINT REFERENCES nivel_escolaridad(id),
+    grupo_sanguineo       VARCHAR(2) CHECK (grupo_sanguineo IN ('A','B','AB','O')),
+    rh_factor             CHAR(1)    CHECK (rh_factor IN ('+','-')),
 
     -- Responsable / acompañante
     nombre_responsable     TEXT,
