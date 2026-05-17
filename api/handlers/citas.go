@@ -27,8 +27,7 @@ func escanearCita(row interface{ Scan(...any) error }) (*models.Cita, error) {
 }
 
 var estadosValidos = map[string]bool{
-	"programada": true, "confirmada": true,
-	"cancelada": true, "no_asistio": true, "completada": true,
+	"programada": true, "cancelada": true,
 }
 
 func CitasRouter(db *pgxpool.Pool) http.Handler {

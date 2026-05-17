@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router'
-import { Search, Plus, Trash2, X } from 'lucide-react'
+import { Search, Plus, Trash2, UserRound } from 'lucide-react'
 import { Breadcrumb } from '../components/Breadcrumb'
 import { type Paciente } from '../api/pacientes'
 import { useCups, type CupsCodigo } from '../api/cups'
@@ -76,15 +76,28 @@ export default function NuevaFactura() {
         </button>
       </div>
 
-      <div className="space-y-4 max-w-3xl">
+      <div className="space-y-4">
         {/* Selección de paciente */}
-        {paciente ? (
-          <div className="card-hce p-5">
-            <p className="section-title">Paciente</p>
-            <div className="flex items-center justify-between rounded-lg px-4 py-3" style={{ backgroundColor: 'var(--hce-primary-soft)', border: '1px solid var(--hce-primary)' }}>
-              <div>
-                <p className="text-sm font-medium text-slate-800">{nombreCompleto(paciente)}</p>
-                <p className="text-xs text-slate-500 mt-0.5">
+        <div
+          className="card-hce px-5 py-4 flex items-center gap-4"
+          style={{
+            borderColor: paciente ? 'var(--hce-primary)' : 'var(--hce-border)',
+            borderLeftWidth: '4px',
+          }}
+        >
+          <div
+            className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
+            style={{ background: paciente ? 'var(--hce-primary)' : 'var(--hce-bg)' }}
+          >
+            <UserRound size={18} style={{ color: paciente ? '#fff' : 'var(--hce-text-muted)' }} />
+          </div>
+          {paciente ? (
+            <>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold truncate" style={{ color: 'var(--hce-text)' }}>
+                  {nombreCompleto(paciente)}
+                </p>
+                <p className="text-xs mt-0.5" style={{ color: 'var(--hce-text-muted)' }}>
                   {paciente.tipo_documento} {paciente.numero_documento}
                   {paciente.edad != null ? ` · ${paciente.edad} años` : ''}
                 </p>
@@ -92,13 +105,19 @@ export default function NuevaFactura() {
               <button
                 type="button"
                 onClick={() => { setPaciente(null); setItems([]) }}
-                className="text-slate-400 hover:text-slate-700 transition-colors"
+                className="btn-secondary text-xs shrink-0"
               >
-                <X size={16} />
+                Cambiar paciente
               </button>
-            </div>
-          </div>
-        ) : (
+            </>
+          ) : (
+            <p className="text-sm" style={{ color: 'var(--hce-text-muted)' }}>
+              Selecciona un paciente para habilitar la factura
+            </p>
+          )}
+        </div>
+
+        {!paciente && (
           <BuscadorPaciente
             selectedDocumento={null}
             onSelect={seleccionarPaciente}
@@ -152,7 +171,7 @@ export default function NuevaFactura() {
                       <tr>
                         <th className="th-hce">CUPS</th>
                         <th className="th-hce">Descripción</th>
-                        <th className="th-hce th-hce--right w-20">Cant.</th>
+                        <th className="th-hce th-hce--right w-28">Cant.</th>
                         <th className="th-hce th-hce--right w-36">Valor unit.</th>
                         <th className="th-hce th-hce--right w-32">Subtotal</th>
                         <th className="w-10" />
@@ -176,7 +195,7 @@ export default function NuevaFactura() {
                               min={1}
                               value={item.cantidad}
                               onChange={(e) => actualizarItem(item._key, 'cantidad', parseInt(e.target.value) || 1)}
-                              className="w-full border border-slate-200 rounded px-2 py-1 text-sm text-right focus:outline-none focus:ring-1 focus:ring-blue-500"
+                              className="input-hce text-right"
                             />
                           </td>
                           <td className="px-4 py-3">
@@ -186,7 +205,7 @@ export default function NuevaFactura() {
                               step={100}
                               value={item.valor_unitario}
                               onChange={(e) => actualizarItem(item._key, 'valor_unitario', parseFloat(e.target.value) || 0)}
-                              className="w-full border border-slate-200 rounded px-2 py-1 text-sm text-right focus:outline-none focus:ring-1 focus:ring-blue-500"
+                              className="input-hce text-right"
                             />
                           </td>
                           <td className="px-4 py-3 text-right text-sm text-slate-700">

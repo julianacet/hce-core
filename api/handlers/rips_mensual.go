@@ -70,7 +70,7 @@ func (h *RipsHandler) resumen(w http.ResponseWriter, r *http.Request) {
 // GET /rips/historial
 func (h *RipsHandler) historial(w http.ResponseWriter, r *http.Request) {
 	rows, err := h.db.Query(r.Context(), `
-		SELECT id, periodo, estado, creado_por, fecha_generacion::text
+		SELECT id, periodo, creado_por, fecha_generacion::text
 		FROM rips_generado
 		WHERE periodo IS NOT NULL
 		ORDER BY fecha_generacion DESC
@@ -85,7 +85,7 @@ func (h *RipsHandler) historial(w http.ResponseWriter, r *http.Request) {
 	lotes := make([]models.RipsLoteItem, 0)
 	for rows.Next() {
 		var item models.RipsLoteItem
-		if err := rows.Scan(&item.ID, &item.Periodo, &item.Estado, &item.CreadoPor, &item.FechaGeneracion); err != nil {
+		if err := rows.Scan(&item.ID, &item.Periodo, &item.CreadoPor, &item.FechaGeneracion); err != nil {
 			responderError(w, http.StatusInternalServerError, "error al leer historial")
 			return
 		}
@@ -268,8 +268,8 @@ func (h *RipsHandler) generarMensual(w http.ResponseWriter, r *http.Request) {
 	u := appmiddleware.UsuarioDesdeContexto(r.Context())
 	var ripsID, fechaGen string
 	err = h.db.QueryRow(r.Context(), `
-		INSERT INTO rips_generado (periodo, datos_json, estado, creado_por)
-		VALUES ($1, $2, 'pendiente', $3)
+		INSERT INTO rips_generado (periodo, datos_json, creado_por)
+		VALUES ($1, $2, $3)
 		RETURNING id, fecha_generacion::text`,
 		periodo, string(datosJSON), u.Nombre,
 	).Scan(&ripsID, &fechaGen)
@@ -282,7 +282,6 @@ func (h *RipsHandler) generarMensual(w http.ResponseWriter, r *http.Request) {
 	responderJSON(w, http.StatusCreated, models.RipsGeneradoResponse{
 		ID:              ripsID,
 		DatosJSON:       rips,
-		Estado:          "pendiente",
 		CreadoPor:       u.Nombre,
 		FechaGeneracion: fechaGen,
 	})

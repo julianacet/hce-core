@@ -215,6 +215,12 @@ export default function EncuentrosGlobal() {
         {/* Tabla */}
         <div className={`overflow-x-auto transition-opacity duration-150 ${isFetching && !isLoading ? 'opacity-60' : ''}`}>
           <table className="w-full text-sm">
+            <colgroup>
+              <col style={{ width: '30%' }} />
+              <col style={{ width: '14%' }} />
+              <col style={{ width: '22%' }} />
+              <col style={{ width: '34%' }} />
+            </colgroup>
             <thead className="thead-sticky border-b" style={{ borderColor: 'var(--hce-border)' }}>
               <tr>
                 <th className="th-hce px-5">

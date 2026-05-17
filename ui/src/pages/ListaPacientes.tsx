@@ -242,6 +242,14 @@ export default function ListaPacientes() {
         {/* Tabla */}
         <div className={`overflow-x-auto transition-opacity duration-150 ${isFetching && !isLoading ? 'opacity-60' : ''}`}>
           <table className="w-full text-sm">
+            <colgroup>
+              <col style={{ width: '30%' }} />
+              <col style={{ width: '8%' }} />
+              <col style={{ width: '14%' }} />
+              <col style={{ width: '12%' }} />
+              <col style={{ width: '18%' }} />
+              <col style={{ width: '18%' }} />
+            </colgroup>
             <thead className="thead-sticky border-b" style={{ borderColor: 'var(--hce-border)' }}>
               <tr>
                 <th className="th-hce px-5">

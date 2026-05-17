@@ -35,7 +35,7 @@ func ExecTx(ctx context.Context, pool *pgxpool.Pool, fn func(tx pgx.Tx) error) e
 	defer tx.Rollback(ctx)
 
 	if uid := usuarioDesdeContexto(ctx); uid != "" {
-		if _, err := tx.Exec(ctx, "SET LOCAL \"app.usuario_id\" = $1", uid); err != nil {
+		if _, err := tx.Exec(ctx, "SELECT set_config('app.usuario_id', $1, true)", uid); err != nil {
 			return fmt.Errorf("set usuario_id: %w", err)
 		}
 	}

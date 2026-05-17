@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router'
 import {
-  UserSearch, Users, CalendarCheck, Star, TrendingUp,
+  Users, CalendarCheck, Star, TrendingUp,
   Package, Clock, AlertTriangle, CalendarDays, Stethoscope,
 } from 'lucide-react'
 import {
@@ -26,19 +26,13 @@ function fmtHora(hora: string): string {
 }
 
 const COLOR_ESTADO: Record<string, string> = {
-  programada:  'bg-slate-100 text-slate-600',
-  confirmada:  'bg-[var(--hce-primary-soft)] text-[var(--hce-primary)]',
-  completada:  'bg-green-100 text-green-700',
-  cancelada:   'bg-red-100 text-red-600',
-  no_asistio:  'bg-orange-100 text-orange-700',
+  programada: 'bg-[var(--hce-primary-soft)] text-[var(--hce-primary)]',
+  cancelada:  'bg-red-100 text-red-600',
 }
 
 const LABEL_ESTADO: Record<string, string> = {
-  programada:  'Programada',
-  confirmada:  'Confirmada',
-  completada:  'Completada',
-  cancelada:   'Cancelada',
-  no_asistio:  'No asistió',
+  programada: 'Programada',
+  cancelada:  'Cancelada',
 }
 
 function Tarjeta({
@@ -82,14 +76,6 @@ export default function Inicio() {
         <div className="relative z-10">
           <h1 className="text-2xl font-bold text-white leading-tight">{tema.nombreSistema}</h1>
           <p className="text-white/70 text-sm mt-1">{tema.subtituloSidebar}</p>
-          <button
-            onClick={() => navigate('/nueva-consulta')}
-            className="mt-5 flex items-center gap-2 bg-white text-sm font-medium px-4 py-2 rounded-md transition-colors hover:bg-white/90"
-            style={{ color: tema.colorPrimario }}
-          >
-            <UserSearch size={15} />
-            Nueva consulta
-          </button>
         </div>
         {tema.logoBase64 ? (
           <img src={tema.logoBase64} alt="Logo" className="h-28 w-auto object-contain relative z-10 opacity-95" />

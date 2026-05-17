@@ -257,13 +257,8 @@ CREATE TABLE rips_generado (
     periodo      VARCHAR(7),                     -- "YYYY-MM" para lotes mensuales
 
     datos_json       JSONB       NOT NULL,
-    estado           VARCHAR(20) NOT NULL DEFAULT 'pendiente'
-                     CHECK (estado IN ('pendiente', 'validado', 'rechazado')),
-    cuv              TEXT,
-    error_validacion TEXT,
 
     fecha_generacion TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    fecha_validacion TIMESTAMPTZ,
     creado_por       TEXT        NOT NULL
 );
 
@@ -597,7 +592,7 @@ CREATE TABLE IF NOT EXISTS cita (
   paciente_telefono   VARCHAR(20),
   motivo              VARCHAR(300),
   estado              VARCHAR(20)  NOT NULL DEFAULT 'programada'
-                      CHECK (estado IN ('programada','confirmada','cancelada','no_asistio','completada')),
+                      CHECK (estado IN ('programada','cancelada')),
   notas               TEXT,
   creado_por          VARCHAR(100) NOT NULL,
   fecha_creacion      TIMESTAMPTZ  NOT NULL DEFAULT now()

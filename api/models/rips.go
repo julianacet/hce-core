@@ -82,7 +82,6 @@ type RipsProcedimiento struct {
 type RipsGeneradoResponse struct {
 	ID              string          `json:"id"`
 	DatosJSON       RipsTransaccion `json:"datos_json"`
-	Estado          string          `json:"estado"`
 	CreadoPor       string          `json:"creado_por"`
 	FechaGeneracion string          `json:"fecha_generacion"`
 }
@@ -105,7 +104,6 @@ type RipsMensualResumen struct {
 type RipsLoteItem struct {
 	ID              string `json:"id"`
 	Periodo         string `json:"periodo"`
-	Estado          string `json:"estado"`
 	CreadoPor       string `json:"creado_por"`
 	FechaGeneracion string `json:"fecha_generacion"`
 }

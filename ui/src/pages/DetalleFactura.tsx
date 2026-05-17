@@ -6,6 +6,7 @@ import { useState } from 'react'
 import { useFactura, useAnularFactura } from '../api/facturas'
 import { usePaciente } from '../api/pacientes'
 import { useMedico } from '../context/MedicoContext'
+import { useTema } from '../context/TemaContext'
 import FacturaPDF from '../components/pdf/FacturaPDF'
 
 function formatCOP(valor: number) {
@@ -16,6 +17,7 @@ export default function DetalleFactura() {
   const { facturaId } = useParams()
   const navigate = useNavigate()
   const { medico } = useMedico()
+  const { tema } = useTema()
   const [imprimiendo, setImprimiendo] = useState(false)
 
   const { data: factura, isLoading, isError } = useFactura(facturaId ?? '')
@@ -41,7 +43,10 @@ export default function DetalleFactura() {
       medico={medico}
       factura={factura}
       pacienteNombre={pacienteNombre}
+      paciente={paciente}
       diagnostico=""
+      colorPrimario={tema.colorPrimario}
+      logoBase64={tema.logoBase64}
     />
   )
 
@@ -66,7 +71,7 @@ export default function DetalleFactura() {
   return (
     <div className="page-hce">
       <Breadcrumb items={[{ label: 'Inicio', to: '/' }, { label: 'Facturación', to: '/facturas' }, { label: 'Factura' }]} />
-      <div className="space-y-4 max-w-2xl">
+      <div className="space-y-4">
         {/* Header */}
         <div className="bg-white rounded-xl border border-slate-200 px-5 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">

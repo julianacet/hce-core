@@ -19,7 +19,6 @@ export type RipsMensualInput = {
 export type RipsGenerado = {
   id: string
   periodo: string
-  estado: string
   creado_por: string
   fecha_generacion: string
   datos_json: unknown
@@ -28,7 +27,6 @@ export type RipsGenerado = {
 export type RipsLoteItem = {
   id: string
   periodo: string
-  estado: string
   creado_por: string
   fecha_generacion: string
 }

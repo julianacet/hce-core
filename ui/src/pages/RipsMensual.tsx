@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { FileCode2, AlertCircle } from 'lucide-react'
 import { Breadcrumb } from '../components/Breadcrumb'
 import { useMedico } from '../context/MedicoContext'
@@ -7,6 +7,7 @@ import {
   useRipsHistorial,
   useGenerarRipsMensual,
 } from '../api/rips'
+import { SortButton, type SortDir } from '../components/SortButton'
 
 const MESES = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -34,9 +35,26 @@ export default function RipsMensual() {
   const [anio, setAnio] = useState(hoy.getFullYear())
   const [mes, setMes] = useState(hoy.getMonth() + 1)
 
+  const [orden, setOrden] = useState<'periodo' | 'fecha_generacion' | 'creado_por'>('fecha_generacion')
+  const [dir, setDir] = useState<SortDir>('desc')
+
   const { data: resumen } = useRipsMensualResumen(anio, mes)
   const { data: historial = [] } = useRipsHistorial()
   const generar = useGenerarRipsMensual()
+
+  const historialOrdenado = useMemo(() => {
+    return [...historial].sort((a, b) => {
+      const va = a[orden] ?? ''
+      const vb = b[orden] ?? ''
+      const cmp = va < vb ? -1 : va > vb ? 1 : 0
+      return dir === 'asc' ? cmp : -cmp
+    })
+  }, [historial, orden, dir])
+
+  function ordenarPor(col: typeof orden) {
+    if (orden === col) setDir(d => (d === 'asc' ? 'desc' : 'asc'))
+    else { setOrden(col); setDir(col === 'fecha_generacion' ? 'desc' : 'asc') }
+  }
 
   const sinConfig = !medico.nit || !medico.codPrestador
 
@@ -57,7 +75,7 @@ export default function RipsMensual() {
       <div className="page-header">
         <div>
           <h2 className="page-title">RIPS Mensual</h2>
-          <p className="page-desc">Genera el lote mensual según Res. 2275/2023. Plazo: primeros 5 días calendario del mes siguiente.</p>
+          <p className="page-desc">Genera el lote mensual según Res. 2275/2023.</p>
         </div>
       </div>
 
@@ -137,27 +155,32 @@ export default function RipsMensual() {
           </p>
         ) : (
           <table className="w-full text-sm">
+            <colgroup>
+              <col style={{ width: '25%' }} />
+              <col style={{ width: '40%' }} />
+              <col style={{ width: '35%' }} />
+            </colgroup>
             <thead className="thead-sticky border-b" style={{ borderColor: 'var(--hce-border)' }}>
               <tr>
-                <th className="th-hce">Período</th>
-                <th className="th-hce">Fecha generación</th>
-                <th className="th-hce">Generado por</th>
-                <th className="th-hce">Estado</th>
+                <th className="th-hce">
+                  <SortButton activo={orden === 'periodo'} dir={dir} onClick={() => ordenarPor('periodo')}>Período</SortButton>
+                </th>
+                <th className="th-hce">
+                  <SortButton activo={orden === 'fecha_generacion'} dir={dir} onClick={() => ordenarPor('fecha_generacion')}>Fecha generación</SortButton>
+                </th>
+                <th className="th-hce">
+                  <SortButton activo={orden === 'creado_por'} dir={dir} onClick={() => ordenarPor('creado_por')}>Generado por</SortButton>
+                </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
-              {historial.map((lote) => (
+            <tbody className="divide-y" style={{ borderColor: 'var(--hce-border)' }}>
+              {historialOrdenado.map((lote) => (
                 <tr key={lote.id}>
-                  <td className="px-4 py-3 font-medium text-slate-700">{periodoLabel(lote.periodo)}</td>
-                  <td className="px-4 py-3 text-slate-500 text-xs">
+                  <td className="px-4 py-3 font-medium" style={{ color: 'var(--hce-text)' }}>{periodoLabel(lote.periodo)}</td>
+                  <td className="px-4 py-3 text-xs" style={{ color: 'var(--hce-text-muted)' }}>
                     {new Date(lote.fecha_generacion).toLocaleString('es-CO')}
                   </td>
-                  <td className="px-4 py-3 text-slate-500">{lote.creado_por}</td>
-                  <td className="px-4 py-3">
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
-                      {lote.estado}
-                    </span>
-                  </td>
+                  <td className="px-4 py-3" style={{ color: 'var(--hce-text-muted)' }}>{lote.creado_por}</td>
                 </tr>
               ))}
             </tbody>

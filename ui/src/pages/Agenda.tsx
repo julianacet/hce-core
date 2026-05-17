@@ -3,7 +3,7 @@ import { Link } from 'react-router'
 import { Breadcrumb } from '../components/Breadcrumb'
 import {
   Clock, User, Phone, ChevronLeft, ChevronRight,
-  Plus, X, Check, XCircle, AlertCircle, CheckCheck, Trash2,
+  Plus, X, XCircle, Trash2,
 } from 'lucide-react'
 import {
   useCitas, useCitasMes, useCrearCita, useActualizarCita, useCambiarEstadoCita, useEliminarCita,
@@ -22,26 +22,17 @@ for (let h = 7; h < 20; h++) {
 
 const ESTADO_LABEL: Record<string, string> = {
   programada: 'Programada',
-  confirmada: 'Confirmada',
-  cancelada: 'Cancelada',
-  no_asistio: 'No asistió',
-  completada: 'Completada',
+  cancelada:  'Cancelada',
 }
 
 const ESTADO_COLOR: Record<string, string> = {
   programada: 'bg-[var(--hce-primary-soft)] text-[var(--hce-primary)] border-[var(--hce-primary)]',
-  confirmada: 'bg-green-50 text-green-700 border-green-200',
-  cancelada: 'bg-red-50 text-red-400 border-red-100',
-  no_asistio: 'bg-orange-50 text-orange-700 border-orange-200',
-  completada: 'bg-slate-100 text-slate-500 border-slate-200',
+  cancelada:  'bg-red-50 text-red-400 border-red-100',
 }
 
 const ESTADO_DOT: Record<string, string> = {
   programada: 'bg-[var(--hce-primary)]',
-  confirmada: 'bg-green-400',
-  cancelada: 'bg-red-300',
-  no_asistio: 'bg-orange-400',
-  completada: 'bg-slate-400',
+  cancelada:  'bg-red-300',
 }
 
 // ── Helpers de fecha ──────────────────────────────────────────────────────────
@@ -346,7 +337,7 @@ function ModalDetalleCita({ cita, onCerrar }: { cita: Cita; onCerrar: () => void
     }
   }
 
-  const cerrado = cita.estado === 'cancelada' || cita.estado === 'completada'
+  const cerrado = cita.estado === 'cancelada'
 
   async function guardar(input: CitaInput) {
     setError('')
@@ -448,23 +439,9 @@ function ModalDetalleCita({ cita, onCerrar }: { cita: Cita; onCerrar: () => void
 
               {!cerrado && (
                 <div className="flex flex-wrap gap-2 pt-3 border-t" style={{ borderColor: 'var(--hce-border)' }}>
-                  {cita.estado === 'programada' && (
-                    <button onClick={() => cambiar('confirmada')}
-                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded bg-green-50 text-green-700 hover:bg-green-100 transition-colors">
-                      <Check className="w-3 h-3" /> Confirmar
-                    </button>
-                  )}
-                  <button onClick={() => cambiar('completada')}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors">
-                    <CheckCheck className="w-3 h-3" /> Completar
-                  </button>
-                  <button onClick={() => cambiar('no_asistio')}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded bg-orange-50 text-orange-700 hover:bg-orange-100 transition-colors">
-                    <AlertCircle className="w-3 h-3" /> No asistió
-                  </button>
                   <button onClick={() => cambiar('cancelada')}
                     className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded bg-red-50 text-red-600 hover:bg-red-100 transition-colors">
-                    <XCircle className="w-3 h-3" /> Cancelar
+                    <XCircle className="w-3 h-3" /> Cancelar cita
                   </button>
                   <button onClick={() => setEditando(true)}
                     className="ml-auto flex items-center gap-1.5 px-3 py-1.5 text-xs rounded border transition-colors hover:bg-slate-50"
@@ -527,7 +504,6 @@ export default function Agenda() {
   }
 
   const citasActivas = citasDay.filter(c => c.estado !== 'cancelada')
-  const completadas = citasDay.filter(c => c.estado === 'completada').length
 
   return (
     <div className="h-screen flex flex-col overflow-hidden" style={{ background: 'var(--hce-bg)' }}>
@@ -543,7 +519,7 @@ export default function Agenda() {
             <div className="flex items-center gap-3">
               {citasActivas.length > 0 && (
                 <span className="text-xs px-2 py-0.5 rounded-full bg-[var(--hce-primary-soft)] text-[var(--hce-primary)]">
-                  {completadas}/{citasActivas.length} atendidos hoy
+                  {citasActivas.length} {citasActivas.length === 1 ? 'cita' : 'citas'} hoy
                 </span>
               )}
               <button
