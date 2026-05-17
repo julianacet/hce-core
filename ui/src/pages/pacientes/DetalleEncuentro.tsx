@@ -376,10 +376,11 @@ export default function DetalleEncuentro() {
 
                 function FilaDx({ d }: { d: typeof e.diagnosticos![0] }) {
                   const badge =
-                    d.tipo === 'impresion'  ? { label: 'Impresión',  cls: 'bg-violet-100 text-violet-700' } :
-                    d.tipo === 'principal'  ? { label: 'Principal',   cls: 'bg-[var(--hce-primary-soft)] text-[var(--hce-primary)]' } :
-                    d.tipo === 'secundario' ? { label: 'Secundario',  cls: 'bg-slate-100 text-slate-600' } :
-                                             { label: 'Nota',         cls: 'bg-amber-100 text-amber-700' }
+                    d.tipo === 'impresion'   ? { label: 'Impresión',   cls: 'bg-violet-100 text-violet-700' } :
+                    d.tipo === 'principal'   ? { label: 'Principal',   cls: 'bg-[var(--hce-primary-soft)] text-[var(--hce-primary)]' } :
+                    d.tipo === 'relacionado' ? { label: 'Relacionado', cls: 'bg-blue-100 text-blue-700' } :
+                    d.tipo === 'secundario'  ? { label: 'Secundario',  cls: 'bg-slate-100 text-slate-600' } :
+                                              { label: 'Nota',         cls: 'bg-amber-100 text-amber-700' }
                   return (
                     <div className="grid items-start py-2.5 border-b border-slate-100 last:border-0"
                       style={{ gridTemplateColumns: 'auto 1fr' }}>

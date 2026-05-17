@@ -1,9 +1,7 @@
-import { useState, useEffect, useRef } from 'react'
-import { ChevronLeft, ChevronRight, X } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useEncuentros, type DiagnosticoItem, type ValoresClinicos, type EncuentroInput } from '../api/encuentros'
 import { useCamposClinicosActivos } from '../api/campos_clinicos'
-import { useBuscarDiagnosticos } from '../api/diagnosticos'
-import { DEBOUNCE_MS } from '../utils/constants'
 import DiagnosticoSearch from './DiagnosticoSearch'
 import { SignosVitalesForm, ExamenFisicoForm, RevisionSistemasForm } from './CampoClinicoForm'
 import AntecedentesTab from './AntecedentesTab'
@@ -65,90 +63,6 @@ const TAB_LABELS: Record<TabKey, string> = {
   formula: 'Fórmula',
 }
 
-// ── Picker de impresión diagnóstica (único resultado) ─────────────────────────
-function ImpresionPicker({
-  value,
-  onChange,
-}: {
-  value: DiagnosticoItem | null
-  onChange: (v: DiagnosticoItem | null) => void
-}) {
-  const [q, setQ] = useState('')
-  const [qD, setQD] = useState('')
-  const [showDrop, setShowDrop] = useState(false)
-  const dropRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
-
-  useEffect(() => {
-    const t = setTimeout(() => setQD(q), DEBOUNCE_MS)
-    return () => clearTimeout(t)
-  }, [q])
-
-  const { data: res = [] } = useBuscarDiagnosticos(qD)
-
-  useEffect(() => {
-    setShowDrop(qD.trim().length >= 2 && res.length > 0)
-  }, [res, qD])
-
-  useEffect(() => {
-    function handle(e: MouseEvent) {
-      if (
-        dropRef.current && !dropRef.current.contains(e.target as Node) &&
-        inputRef.current && !inputRef.current.contains(e.target as Node)
-      ) setShowDrop(false)
-    }
-    document.addEventListener('mousedown', handle)
-    return () => document.removeEventListener('mousedown', handle)
-  }, [])
-
-  if (value) {
-    return (
-      <div className="flex items-center gap-2 rounded-lg border px-3 py-2 text-sm bg-violet-50 border-violet-200 text-violet-800">
-        {value.codigo && <span className="font-mono text-xs opacity-70">{value.codigo}</span>}
-        <span className="flex-1">{value.descripcion}</span>
-        <button type="button" onClick={() => onChange(null)} className="opacity-60 hover:opacity-100 shrink-0">
-          <X size={13} />
-        </button>
-      </div>
-    )
-  }
-
-  return (
-    <div className="relative">
-      <input
-        ref={inputRef}
-        value={q}
-        onChange={e => setQ(e.target.value)}
-        onFocus={() => qD.length >= 2 && res.length > 0 && setShowDrop(true)}
-        placeholder="Buscar por código CIE-10 o nombre…"
-        className="input-hce"
-      />
-      {showDrop && (
-        <div
-          ref={dropRef}
-          className="absolute z-50 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg max-h-52 overflow-y-auto"
-        >
-          {res.map(r => (
-            <button
-              key={r.codigo}
-              type="button"
-              onMouseDown={e => {
-                e.preventDefault()
-                onChange({ tipo: 'impresion', codigo: r.codigo, descripcion: r.nombre })
-                setQ('')
-                setShowDrop(false)
-              }}
-              className="w-full text-left px-3 py-2 hover:bg-slate-50 flex items-baseline gap-2 text-sm"
-            >
-              <span className="font-mono text-xs text-slate-500 shrink-0">{r.codigo}</span>
-              <span className="text-slate-800">{r.nombre}</span>
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
 
 export default function EncuentroForm({
   documento,
@@ -172,8 +86,6 @@ export default function EncuentroForm({
   const [revision, setRevision] = useState<ValoresClinicos>(draft?.revision ?? {})
   const [examen, setExamen] = useState<ValoresClinicos>(draft?.examen ?? {})
   const [diagnosticos, setDiagnosticos] = useState<DiagnosticoItem[]>(draft?.diagnosticos ?? [])
-  const [impresion, setImpresion] = useState<DiagnosticoItem | null>(draft?.impresion ?? null)
-  const [tipoDiagnosticoPrincipal, setTipoDiagnosticoPrincipal] = useState<string>(draft?.tipoDiagnosticoPrincipal ?? '01')
   const [medsPos, setMedsPos] = useState<Medicamento[]>(draft?.medsPos ?? [{ ...medVacio }])
   const [medsNoPos, setMedsNoPos] = useState<Medicamento[]>(draft?.medsNoPos ?? [{ ...medVacio }])
   const [error, setError] = useState<string | null>(null)
@@ -198,8 +110,7 @@ export default function EncuentroForm({
     Object.values(signos).some(v => v.trim()) ||
     Object.keys(revision).length > 0 ||
     Object.keys(examen).length > 0 ||
-    diagnosticos.length > 0 ||
-    impresion
+    diagnosticos.length > 0
   )
 
   const availableTabs: TabKey[] = [
@@ -214,8 +125,8 @@ export default function EncuentroForm({
   ]
 
   useEffect(() => {
-    try { sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ form, signos, revision, examen, diagnosticos, impresion, medsPos, medsNoPos, tipoDiagnosticoPrincipal })) } catch {}
-  }, [form, signos, revision, examen, diagnosticos, impresion, medsPos, medsNoPos, DRAFT_KEY])
+    try { sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ form, signos, revision, examen, diagnosticos, medsPos, medsNoPos })) } catch {}
+  }, [form, signos, revision, examen, diagnosticos, medsPos, medsNoPos, DRAFT_KEY])
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }))
@@ -231,8 +142,8 @@ export default function EncuentroForm({
       signos_vitales: Object.keys(signosLimpios).length > 0 ? signosLimpios : undefined,
       revision_sistemas: Object.keys(revision).length > 0 ? revision : undefined,
       examen_fisico: Object.keys(examen).length > 0 ? examen : undefined,
-      diagnosticos: [...(impresion ? [impresion] : []), ...diagnosticos],
-      tipo_diagnostico_principal: tipoDiagnosticoPrincipal,
+      diagnosticos,
+      tipo_diagnostico_principal: diagnosticos.find(d => d.tipo === 'principal')?.tipo_clinico ?? '01',
       plan_manejo: form.plan_manejo || undefined,
       finalidad_consulta: form.finalidad_consulta,
       causa_externa: form.causa_externa,
@@ -400,33 +311,10 @@ export default function EncuentroForm({
         )}
 
         {activeTab === 'diagnosticos' && (
-          <>
-            <div className="space-y-2">
-              <div>
-                <label className="label-hce">Impresión diagnóstica <span className="text-slate-400 font-normal">(opcional)</span></label>
-                <p className="text-xs text-slate-400 mb-2">Diagnóstico presuntivo basado en la anamnesis y el examen físico, antes de confirmar.</p>
-                <ImpresionPicker value={impresion} onChange={setImpresion} />
-              </div>
-            </div>
-
-            <div className="border-t border-slate-100 pt-4 space-y-2">
-              <label className="label-hce">Diagnósticos confirmados</label>
-              <DiagnosticoSearch value={diagnosticos} onChange={setDiagnosticos} />
-            </div>
-
-            <div>
-              <label className="label-hce">Tipo de diagnóstico <span className="text-slate-400 font-normal">(RIPS)</span></label>
-              <select
-                value={tipoDiagnosticoPrincipal}
-                onChange={e => setTipoDiagnosticoPrincipal(e.target.value)}
-                className="input-hce"
-              >
-                <option value="01">01 — Impresión diagnóstica</option>
-                <option value="02">02 — Confirmado clínicamente</option>
-                <option value="03">03 — Confirmado por laboratorio</option>
-              </select>
-            </div>
-          </>
+          <div className="space-y-2">
+            <label className="label-hce">Diagnósticos</label>
+            <DiagnosticoSearch value={diagnosticos} onChange={setDiagnosticos} />
+          </div>
         )}
 
         {activeTab === 'formula' && (
@@ -436,10 +324,7 @@ export default function EncuentroForm({
             medsNoPos={medsNoPos}
             setMedsNoPos={setMedsNoPos}
             paciente={paciente ?? null}
-            diagnostico={
-              diagnosticos.find(d => d.tipo === 'principal')?.codigo ??
-              impresion?.codigo ?? ''
-            }
+            diagnostico={diagnosticos.find(d => d.tipo === 'principal')?.codigo ?? ''}
           />
         )}
 

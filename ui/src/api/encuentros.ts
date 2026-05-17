@@ -3,7 +3,8 @@ import { apiFetch } from './client'
 import { ENCUENTROS_KEY, ENCUENTROS_GLOBAL_KEY } from './keys'
 
 export type DiagnosticoItem = {
-  tipo: 'impresion' | 'principal' | 'secundario' | 'nota'
+  tipo: 'impresion' | 'principal' | 'relacionado' | 'secundario' | 'nota'
+  tipo_clinico?: string   // RIPS: '01' impresión | '02' confirmado clínico | '03' confirmado laboratorio
   codigo?: string
   descripcion: string
 }
