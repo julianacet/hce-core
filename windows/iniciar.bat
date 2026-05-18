@@ -64,11 +64,11 @@ REM ── Servidor web ──────────────────�
 
 tasklist /fi "imagename eq hce-web.exe" 2>nul | find /i "hce-web.exe" >nul
 if errorlevel 1 (
-    echo [3/3] Iniciando servidor web en puerto %WEB_PORT%...
-    start /b "" "%DIR%hce-web.exe" > "%DIR%logs\web.log" 2>&1
+    echo [3/3] Abriendo HCE Consultorio...
+    start "" "%DIR%hce-web.exe"
     echo       OK
 ) else (
-    echo [3/3] Servidor web ya en ejecucion.
+    echo [3/3] HCE Consultorio ya esta abierto.
 )
 
 REM ── Esperar y abrir navegador ─────────────────────────────────────────────────
@@ -94,9 +94,8 @@ echo ================================================
 echo   HCE Consultorio esta en ejecucion
 echo ================================================
 echo.
-echo   Abre el navegador en: http://localhost:%WEB_PORT%
+echo   La ventana de HCE ya deberia estar abierta.
+echo   Si no aparecio, ejecuta iniciar.bat de nuevo.
 echo.
 echo   Para detener los servicios ejecuta: detener.bat
 echo.
-
-start "" "http://localhost:%WEB_PORT%"

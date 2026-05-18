@@ -47,7 +47,7 @@ if "!API_PORT!"=="" set API_PORT=8000
 
 :ask_password
 set "DB_PASS="
-set /p "DB_PASS=  Contrasena para la base de datos (min. 8 caracteres): "
+set /p "DB_PASS=  Contrasena para la base de datos (min. 8 caracteres, sin ' @ / : ? # %% +): "
 if "!DB_PASS!"=="" goto ask_password
 
 REM Verificar longitud >= 8 con PowerShell
@@ -57,8 +57,17 @@ if errorlevel 1 (
     goto ask_password
 )
 
+REM Verificar caracteres que rompen SQL o la URL de conexion
+echo !DB_PASS! | findstr /r "[\"'@/:?#%%&+\\]" >nul 2>&1
+if not errorlevel 1 (
+    echo   [!] La contrasena no puede contener: ' " @ / : ? # %% + \
+    goto ask_password
+)
+
 echo.
 echo [1] Inicializando base de datos...
+
+mkdir "%DIR%logs" 2>nul
 
 REM initdb con autenticacion trust (solo localhost)
 "%PGSQL%\bin\initdb.exe" -D "%DATA%" -U postgres -E UTF8 --locale=C -A trust >"%DIR%logs\initdb.log" 2>&1
@@ -76,7 +85,6 @@ REM Agregar regla md5 para usuario hce (antes de la regla trust)
 echo host    hce_provider    hce    127.0.0.1/32    md5>>"%DATA%\pg_hba.conf"
 
 echo [2] Iniciando PostgreSQL temporalmente...
-mkdir "%DIR%logs" 2>nul
 "%PGSQL%\bin\pg_ctl.exe" start -D "%DATA%" -l "%DIR%logs\postgres.log" -w -t 30
 if errorlevel 1 (
     echo [ERROR] No se pudo iniciar PostgreSQL. Revisa logs\postgres.log
@@ -88,10 +96,15 @@ echo [3] Creando usuario y base de datos...
 "%PGSQL%\bin\psql.exe" -U postgres -p 5433 -c "CREATE USER hce WITH PASSWORD '!DB_PASS!';" postgres >nul 2>&1
 "%PGSQL%\bin\psql.exe" -U postgres -p 5433 -c "CREATE DATABASE hce_provider OWNER hce ENCODING 'UTF8';" postgres >nul 2>&1
 
-echo [4] Cargando esquema...
-"%PGSQL%\bin\psql.exe" -U postgres -p 5433 -d hce_provider -f "%DB_DIR%\init.sql" >"%DIR%logs\init_sql.log" 2>&1
+echo [4] Cargando esquema y datos de referencia...
+"%PGSQL%\bin\psql.exe" -U postgres -p 5433 -d hce_provider -f "%DB_DIR%\init.sql"           >>"%DIR%logs\init_sql.log" 2>&1
+"%PGSQL%\bin\psql.exe" -U postgres -p 5433 -d hce_provider -f "%DB_DIR%\seed_divipola.sql"  >>"%DIR%logs\init_sql.log" 2>&1
+"%PGSQL%\bin\psql.exe" -U postgres -p 5433 -d hce_provider -f "%DB_DIR%\seed_ocupaciones.sql" >>"%DIR%logs\init_sql.log" 2>&1
+"%PGSQL%\bin\psql.exe" -U postgres -p 5433 -d hce_provider -f "%DB_DIR%\seed_eps.sql"       >>"%DIR%logs\init_sql.log" 2>&1
+"%PGSQL%\bin\psql.exe" -U postgres -p 5433 -d hce_provider -f "%DB_DIR%\seed_medicamentos.sql" >>"%DIR%logs\init_sql.log" 2>&1
+"%PGSQL%\bin\psql.exe" -U postgres -p 5433 -d hce_provider -f "%DB_DIR%\seed_examenes.sql"  >>"%DIR%logs\init_sql.log" 2>&1
 if errorlevel 1 (
-    echo [ADVERTENCIA] Hubo errores al cargar init.sql. Revisa logs\init_sql.log
+    echo [ADVERTENCIA] Hubo errores al cargar los datos. Revisa logs\init_sql.log
 )
 
 echo [5] Deteniendo PostgreSQL...
@@ -114,14 +127,33 @@ REM Escribir config.bat
     echo set "WEB_PORT=!UI_PORT!"
     echo set "WEB_DIR=%%~dp0dist"
     echo set "PGSQL_DATA=%%~dp0data"
+    echo set "APP_TZ=America/Bogota"
+    echo set "TZ=America/Bogota"
 ) > "%CONFIG%"
+
+echo [7] Creando accesos directos...
+
+REM Acceso directo en el escritorio
+for /f "delims=" %%d in ('powershell -nologo -noprofile -command "[Environment]::GetFolderPath(\"Desktop\")"') do set "DESKTOP=%%d"
+powershell -nologo -noprofile -command "$ws=New-Object -ComObject WScript.Shell; $s=$ws.CreateShortcut('!DESKTOP!\HCE Consultorio.lnk'); $s.TargetPath='!DIR!iniciar.bat'; $s.WorkingDirectory='!DIR!'; $s.IconLocation='!DIR!hce-api.exe,0'; $s.WindowStyle=1; $s.Save()" >nul 2>&1
+echo       Acceso directo creado en el escritorio.
+
+REM Preguntar inicio automatico con Windows
+echo.
+set /p "AUTOSTART=  Iniciar HCE automaticamente cuando encienda el equipo? [s/N]: "
+if /i "!AUTOSTART!"=="s" (
+    for /f "delims=" %%s in ('powershell -nologo -noprofile -command "[Environment]::GetFolderPath(\"Startup\")"') do set "STARTUP=%%s"
+    powershell -nologo -noprofile -command "$ws=New-Object -ComObject WScript.Shell; $s=$ws.CreateShortcut('!STARTUP!\HCE Consultorio.lnk'); $s.TargetPath='!DIR!iniciar.bat'; $s.WorkingDirectory='!DIR!'; $s.WindowStyle=1; $s.Save()" >nul 2>&1
+    echo       Inicio automatico configurado.
+)
 
 echo.
 echo ================================================
 echo   Configuracion completada exitosamente
 echo ================================================
 echo.
-echo   Para iniciar HCE Consultorio, ejecuta:
+echo   Para iniciar HCE Consultorio, haz doble clic en:
+echo     El acceso directo del escritorio, o
 echo     iniciar.bat
 echo.
 echo   Credenciales iniciales:

@@ -33,12 +33,23 @@ Source: "hce-web.exe";  DestDir: "{app}"; Flags: ignoreversion
 Source: "primera_vez.bat"; DestDir: "{app}"; Flags: ignoreversion
 Source: "iniciar.bat";    DestDir: "{app}"; Flags: ignoreversion
 Source: "detener.bat";    DestDir: "{app}"; Flags: ignoreversion
+Source: "migrar.bat";     DestDir: "{app}"; Flags: ignoreversion
+
+; Scripts de migración desde Simedic (generados por construir_windows.sh)
+Source: "migration\migrar_pacientes.py";   DestDir: "{app}\migration"; Flags: ignoreversion
+Source: "migration\migrar_consultas.py";   DestDir: "{app}\migration"; Flags: ignoreversion
+Source: "migration\migrar_antecedentes.py"; DestDir: "{app}\migration"; Flags: ignoreversion
 
 ; Frontend estático (generado por construir_windows.sh)
 Source: "dist\*"; DestDir: "{app}\dist"; Flags: ignoreversion recursesubdirs createallsubdirs
 
-; Esquema de la base de datos
-Source: "..\db\init.sql"; DestDir: "{app}\db"; Flags: ignoreversion
+; Esquema e datos de referencia
+Source: "..\db\init.sql";              DestDir: "{app}\db"; Flags: ignoreversion
+Source: "..\db\seed_divipola.sql";    DestDir: "{app}\db"; Flags: ignoreversion
+Source: "..\db\seed_ocupaciones.sql"; DestDir: "{app}\db"; Flags: ignoreversion
+Source: "..\db\seed_eps.sql";         DestDir: "{app}\db"; Flags: ignoreversion
+Source: "..\db\seed_medicamentos.sql"; DestDir: "{app}\db"; Flags: ignoreversion
+Source: "..\db\seed_examenes.sql";    DestDir: "{app}\db"; Flags: ignoreversion
 
 ; PostgreSQL portátil (descargar por separado — ver construir_windows.sh)
 Source: "pgsql\*"; DestDir: "{app}\pgsql"; Flags: ignoreversion recursesubdirs createallsubdirs
@@ -46,12 +57,14 @@ Source: "pgsql\*"; DestDir: "{app}\pgsql"; Flags: ignoreversion recursesubdirs c
 [Dirs]
 Name: "{app}\logs"
 Name: "{app}\data"
+Name: "{app}\migration\simedic"
 
 [Icons]
-Name: "{group}\Iniciar HCE Consultorio";    Filename: "{app}\iniciar.bat";    WorkingDir: "{app}"; IconFilename: "{app}\hce-api.exe"
-Name: "{group}\Detener HCE Consultorio";    Filename: "{app}\detener.bat";    WorkingDir: "{app}"
-Name: "{group}\Desinstalar HCE Consultorio"; Filename: "{uninstallexe}"
-Name: "{commondesktop}\HCE Consultorio";    Filename: "{app}\iniciar.bat";    WorkingDir: "{app}"; IconFilename: "{app}\hce-api.exe"; Tasks: desktopicon
+Name: "{group}\Iniciar HCE Consultorio";       Filename: "{app}\iniciar.bat";    WorkingDir: "{app}"; IconFilename: "{app}\hce-api.exe"
+Name: "{group}\Detener HCE Consultorio";       Filename: "{app}\detener.bat";    WorkingDir: "{app}"
+Name: "{group}\Migrar datos desde Simedic";    Filename: "{app}\migrar.bat";     WorkingDir: "{app}"
+Name: "{group}\Desinstalar HCE Consultorio";   Filename: "{uninstallexe}"
+Name: "{commondesktop}\HCE Consultorio";       Filename: "{app}\iniciar.bat";    WorkingDir: "{app}"; IconFilename: "{app}\hce-api.exe"; Tasks: desktopicon
 
 [Tasks]
 Name: "desktopicon"; Description: "Crear acceso directo en el escritorio"; GroupDescription: "Iconos adicionales:"
