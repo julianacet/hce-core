@@ -63,3 +63,5 @@ export const USUARIOS_KEY = ['usuarios'] as const
 export const AUDITORIA_KEY = ['auditoria'] as const
 
 export const TARIFAS_KEY = ['tarifas'] as const
+
+export const ORDENES_EXAMEN_KEY = ['ordenes-examen'] as const

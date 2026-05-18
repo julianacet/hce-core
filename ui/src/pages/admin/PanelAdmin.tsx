@@ -65,6 +65,16 @@ import {
   type MedicamentoPredefinido,
   type MedicamentoInput,
 } from '../../api/medicamentos_predefinidos'
+import {
+  useExamenesPredefinidos,
+  useCrearExamen,
+  useActualizarExamen,
+  useToggleExamen,
+  useEliminarExamen,
+  CATEGORIAS_EXAMEN,
+  type ExamenPredefinido,
+  type ExamenPredefinidoInput,
+} from '../../api/examenes_predefinidos'
 import { Breadcrumb } from '../../components/Breadcrumb'
 
 const PALETAS = [
@@ -1438,6 +1448,156 @@ function MedicamentosAdmin({ onAbierto }: { onAbierto?: (v: boolean) => void }) 
   )
 }
 
+// ── Gestión de exámenes predefinidos ─────────────────────────────────────────
+
+const CATEGORIA_COLOR: Record<string, string> = {
+  laboratorio: 'bg-blue-100 text-blue-700',
+  imagen:      'bg-purple-100 text-purple-700',
+  patologia:   'bg-rose-100 text-rose-700',
+  otro:        'bg-slate-100 text-slate-600',
+}
+
+function ExamenRow({ e, onEditar }: { e: ExamenPredefinido; onEditar: () => void }) {
+  const toggle   = useToggleExamen(e.id)
+  const eliminar = useEliminarExamen()
+  return (
+    <div className={`flex items-center gap-3 px-4 py-3 border-b last:border-0 ${!e.esta_activo ? 'opacity-50' : ''}`}
+         style={{ borderColor: 'var(--hce-border)' }}>
+      <span className={`text-xs font-medium px-2 py-0.5 rounded-full shrink-0 ${CATEGORIA_COLOR[e.categoria]}`}>
+        {CATEGORIAS_EXAMEN[e.categoria]}
+      </span>
+      <span className="flex-1 text-sm" style={{ color: 'var(--hce-text)' }}>{e.nombre}</span>
+      {e.codigo_cups && (
+        <span className="text-xs font-mono shrink-0" style={{ color: 'var(--hce-primary)' }}>{e.codigo_cups}</span>
+      )}
+      <RowMenu
+        items={[
+          { label: 'Editar',                      icon: <Pencil className="w-3.5 h-3.5" />,  onClick: onEditar },
+          { label: e.esta_activo ? 'Desactivar' : 'Activar', icon: <Power className="w-3.5 h-3.5" />, onClick: () => toggle.mutate() },
+          { label: 'Eliminar', danger: true,       icon: <Trash2 className="w-3.5 h-3.5" />,  onClick: async () => {
+            if (!confirm(`¿Eliminar "${e.nombre}"?`)) return
+            await eliminar.mutateAsync(e.id)
+          }},
+        ]}
+        loading={toggle.isPending || eliminar.isPending}
+      />
+    </div>
+  )
+}
+
+function ExamenesAdmin({ onAbierto }: { onAbierto?: (v: boolean) => void }) {
+  const [q, setQ] = useState('')
+  const [categoriaFiltro, setCategoriaFiltro] = useState('')
+  const [editando, setEditando] = useState<ExamenPredefinido | null>(null)
+  const [form, setForm] = useState<ExamenPredefinidoInput>({ nombre: '', codigo_cups: null, categoria: 'laboratorio' })
+  const [abierto, setAbierto] = useState(false)
+  const [error, setError] = useState('')
+
+  const { data: examenes = [], isFetching } = useExamenesPredefinidos(q || undefined, categoriaFiltro || undefined, true)
+  const crear     = useCrearExamen()
+  const actualizar = useActualizarExamen(editando?.id ?? 0)
+
+  function abrirNuevo() {
+    setEditando(null)
+    setForm({ nombre: '', codigo_cups: null, categoria: 'laboratorio' })
+    setError('')
+    setAbierto(true)
+    onAbierto?.(true)
+  }
+
+  function abrirEditar(e: ExamenPredefinido) {
+    setEditando(e)
+    setForm({ nombre: e.nombre, codigo_cups: e.codigo_cups, categoria: e.categoria })
+    setError('')
+    setAbierto(true)
+    onAbierto?.(true)
+  }
+
+  function cerrar() { setAbierto(false); onAbierto?.(false) }
+
+  async function handleGuardar(ev: React.FormEvent) {
+    ev.preventDefault()
+    setError('')
+    try {
+      if (editando) await actualizar.mutateAsync(form)
+      else          await crear.mutateAsync(form)
+      cerrar()
+    } catch (err: any) { setError(err?.message ?? 'Error al guardar') }
+  }
+
+  const guardando = crear.isPending || actualizar.isPending
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <p className="text-sm" style={{ color: 'var(--hce-text-muted)' }}>
+          Catálogo de exámenes disponibles para ordenar. Muestra hasta 80 resultados.
+        </p>
+        <button onClick={abrirNuevo} className="btn-primary"><Plus className="w-4 h-4" /> Nuevo examen</button>
+      </div>
+
+      {abierto && (
+        <form onSubmit={handleGuardar} className="card-hce p-4 space-y-3">
+          <h4 className="card-title">{editando ? 'Editar examen' : 'Nuevo examen'}</h4>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="col-span-2">
+              <label className="label-hce">Nombre *</label>
+              <input className="input-hce" required value={form.nombre}
+                     onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))} />
+            </div>
+            <div>
+              <label className="label-hce">Categoría *</label>
+              <select className="input-hce" value={form.categoria}
+                      onChange={e => setForm(f => ({ ...f, categoria: e.target.value }))}>
+                {Object.entries(CATEGORIAS_EXAMEN).map(([k, v]) => (
+                  <option key={k} value={k}>{v}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="label-hce">Código CUPS <span className="font-normal">(opcional)</span></label>
+              <input className="input-hce font-mono" placeholder="Ej: 903856"
+                     value={form.codigo_cups ?? ''}
+                     onChange={e => setForm(f => ({ ...f, codigo_cups: e.target.value || null }))} />
+            </div>
+          </div>
+          {error && <p className="text-sm text-red-600">{error}</p>}
+          <div className="flex gap-2 justify-end">
+            <button type="button" onClick={cerrar} className="btn-secondary">Cancelar</button>
+            <button type="submit" disabled={guardando} className="btn-primary">
+              {guardando ? 'Guardando…' : 'Guardar'}
+            </button>
+          </div>
+        </form>
+      )}
+
+      <div className="flex gap-2">
+        <input className="input-hce flex-1" placeholder="Buscar por nombre…"
+               value={q} onChange={e => setQ(e.target.value)} />
+        <select className="input-hce w-44" value={categoriaFiltro}
+                onChange={e => setCategoriaFiltro(e.target.value)}>
+          <option value="">Todas las categorías</option>
+          {Object.entries(CATEGORIAS_EXAMEN).map(([k, v]) => (
+            <option key={k} value={k}>{v}</option>
+          ))}
+        </select>
+      </div>
+
+      <div className="card-hce overflow-hidden">
+        {isFetching ? (
+          <p className="px-4 py-6 text-sm text-center" style={{ color: 'var(--hce-text-muted)' }}>Cargando…</p>
+        ) : examenes.length === 0 ? (
+          <p className="px-4 py-6 text-sm text-center" style={{ color: 'var(--hce-text-muted)' }}>
+            No hay exámenes registrados aún.
+          </p>
+        ) : (
+          examenes.map(e => <ExamenRow key={e.id} e={e} onEditar={() => abrirEditar(e)} />)
+        )}
+      </div>
+    </div>
+  )
+}
+
 export default function PanelAdmin() {
   const { tema, guardarTema } = useTema()
   const { medico, guardar: guardarMedico } = useMedico()
@@ -1454,7 +1614,7 @@ export default function PanelAdmin() {
   const [tab, setTab] = useTabParam(
     'tab',
     'perfil' as const,
-    ['perfil', 'impresion', 'apariencia', 'consentimientos', 'usuarios', 'eventos', 'antecedentes', 'campos', 'medicamentos'] as const,
+    ['perfil', 'impresion', 'apariencia', 'consentimientos', 'usuarios', 'eventos', 'antecedentes', 'campos', 'medicamentos', 'examenes'] as const,
   )
   const inputLogo = useRef<HTMLInputElement>(null)
 
@@ -1569,6 +1729,7 @@ export default function PanelAdmin() {
           { id: 'usuarios',        label: 'Usuarios' },
           { id: 'eventos',         label: 'Eventos adversos' },
           { id: 'medicamentos',    label: 'Medicamentos' },
+          { id: 'examenes',        label: 'Exámenes' },
         ] as const).map(({ id, label }) => (
           <button
             key={id}
@@ -1719,6 +1880,18 @@ export default function PanelAdmin() {
                   {TAMANOS_DOC.map((t) => <option key={t} value={t}>{LABEL_TAMANO[t]}</option>)}
                 </select>
               </div>
+              <div>
+                <label className="label-hce">Historia clínica</label>
+                <select value={formMedico.impresion.historiaClinica} onChange={(e) => setFormMedico((prev) => ({ ...prev, impresion: { ...prev.impresion, historiaClinica: e.target.value as TamanoDocumento } }))} className="input-hce">
+                  {TAMANOS_DOC.map((t) => <option key={t} value={t}>{LABEL_TAMANO[t]}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="label-hce">Orden de exámenes</label>
+                <select value={formMedico.impresion.ordenExamen} onChange={(e) => setFormMedico((prev) => ({ ...prev, impresion: { ...prev.impresion, ordenExamen: e.target.value as TamanoDocumento } }))} className="input-hce">
+                  {TAMANOS_DOC.map((t) => <option key={t} value={t}>{LABEL_TAMANO[t]}</option>)}
+                </select>
+              </div>
             </div>
           </div>
           {errorPerfil && <p className="form-error">{errorPerfil}</p>}
@@ -1741,6 +1914,7 @@ export default function PanelAdmin() {
       {tab === 'antecedentes' && <AntecedentesAdmin onAbierto={setFormularioAbierto} />}
       {tab === 'campos' && <CamposClinicosAdmin onAbierto={setFormularioAbierto} />}
       {tab === 'medicamentos' && <MedicamentosAdmin onAbierto={setFormularioAbierto} />}
+      {tab === 'examenes'    && <ExamenesAdmin     onAbierto={setFormularioAbierto} />}
 
       {tab === 'apariencia' && <form onSubmit={guardar} className="space-y-6">
 

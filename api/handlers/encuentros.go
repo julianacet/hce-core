@@ -45,6 +45,7 @@ func EncuentrosRouter(db *pgxpool.Pool) http.Handler {
 		r.Mount("/formulas", FormulasRouter(db))
 		r.Mount("/consentimiento", ConsentimientoEncuentroRouter(db))
 		r.Mount("/notas", NotasEncuentroRouter(db))
+		r.Mount("/ordenes", OrdenesExamenRouter(db))
 	})
 
 	return r

@@ -36,8 +36,8 @@ export default function PacienteLayout() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="bg-white border-b border-slate-200 px-8 py-6">
-        <div style={{ maxWidth: 'var(--hce-page-width)', marginInline: 'auto' }}>
+      <div className="bg-white border-b border-slate-200 py-6">
+        <div style={{ maxWidth: 'var(--hce-page-width)', marginInline: 'auto', paddingInline: '2rem' }}>
           <Breadcrumb items={crumbs} />
           <div className="page-header" style={{ marginBottom: '1rem' }}>
             <div>
@@ -81,8 +81,8 @@ export default function PacienteLayout() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto bg-slate-50 p-6">
-        <div style={{ maxWidth: 'var(--hce-page-width)', marginInline: 'auto' }}>
+      <div className="flex-1 overflow-y-auto bg-slate-50 py-6">
+        <div style={{ maxWidth: 'var(--hce-page-width)', marginInline: 'auto', paddingInline: '2rem' }}>
           <Outlet />
         </div>
       </div>

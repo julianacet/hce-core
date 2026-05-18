@@ -1,6 +1,6 @@
 import { useParams } from 'react-router'
 import { Printer, FileDown } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useTabParam } from '../../hooks/useTabParam'
 import { pdf } from '@react-pdf/renderer'
 import { useEncuentro, type ValorNormalNotas } from '../../api/encuentros'
@@ -9,24 +9,143 @@ import { useMedico } from '../../context/MedicoContext'
 import { useTema } from '../../context/TemaContext'
 import FormulaPDF, { type Medicamento } from '../../components/pdf/FormulaPDF'
 import HistoriaClinicaPDF from '../../components/pdf/HistoriaClinicaPDF'
+import OrdenExamenPDF from '../../components/pdf/OrdenExamenPDF'
 import { useCamposClinicosActivos } from '../../api/campos_clinicos'
 import { useFormulas, type FormulaGuardada } from '../../api/formulas'
 import { useNotasEncuentro, useCrearNotaEncuentro } from '../../api/notas_encuentro'
 import { useAntecedentes } from '../../api/antecedentes'
 import AntecedentesTab from '../../components/AntecedentesTab'
 import { nombreCompleto, fmtFechaNacimiento } from '../../utils/paciente'
+import { useOrdenesExamen } from '../../api/ordenes_examen'
+import { TAMANO_PAGINA } from '../../utils/impresion'
 
-type Tab = 'motivo' | 'signos' | 'revision' | 'examen' | 'analisis' | 'diagnosticos' | 'antecedentes' | 'formula'
+// ── Tab Exámenes médicos (solo lectura) ───────────────────────────────────────
+
+function TabExamenesMedicos({
+  docId, ordenes, medico, paciente, diagnostico, tema, pacienteNombre,
+}: {
+  docId: string
+  ordenes: ReturnType<typeof useOrdenesExamen>['data'] & object[]
+  medico: any
+  paciente: any
+  diagnostico: string
+  tema: any
+  pacienteNombre: string
+}) {
+  const [imprimiendoId, setImprimiendoId] = useState<string | null>(null)
+
+  async function handleImprimir(orden: NonNullable<typeof ordenes>[0]) {
+    setImprimiendoId(orden.id)
+    try {
+      const { pdf } = await import('@react-pdf/renderer')
+      const fechaOrden = new Date(orden.fecha_creacion).toLocaleDateString('es-CO', {
+        day: '2-digit', month: 'long', year: 'numeric',
+      })
+      const blob = await pdf(
+        <OrdenExamenPDF
+          medico={medico}
+          paciente={{
+            nombre: pacienteNombre,
+            documento: paciente?.numero_documento ?? docId,
+            tipoDocumento: paciente?.tipo_documento ?? '',
+            fechaNacimiento: fmtFechaNacimiento(paciente?.fecha_nacimiento),
+          }}
+          diagnostico={diagnostico}
+          items={orden.items}
+          indicacionesGenerales={orden.indicaciones_generales}
+          fecha={fechaOrden}
+          tamano={TAMANO_PAGINA[medico.impresion?.ordenExamen ?? 'A4']}
+          colorPrimario={tema.colorPrimario}
+          logoBase64={tema.logoBase64}
+        />
+      ).toBlob()
+      const url = URL.createObjectURL(blob)
+      const ventana = window.open(url)
+      if (ventana) {
+        ventana.addEventListener('load', () => {
+          ventana.focus(); ventana.print()
+          ventana.addEventListener('afterprint', () => URL.revokeObjectURL(url))
+        })
+      }
+    } finally {
+      setImprimiendoId(null)
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+
+      {/* Órdenes existentes */}
+      {ordenes.length > 0 && (
+        <div className="space-y-3">
+          {ordenes.map(orden => (
+            <div key={orden.id} className="border rounded-lg p-4 space-y-2"
+                 style={{ borderColor: 'var(--hce-border)' }}>
+              <div className="flex items-center justify-between">
+                <p className="text-xs" style={{ color: 'var(--hce-text-muted)' }}>
+                  {new Date(orden.fecha_creacion).toLocaleDateString('es-CO', {
+                    day: '2-digit', month: 'short', year: 'numeric',
+                  })} · {orden.creado_por}
+                </p>
+                <button
+                  onClick={() => handleImprimir(orden)}
+                  disabled={imprimiendoId === orden.id}
+                  className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md border transition-colors disabled:opacity-40"
+                  style={{ borderColor: 'var(--hce-border)', color: 'var(--hce-text-muted)' }}
+                >
+                  <Printer size={12} />
+                  {imprimiendoId === orden.id ? 'Preparando…' : 'Reimprimir'}
+                </button>
+              </div>
+              <ul className="space-y-1.5">
+                {orden.items.map(item => (
+                  <li key={item.id} className="flex items-start gap-2 text-sm">
+                    {item.codigo_cups && (
+                      <span className="font-mono text-xs font-semibold shrink-0 mt-0.5"
+                            style={{ color: 'var(--hce-primary)' }}>{item.codigo_cups}</span>
+                    )}
+                    <span style={{ color: 'var(--hce-text)' }}>{item.descripcion}</span>
+                    {item.indicaciones && (
+                      <span className="text-xs italic" style={{ color: 'var(--hce-text-muted)' }}>
+                        — {item.indicaciones}
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+              {orden.indicaciones_generales && (
+                <p className="text-xs italic pt-1 border-t" style={{ color: 'var(--hce-text-muted)', borderColor: 'var(--hce-border)' }}>
+                  {orden.indicaciones_generales}
+                </p>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {ordenes.length === 0 && (
+        <p className="text-sm" style={{ color: 'var(--hce-text-muted)' }}>
+          Sin órdenes de exámenes para esta consulta.
+        </p>
+      )}
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+type Tab = 'motivo' | 'signos' | 'revision' | 'examen' | 'analisis' | 'diagnosticos' | 'antecedentes' | 'formula' | 'examenes_medicos'
 
 const TABS: { key: Tab; label: string }[] = [
-  { key: 'motivo',       label: 'Motivo' },
-  { key: 'antecedentes', label: 'Antecedentes' },
-  { key: 'signos',       label: 'Signos vitales' },
-  { key: 'revision',     label: 'Rev. por sistemas' },
-  { key: 'examen',       label: 'Examen físico' },
-  { key: 'analisis',     label: 'Análisis' },
-  { key: 'diagnosticos', label: 'Diagnósticos' },
-  { key: 'formula',      label: 'Fórmula' },
+  { key: 'motivo',           label: 'Motivo' },
+  { key: 'antecedentes',     label: 'Antecedentes' },
+  { key: 'signos',           label: 'Signos vitales' },
+  { key: 'revision',         label: 'Rev. por sistemas' },
+  { key: 'examen',           label: 'Examen físico' },
+  { key: 'analisis',         label: 'Análisis' },
+  { key: 'diagnosticos',     label: 'Diagnósticos' },
+  { key: 'formula',          label: 'Fórmula' },
+  { key: 'examenes_medicos', label: 'Exámenes' },
 ]
 
 const ALL_TAB_KEYS = TABS.map(t => t.key) as readonly Tab[]
@@ -49,6 +168,7 @@ export default function DetalleEncuentro() {
   const { data: notas = [] } = useNotasEncuentro(id ?? '', encId ?? '')
   const { data: antecedentes = {} } = useAntecedentes(id ?? '')
   const crearNota = useCrearNotaEncuentro(id ?? '', encId ?? '')
+  const { data: ordenesExamen = [] } = useOrdenesExamen(id ?? '', encId ?? '')
 
   async function handleDescargarHistoria() {
     if (!e || !paciente) return
@@ -62,6 +182,8 @@ export default function DetalleEncuentro() {
           campos={campos}
           antecedentes={antecedentes}
           formulas={formulas}
+          ordenes={ordenesExamen}
+          tamano={TAMANO_PAGINA[medico.impresion?.historiaClinica ?? 'A4']}
           colorPrimario={tema.colorPrimario}
           logoBase64={tema.logoBase64}
         />
@@ -506,6 +628,19 @@ export default function DetalleEncuentro() {
           {/* Antecedentes */}
           {tab === 'antecedentes' && (
             <AntecedentesTab documento={id ?? ''} genero={paciente?.genero} readOnly />
+          )}
+
+          {/* Exámenes médicos */}
+          {tab === 'examenes_medicos' && (
+            <TabExamenesMedicos
+              docId={id ?? ''}
+              ordenes={ordenesExamen}
+              medico={medico}
+              paciente={paciente ?? null}
+              diagnostico={diagnostico}
+              tema={tema}
+              pacienteNombre={pacienteNombre}
+            />
           )}
 
           {/* Fórmula */}

@@ -5,7 +5,8 @@ import { UserRound } from 'lucide-react'
 import { type Paciente } from '../api/pacientes'
 import { useCrearEncuentro, type EncuentroInput } from '../api/encuentros'
 import { crearFormulas } from '../api/formulas'
-import EncuentroForm, { type FormulaData } from '../components/EncuentroForm'
+import { crearOrdenExamen } from '../api/ordenes_examen'
+import EncuentroForm, { type FormulaData, type OrdenData } from '../components/EncuentroForm'
 import { BuscadorPaciente } from '../components/BuscadorPaciente'
 import { nombreCompleto, fmtFechaNacimiento } from '../utils/paciente'
 
@@ -47,10 +48,21 @@ export default function NuevaConsulta() {
     setFormKey(k => k + 1)
   }
 
-  async function handleSubmit(data: EncuentroInput, formulas: FormulaData) {
+  async function handleSubmit(data: EncuentroInput, formulas: FormulaData, orden: OrdenData) {
     const encuentro = await crear.mutateAsync(data)
     const doc = paciente!.numero_documento
     await crearFormulas(doc, encuentro.encuentro_id, formulas)
+    await crearOrdenExamen(doc, encuentro.encuentro_id, {
+      indicaciones_generales: orden.indicaciones_generales.trim() || null,
+      items: orden.items
+        .filter(i => i.descripcion.trim())
+        .map((i, idx) => ({
+          codigo_cups: i.codigo_cups,
+          descripcion: i.descripcion.trim(),
+          indicaciones: i.indicaciones?.trim() || null,
+          posicion: idx + 1,
+        })),
+    })
     navigate(`/pacientes/${doc}/encuentros/${encuentro.encuentro_id}`)
   }
 

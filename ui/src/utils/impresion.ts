@@ -5,6 +5,8 @@ export type ConfigImpresion = {
   factura: TamanoDocumento
   formula: TamanoDocumento
   consentimiento: TamanoDocumento
+  historiaClinica: TamanoDocumento
+  ordenExamen: TamanoDocumento
   termicaFactura: TamanoTermica
 }
 
@@ -12,6 +14,8 @@ export const DEFAULTS_IMPRESION: ConfigImpresion = {
   factura: 'MediaCarta',
   formula: 'A4',
   consentimiento: 'A4',
+  historiaClinica: 'A4',
+  ordenExamen: 'A4',
   termicaFactura: 'Termica80',
 }
 

@@ -280,8 +280,13 @@ CREATE TABLE rips_generado (
 
     datos_json       JSONB       NOT NULL,
 
-    fecha_generacion TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    creado_por       TEXT        NOT NULL
+    -- Resultado de validación DIAN / SISPRO
+    cuv              TEXT,
+    error_validacion TEXT,
+
+    fecha_generacion  TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    fecha_validacion  TIMESTAMPTZ,
+    creado_por        TEXT        NOT NULL
 );
 
 CREATE INDEX idx_rips_encuentro ON rips_generado(encuentro_id) WHERE encuentro_id IS NOT NULL;
@@ -528,6 +533,22 @@ CREATE TABLE log_auditoria (
 CREATE INDEX idx_log_tabla_registro ON log_auditoria(nombre_tabla, registro_id);
 CREATE INDEX idx_log_fecha          ON log_auditoria(fecha_cambio DESC);
 
+-- Tabla de archivo: filas antiguas movidas periódicamente desde log_auditoria.
+-- Comparte la secuencia de IDs para mantener la trazabilidad entre tablas.
+CREATE TABLE log_auditoria_historico (
+    id               BIGINT      PRIMARY KEY DEFAULT nextval('log_auditoria_id_seq'),
+    nombre_tabla     TEXT        NOT NULL,
+    registro_id      UUID        NOT NULL,
+    accion           TEXT        NOT NULL CHECK (accion IN ('INSERT', 'UPDATE', 'DELETE')),
+    datos_anteriores JSONB,
+    datos_nuevos     JSONB,
+    usuario_id       TEXT,
+    fecha_cambio     TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_log_hist_tabla_registro ON log_auditoria_historico(nombre_tabla, registro_id);
+CREATE INDEX idx_log_hist_fecha          ON log_auditoria_historico(fecha_cambio DESC);
+
 -- ============================================================
 -- 11. Función y triggers de auditoría
 -- ============================================================
@@ -698,7 +719,7 @@ CREATE TABLE IF NOT EXISTS antecedente_pregunta (
     tipo_respuesta      VARCHAR(20) NOT NULL
                         CHECK (tipo_respuesta IN ('booleano','texto','numero','fecha','opciones','lista')),
     opciones            JSONB,
-    tiene_detalle       BOOLEAN     NOT NULL DEFAULT TRUE,
+    tiene_detalle       BOOLEAN     NOT NULL DEFAULT FALSE,
     placeholder_detalle TEXT,
     solo_genero         VARCHAR(5),
     orden               INTEGER     NOT NULL DEFAULT 0,
@@ -1034,7 +1055,47 @@ CREATE INDEX IF NOT EXISTS idx_medicamento_nombre ON medicamento_predefinido
     USING gin(to_tsvector('spanish', nombre));
 
 -- ============================================================
--- 24. Tarifas de procedimientos por código CUPS
+-- 24. Órdenes de exámenes médicos
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS orden_examen (
+    id                      UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    encuentro_id            UUID        NOT NULL,  -- ID lógico del encuentro (encuentro_clinico.encuentro_id)
+    indicaciones_generales  TEXT,
+    fecha_creacion          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    creado_por              TEXT        NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_orden_examen_encuentro ON orden_examen(encuentro_id);
+
+CREATE TABLE IF NOT EXISTS orden_examen_item (
+    id           UUID    PRIMARY KEY DEFAULT gen_random_uuid(),
+    orden_id     UUID    NOT NULL REFERENCES orden_examen(id) ON DELETE CASCADE,
+    codigo_cups  VARCHAR(6),
+    descripcion  TEXT    NOT NULL,
+    indicaciones TEXT,
+    posicion     INTEGER NOT NULL DEFAULT 1
+);
+
+CREATE INDEX IF NOT EXISTS idx_orden_examen_item_orden ON orden_examen_item(orden_id);
+
+-- ============================================================
+-- 25. Catálogo de exámenes predefinidos
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS examen_predefinido (
+    id          SERIAL  PRIMARY KEY,
+    nombre      TEXT    NOT NULL,
+    codigo_cups VARCHAR(6),
+    categoria   TEXT    NOT NULL CHECK (categoria IN ('laboratorio', 'imagen', 'patologia', 'otro')),
+    esta_activo BOOLEAN NOT NULL DEFAULT TRUE
+);
+
+CREATE INDEX IF NOT EXISTS idx_examen_predefinido_nombre ON examen_predefinido
+    USING gin(to_tsvector('spanish', nombre));
+
+-- ============================================================
+-- 26. Tarifas de procedimientos por código CUPS
 -- ============================================================
 
 CREATE TABLE IF NOT EXISTS tarifa (

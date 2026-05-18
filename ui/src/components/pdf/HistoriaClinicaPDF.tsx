@@ -10,6 +10,7 @@ import type { Encuentro, ValorNormalNotas } from '../../api/encuentros'
 import type { CampoClinico } from '../../api/campos_clinicos'
 import type { AntecedentesCompletos, ListaCampo } from '../../api/antecedentes'
 import type { FormulaGuardada } from '../../api/formulas'
+import type { OrdenExamen } from '../../api/ordenes_examen'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -100,6 +101,8 @@ export type HistoriaClinicaProps = {
   campos: CampoClinico[]
   antecedentes: AntecedentesCompletos
   formulas: FormulaGuardada[]
+  ordenes?: OrdenExamen[]
+  tamano?: string | [number, number]
   colorPrimario?: string
   logoBase64?: string | null
 }
@@ -107,8 +110,8 @@ export type HistoriaClinicaProps = {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function HistoriaClinicaPDF({
-  medico, paciente, encuentro, campos, antecedentes, formulas,
-  colorPrimario = '#1d4ed8', logoBase64 = null,
+  medico, paciente, encuentro, campos, antecedentes, formulas, ordenes = [],
+  tamano = 'A4', colorPrimario = '#1d4ed8', logoBase64 = null,
 }: HistoriaClinicaProps) {
   const PRIMARY = colorPrimario
   const LOGO_W  = 60
@@ -222,6 +225,15 @@ export default function HistoriaClinicaPDF({
     medDetalle: { fontSize: 8, color: '#334155', marginBottom: 1, flexShrink: 1 },
     medNota: { fontSize: 7.5, color: '#64748b', fontStyle: 'italic', flexShrink: 1 },
 
+    // ── Órdenes de examen ─────────────────────────────────────────────────────
+    ordenBloque: { marginBottom: 8, paddingLeft: 8, borderLeftWidth: 2, borderLeftColor: `${PRIMARY}40` },
+    ordenFecha: { fontSize: 7.5, color: '#64748b', marginBottom: 3 },
+    ordenItem: { flexDirection: 'row', marginBottom: 2 },
+    ordenCups: { fontSize: 8, fontFamily: 'Helvetica-Bold', color: PRIMARY, width: 54, flexShrink: 0 },
+    ordenDesc: { fontSize: 8.5, color: '#0f172a', flex: 1, lineHeight: 1.4, flexShrink: 1 },
+    ordenInd: { fontSize: 7.5, color: '#64748b', fontStyle: 'italic', flexShrink: 1 },
+    ordenGeneral: { fontSize: 7.5, color: '#475569', fontStyle: 'italic', marginTop: 3 },
+
     // ── Firma ─────────────────────────────────────────────────────────────────
     pie: { marginTop: 24, flexDirection: 'row', justifyContent: 'flex-end' },
     firmaBloque: { alignItems: 'center', width: 180 },
@@ -306,7 +318,7 @@ export default function HistoriaClinicaPDF({
 
   return (
     <Document>
-      <Page size="A4" style={s.page}>
+      <Page size={tamano} style={s.page}>
 
         {/* Footer fijo con paginación */}
         <View fixed style={s.footer}>
@@ -593,6 +605,38 @@ export default function HistoriaClinicaPDF({
                 </View>
               ))
             )}
+          </>
+        ) : null}
+
+        {/* Órdenes de examen */}
+        {ordenes.length > 0 ? (
+          <>
+            <Text style={[s.seccionTitulo, { marginTop: 8 }]}>Órdenes de exámenes</Text>
+            {ordenes.map(orden => (
+              <View key={orden.id} style={s.ordenBloque} wrap={false}>
+                <Text style={s.ordenFecha}>
+                  {new Date(orden.fecha_creacion).toLocaleDateString('es-CO', {
+                    day: '2-digit', month: 'long', year: 'numeric',
+                  })} · {orden.creado_por}
+                </Text>
+                {orden.items.map(item => (
+                  <View key={item.id} style={s.ordenItem}>
+                    {item.codigo_cups
+                      ? <Text style={s.ordenCups}>{item.codigo_cups}</Text>
+                      : <Text style={s.ordenCups} />}
+                    <View style={{ flex: 1 }}>
+                      <Text style={s.ordenDesc}>{item.descripcion}</Text>
+                      {item.indicaciones
+                        ? <Text style={s.ordenInd}>{item.indicaciones}</Text>
+                        : null}
+                    </View>
+                  </View>
+                ))}
+                {orden.indicaciones_generales
+                  ? <Text style={s.ordenGeneral}>Indicaciones: {orden.indicaciones_generales}</Text>
+                  : null}
+              </View>
+            ))}
           </>
         ) : null}
 

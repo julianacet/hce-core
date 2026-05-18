@@ -7,6 +7,7 @@ import { SignosVitalesForm, ExamenFisicoForm, RevisionSistemasForm } from './Cam
 import AntecedentesTab from './AntecedentesTab'
 import { NavigationGuard } from './NavigationGuard'
 import FormulaTab from './FormulaTab'
+import ExamenesTab, { type ItemOrden } from './ExamenesTab'
 import { type Medicamento, medVacio } from './pdf/FormulaPDF'
 
 type FormState = {
@@ -31,16 +32,21 @@ export type FormulaData = {
   no_pos: Medicamento[]
 }
 
+export type OrdenData = {
+  items: ItemOrden[]
+  indicaciones_generales: string
+}
+
 type Props = {
   documento: string
   genero?: string
   paciente?: PacienteInfo
-  onSubmit: (data: EncuentroInput, formulas: FormulaData) => Promise<void>
+  onSubmit: (data: EncuentroInput, formulas: FormulaData, orden: OrdenData) => Promise<void>
   isPending: boolean
   onCancelar?: () => void
 }
 
-type TabKey = 'motivo' | 'antecedentes' | 'signos' | 'revision' | 'examen' | 'analisis' | 'diagnosticos' | 'formula'
+type TabKey = 'motivo' | 'antecedentes' | 'signos' | 'revision' | 'examen' | 'analisis' | 'diagnosticos' | 'formula' | 'examenes'
 
 const FORM_INICIAL: FormState = {
   motivo_consulta: '',
@@ -61,6 +67,7 @@ const TAB_LABELS: Record<TabKey, string> = {
   analisis: 'Análisis',
   diagnosticos: 'Diagnósticos',
   formula: 'Fórmula',
+  examenes: 'Exámenes',
 }
 
 
@@ -88,6 +95,8 @@ export default function EncuentroForm({
   const [diagnosticos, setDiagnosticos] = useState<DiagnosticoItem[]>(draft?.diagnosticos ?? [])
   const [medsPos, setMedsPos] = useState<Medicamento[]>(draft?.medsPos ?? [{ ...medVacio }])
   const [medsNoPos, setMedsNoPos] = useState<Medicamento[]>(draft?.medsNoPos ?? [{ ...medVacio }])
+  const [ordenItems, setOrdenItems] = useState<ItemOrden[]>(draft?.ordenItems ?? [])
+  const [ordenIndicaciones, setOrdenIndicaciones] = useState<string>(draft?.ordenIndicaciones ?? '')
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<TabKey>('motivo')
   const [showConfirmModal, setShowConfirmModal] = useState(false)
@@ -122,11 +131,12 @@ export default function EncuentroForm({
     'analisis',
     'diagnosticos',
     'formula',
+    'examenes',
   ]
 
   useEffect(() => {
-    try { sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ form, signos, revision, examen, diagnosticos, medsPos, medsNoPos })) } catch {}
-  }, [form, signos, revision, examen, diagnosticos, medsPos, medsNoPos, DRAFT_KEY])
+    try { sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ form, signos, revision, examen, diagnosticos, medsPos, medsNoPos, ordenItems, ordenIndicaciones })) } catch {}
+  }, [form, signos, revision, examen, diagnosticos, medsPos, medsNoPos, ordenItems, ordenIndicaciones, DRAFT_KEY])
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }))
@@ -157,7 +167,11 @@ export default function EncuentroForm({
     setSubmitting(true)
     setError(null)
     try {
-      await onSubmit(buildInput(), { pos: medsPos, no_pos: medsNoPos })
+      await onSubmit(
+        buildInput(),
+        { pos: medsPos, no_pos: medsNoPos },
+        { items: ordenItems, indicaciones_generales: ordenIndicaciones },
+      )
       try { sessionStorage.removeItem(DRAFT_KEY) } catch {}
     } catch (err) {
       setSubmitting(false)
@@ -325,6 +339,15 @@ export default function EncuentroForm({
             setMedsNoPos={setMedsNoPos}
             paciente={paciente ?? null}
             diagnostico={diagnosticos.find(d => d.tipo === 'principal')?.codigo ?? ''}
+          />
+        )}
+
+        {activeTab === 'examenes' && (
+          <ExamenesTab
+            items={ordenItems}
+            setItems={setOrdenItems}
+            indicaciones={ordenIndicaciones}
+            setIndicaciones={setOrdenIndicaciones}
           />
         )}
 
