@@ -318,15 +318,16 @@ func insertarEncuentro(ctx context.Context, db encuentroQuerier, encuentroID str
 			continue
 		}
 		_, err := db.Exec(ctx,
-			`INSERT INTO encuentro_diagnostico (encuentro_clinico_id, tipo, codigo, descripcion, orden)
-			 VALUES ($1, $2, $3, $4, $5)`,
-			e.ID, d.Tipo, d.Codigo, d.Descripcion, i,
+			`INSERT INTO encuentro_diagnostico (encuentro_clinico_id, tipo, tipo_clinico, codigo, descripcion, orden)
+			 VALUES ($1, $2, $3, $4, $5, $6)`,
+			e.ID, d.Tipo, d.TipoClinico, d.Codigo, d.Descripcion, i,
 		)
 		if err != nil {
 			return models.Encuentro{}, fmt.Errorf("insertar diagnóstico: %w", err)
 		}
 		e.Diagnosticos = append(e.Diagnosticos, models.EncuentroDiagnostico{
 			Tipo:        d.Tipo,
+			TipoClinico: d.TipoClinico,
 			Codigo:      d.Codigo,
 			Descripcion: d.Descripcion,
 			Orden:       i,
@@ -338,7 +339,7 @@ func insertarEncuentro(ctx context.Context, db encuentroQuerier, encuentroID str
 
 func cargarDiagnosticos(ctx context.Context, db *pgxpool.Pool, encuentroClinicID string) ([]models.EncuentroDiagnostico, error) {
 	rows, err := db.Query(ctx,
-		`SELECT id, tipo, codigo, descripcion, orden
+		`SELECT id, tipo, tipo_clinico, codigo, descripcion, orden
 		 FROM encuentro_diagnostico
 		 WHERE encuentro_clinico_id = $1
 		 ORDER BY orden`,
@@ -352,7 +353,7 @@ func cargarDiagnosticos(ctx context.Context, db *pgxpool.Pool, encuentroClinicID
 	var diags []models.EncuentroDiagnostico
 	for rows.Next() {
 		var d models.EncuentroDiagnostico
-		if err := rows.Scan(&d.ID, &d.Tipo, &d.Codigo, &d.Descripcion, &d.Orden); err != nil {
+		if err := rows.Scan(&d.ID, &d.Tipo, &d.TipoClinico, &d.Codigo, &d.Descripcion, &d.Orden); err != nil {
 			return nil, err
 		}
 		diags = append(diags, d)

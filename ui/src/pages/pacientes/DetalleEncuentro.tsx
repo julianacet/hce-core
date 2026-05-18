@@ -1,5 +1,5 @@
 import { useParams } from 'react-router'
-import { Printer } from 'lucide-react'
+import { Printer, FileDown } from 'lucide-react'
 import { useState } from 'react'
 import { useTabParam } from '../../hooks/useTabParam'
 import { pdf } from '@react-pdf/renderer'
@@ -8,13 +8,15 @@ import { usePaciente } from '../../api/pacientes'
 import { useMedico } from '../../context/MedicoContext'
 import { useTema } from '../../context/TemaContext'
 import FormulaPDF, { type Medicamento } from '../../components/pdf/FormulaPDF'
+import HistoriaClinicaPDF from '../../components/pdf/HistoriaClinicaPDF'
 import { useCamposClinicosActivos } from '../../api/campos_clinicos'
 import { useFormulas, type FormulaGuardada } from '../../api/formulas'
 import { useNotasEncuentro, useCrearNotaEncuentro } from '../../api/notas_encuentro'
+import { useAntecedentes } from '../../api/antecedentes'
 import AntecedentesTab from '../../components/AntecedentesTab'
 import { nombreCompleto, fmtFechaNacimiento } from '../../utils/paciente'
 
-type Tab = 'motivo' | 'signos' | 'revision' | 'examen' | 'diagnosticos' | 'antecedentes' | 'formula'
+type Tab = 'motivo' | 'signos' | 'revision' | 'examen' | 'analisis' | 'diagnosticos' | 'antecedentes' | 'formula'
 
 const TABS: { key: Tab; label: string }[] = [
   { key: 'motivo',       label: 'Motivo' },
@@ -22,6 +24,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'signos',       label: 'Signos vitales' },
   { key: 'revision',     label: 'Rev. por sistemas' },
   { key: 'examen',       label: 'Examen físico' },
+  { key: 'analisis',     label: 'Análisis' },
   { key: 'diagnosticos', label: 'Diagnósticos' },
   { key: 'formula',      label: 'Fórmula' },
 ]
@@ -35,6 +38,7 @@ export default function DetalleEncuentro() {
   const { tema } = useTema()
   const [tab, setTab] = useTabParam('tab', 'motivo' as Tab, ALL_TAB_KEYS)
   const [imprimiendoFormulaId, setImprimiendoFormulaId] = useState<string | null>(null)
+  const [descargandoHistoria, setDescargandoHistoria] = useState(false)
   const [notaAbierta, setNotaAbierta] = useState(false)
   const [notaTexto, setNotaTexto] = useState('')
 
@@ -43,7 +47,35 @@ export default function DetalleEncuentro() {
   const { data: campos = [] } = useCamposClinicosActivos()
   const { data: formulas = [] } = useFormulas(id ?? '', encId ?? '')
   const { data: notas = [] } = useNotasEncuentro(id ?? '', encId ?? '')
+  const { data: antecedentes = {} } = useAntecedentes(id ?? '')
   const crearNota = useCrearNotaEncuentro(id ?? '', encId ?? '')
+
+  async function handleDescargarHistoria() {
+    if (!e || !paciente) return
+    setDescargandoHistoria(true)
+    try {
+      const blob = await pdf(
+        <HistoriaClinicaPDF
+          medico={medico}
+          paciente={paciente}
+          encuentro={e}
+          campos={campos}
+          antecedentes={antecedentes}
+          formulas={formulas}
+          colorPrimario={tema.colorPrimario}
+          logoBase64={tema.logoBase64}
+        />
+      ).toBlob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `HC-${paciente.numero_documento}-${new Date(e.fecha_atencion).toISOString().slice(0, 10)}.pdf`
+      a.click()
+      URL.revokeObjectURL(url)
+    } finally {
+      setDescargandoHistoria(false)
+    }
+  }
 
   if (isLoading) return <div className="p-6 text-sm text-slate-400">Cargando consulta...</div>
   if (isError || !e) return <div className="p-6 text-sm text-red-500">Error al cargar la consulta.</div>
@@ -134,6 +166,14 @@ export default function DetalleEncuentro() {
             <span className="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">
               v{e.numero_version}
             </span>
+            <button
+              onClick={handleDescargarHistoria}
+              disabled={descargandoHistoria}
+              className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors disabled:opacity-40"
+            >
+              <FileDown size={13} />
+              {descargandoHistoria ? 'Generando...' : 'Descargar historia'}
+            </button>
           </div>
         </div>
       </div>
@@ -298,9 +338,28 @@ export default function DetalleEncuentro() {
             const camposRevision = campos.filter(c => c.seccion === 'revision_sistemas')
             const filas: React.ReactNode[] = []
             for (const c of camposRevision) {
-              const v = rs[c.clave] as ValorNormalNotas | undefined
-              if (!v) continue
-              const detalle = v.notas?.trim()
+              const raw = rs[c.clave]
+              if (raw === undefined || raw === null) continue
+
+              let label: string
+              let notas: string
+              let colorClass: string
+
+              if (typeof raw === 'string') {
+                label = raw
+                const notasRaw = rs[c.clave + '_notas']
+                notas = typeof notasRaw === 'string' ? notasRaw.trim() : ''
+                const idx = c.opciones?.indexOf(raw) ?? -1
+                colorClass = idx === 0 ? 'bg-green-100 text-green-700'
+                           : idx === 1 ? 'bg-amber-100 text-amber-700'
+                           : 'bg-slate-100 text-slate-600'
+              } else {
+                const v = raw as ValorNormalNotas
+                label = v.normal ? 'Niega' : 'Refiere'
+                notas = v.notas?.trim() ?? ''
+                colorClass = v.normal ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
+              }
+
               filas.push(
                 <div key={c.clave}
                   className="grid items-start py-2.5 border-b border-slate-100 last:border-0"
@@ -308,12 +367,10 @@ export default function DetalleEncuentro() {
                 >
                   <div>
                     <span className="text-sm" style={{ color: 'var(--hce-text)' }}>{c.nombre}</span>
-                    {detalle && <p className="text-xs text-slate-400 mt-0.5 break-words whitespace-pre-wrap">{detalle}</p>}
+                    {notas && <p className="text-xs text-slate-400 mt-0.5 break-words whitespace-pre-wrap">{notas}</p>}
                   </div>
-                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full ml-6 mt-0.5 ${
-                    v.normal ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
-                  }`}>
-                    {v.normal ? 'Niega' : 'Refiere'}
+                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full ml-6 mt-0.5 ${colorClass}`}>
+                    {label}
                   </span>
                 </div>
               )
@@ -331,41 +388,65 @@ export default function DetalleEncuentro() {
             const camposExamen = campos.filter(c => c.seccion === 'examen_fisico')
             const filas: React.ReactNode[] = []
             for (const c of camposExamen) {
-              const val = ef[c.clave]
-              if (val === undefined || val === null) continue
+              const raw = ef[c.clave]
+              if (raw === undefined || raw === null) continue
+
               if (c.tipo === 'texto') {
-                if (typeof val === 'string' && val.trim()) {
+                if (typeof raw === 'string' && raw.trim()) {
                   filas.push(
                     <div key={c.clave} className="py-2.5 border-b border-slate-100 last:border-0">
                       <p className="text-xs text-slate-400 mb-0.5">{c.nombre}</p>
-                      <p className="text-sm leading-relaxed break-words whitespace-pre-wrap" style={{ color: 'var(--hce-text)' }}>{val}</p>
+                      <p className="text-sm leading-relaxed break-words whitespace-pre-wrap" style={{ color: 'var(--hce-text)' }}>{raw}</p>
                     </div>
                   )
                 }
-              } else {
-                const v = val as ValorNormalNotas
-                const detalle = v.notas?.trim()
-                filas.push(
-                  <div key={c.clave}
-                    className="grid items-start py-2.5 border-b border-slate-100 last:border-0"
-                    style={{ gridTemplateColumns: '1fr auto' }}
-                  >
-                    <div>
-                      <span className="text-sm" style={{ color: 'var(--hce-text)' }}>{c.nombre}</span>
-                      {detalle && <p className="text-xs text-slate-400 mt-0.5 break-words whitespace-pre-wrap">{detalle}</p>}
-                    </div>
-                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ml-6 mt-0.5 ${
-                      v.normal ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
-                    }`}>
-                      {v.normal ? 'Normal' : 'Anormal'}
-                    </span>
-                  </div>
-                )
+                continue
               }
+
+              let label: string
+              let notas: string
+              let colorClass: string
+
+              if (typeof raw === 'string') {
+                label = raw
+                const notasRaw = ef[c.clave + '_notas']
+                notas = typeof notasRaw === 'string' ? notasRaw.trim() : ''
+                const idx = c.opciones?.indexOf(raw) ?? -1
+                colorClass = idx === 0 ? 'bg-green-100 text-green-700'
+                           : idx === 1 ? 'bg-amber-100 text-amber-700'
+                           : 'bg-slate-100 text-slate-600'
+              } else {
+                const v = raw as ValorNormalNotas
+                label = v.normal ? 'Normal' : 'Anormal'
+                notas = v.notas?.trim() ?? ''
+                colorClass = v.normal ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
+              }
+
+              filas.push(
+                <div key={c.clave}
+                  className="grid items-start py-2.5 border-b border-slate-100 last:border-0"
+                  style={{ gridTemplateColumns: '1fr auto' }}
+                >
+                  <div>
+                    <span className="text-sm" style={{ color: 'var(--hce-text)' }}>{c.nombre}</span>
+                    {notas && <p className="text-xs text-slate-400 mt-0.5 break-words whitespace-pre-wrap">{notas}</p>}
+                  </div>
+                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full ml-6 mt-0.5 ${colorClass}`}>
+                    {label}
+                  </span>
+                </div>
+              )
             }
             if (filas.length === 0) return <p className="text-sm text-slate-400">Sin examen físico registrado.</p>
             return <div>{filas}</div>
           })()}
+
+          {/* Análisis */}
+          {tab === 'analisis' && (
+            e.plan_manejo
+              ? <p className="text-sm leading-relaxed break-words whitespace-pre-wrap" style={{ color: 'var(--hce-text)' }}>{e.plan_manejo}</p>
+              : <p className="text-sm text-slate-400">Sin análisis registrado.</p>
+          )}
 
           {/* Diagnósticos */}
           {tab === 'diagnosticos' && (
@@ -418,12 +499,6 @@ export default function DetalleEncuentro() {
                 </div>
               ) : (
                 <p className="text-sm text-slate-400">Sin diagnósticos registrados.</p>
-              )}
-              {e.plan_manejo && (
-                <div>
-                  <p className="text-xs text-slate-400 mb-1">Plan de manejo</p>
-                  <p className="text-sm leading-relaxed break-words whitespace-pre-wrap" style={{ color: 'var(--hce-text)' }}>{e.plan_manejo}</p>
-                </div>
               )}
             </div>
           )}

@@ -798,7 +798,8 @@ CREATE TABLE IF NOT EXISTS diagnostico_cie10 (
 CREATE TABLE IF NOT EXISTS encuentro_diagnostico (
     id                    UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
     encuentro_clinico_id  UUID        NOT NULL REFERENCES encuentro_clinico(id) ON DELETE CASCADE,
-    tipo                  VARCHAR(15) NOT NULL CHECK (tipo IN ('impresion', 'principal', 'secundario', 'nota')),
+    tipo                  VARCHAR(15) NOT NULL CHECK (tipo IN ('impresion', 'principal', 'relacionado', 'secundario', 'nota')),
+    tipo_clinico          VARCHAR(2),
     codigo                VARCHAR(8)  REFERENCES diagnostico_cie10(codigo),
     descripcion           TEXT        NOT NULL,
     orden                 SMALLINT    NOT NULL DEFAULT 0
