@@ -230,7 +230,7 @@ export default function Inicio() {
               Sin consultas este mes.
             </div>
           ) : (
-            <div className="divide-y" style={{ borderColor: 'var(--hce-border)' }}>
+            <div className="divide-y overflow-y-auto max-h-56" style={{ borderColor: 'var(--hce-border)' }}>
               {topDiag.map((d, i) => (
                 <div key={d.codigo} className="flex items-center gap-3 py-2.5">
                   <span className="text-xs tabular-nums w-4 shrink-0 text-right" style={{ color: 'var(--hce-text-muted)' }}>
@@ -261,7 +261,7 @@ export default function Inicio() {
                 <AlertTriangle size={15} className="text-amber-600" />
                 <h3 className="text-sm font-semibold text-amber-800">Stock bajo</h3>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-2 overflow-y-auto max-h-48">
                 {stockBajo.map((ins) => (
                   <div key={ins.id} className="flex items-center justify-between bg-white rounded-lg px-3 py-2 border border-amber-100">
                     <p className="text-sm font-medium text-slate-700 truncate">{ins.nombre}</p>
@@ -280,7 +280,7 @@ export default function Inicio() {
                 <Package size={15} className="text-orange-600" />
                 <h3 className="text-sm font-semibold text-orange-800">Próximos a vencer</h3>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-2 overflow-y-auto max-h-48">
                 {porVencer.map((ins) => (
                   <div key={ins.id} className="flex items-center justify-between bg-white rounded-lg px-3 py-2 border border-orange-100">
                     <p className="text-sm font-medium text-slate-700 truncate">{ins.nombre}</p>
@@ -306,7 +306,7 @@ export default function Inicio() {
             Ver todos →
           </button>
         </div>
-        <div className="divide-y" style={{ borderColor: 'var(--hce-border)' }}>
+        <div className="divide-y overflow-y-auto max-h-64" style={{ borderColor: 'var(--hce-border)' }}>
           {isLoading && (
             <div className="px-5 py-8 text-center text-sm" style={{ color: 'var(--hce-text-muted)' }}>Cargando…</div>
           )}
