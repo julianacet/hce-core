@@ -1,5 +1,5 @@
 import { Outlet, NavLink, useNavigate } from 'react-router'
-import { LayoutDashboard, UserSearch, Users, ShieldCheck, LogOut, FileCode2, Star, Package, AlertTriangle, Building2, CalendarDays, Receipt, Activity, BadgeDollarSign } from 'lucide-react'
+import { LayoutDashboard, UserSearch, Users, ShieldCheck, LogOut, FileCode2, Star, Package, AlertTriangle, Building2, CalendarDays, Receipt, Activity, BadgeDollarSign, FileCheck2 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useTema } from '../context/TemaContext'
 
@@ -24,6 +24,7 @@ export default function RootLayout() {
         { to: '/nueva-consulta', label: 'Consultas', icon: UserSearch },
         { to: '/pacientes', label: 'Pacientes', icon: Users },
         { to: '/agenda', label: 'Agenda', icon: CalendarDays },
+        { to: '/consentimientos', label: 'Consentimientos', icon: FileCheck2 },
       ],
     },
     {

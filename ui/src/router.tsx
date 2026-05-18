@@ -24,6 +24,8 @@ import EventosAdversos from './pages/EventosAdversos'
 import Proveedores from './pages/Proveedores'
 import Tarifas from './pages/Tarifas'
 import Agenda from './pages/Agenda'
+import Consentimientos from './pages/Consentimientos'
+import NuevoConsentimiento from './pages/NuevoConsentimiento'
 
 const router = createBrowserRouter([
   { path: '/login', element: <Login /> },
@@ -52,6 +54,8 @@ const router = createBrowserRouter([
           { path: 'proveedores', element: <Proveedores /> },
           { path: 'tarifas', element: <Tarifas /> },
           { path: 'agenda', element: <Agenda /> },
+          { path: 'consentimientos', element: <Consentimientos /> },
+          { path: 'consentimientos/nuevo', element: <NuevoConsentimiento /> },
 
           // Solo admin
           {

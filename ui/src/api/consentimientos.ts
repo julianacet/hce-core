@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiFetch } from './client'
-import { PLANTILLAS_CONSENTIMIENTO_KEY, CONSENTIMIENTO_KEY } from './keys'
+import { PLANTILLAS_CONSENTIMIENTO_KEY, CONSENTIMIENTO_KEY, CONSENTIMIENTOS_GENERADOS_KEY } from './keys'
 
 export type PlantillaConsentimiento = {
   id: string
@@ -18,12 +18,26 @@ export type PlantillaInput = {
 
 export type ConsentimientoGenerado = {
   id: string
-  encuentro_id: string
+  encuentro_id: string | null
   plantilla_id: string | null
+  plantilla_nombre: string | null
   paciente_documento: string
+  paciente_nombre: string
+  tipo_documento: string
   contenido_renderizado: string
+  firmado: boolean
+  fecha_firma: string | null
+  firmado_por: string | null
   fecha_generacion: string
   creado_por: string
+}
+
+export type ConsentimientoStandaloneInput = {
+  plantilla_id: string
+  paciente_documento: string
+  paciente_nombre: string
+  tipo_documento: string
+  contenido_renderizado: string
 }
 
 // ── Plantillas (admin) ────────────────────────────────────────────────────────
@@ -80,6 +94,46 @@ export function useEliminarPlantilla() {
     onSuccess: (_, id) => {
       qc.setQueryData<PlantillaConsentimiento[]>(PLANTILLAS_CONSENTIMIENTO_KEY, (old) => old?.filter((p) => p.id !== id) ?? [])
     },
+  })
+}
+
+// ── Consentimientos standalone ────────────────────────────────────────────────
+
+export type ConsentimientosFiltros = {
+  q?: string
+  page?: number
+  limit?: number
+  orden?: string
+  dir?: string
+}
+
+export function useConsentimientosGenerados(filtros: ConsentimientosFiltros = {}) {
+  const params = new URLSearchParams()
+  if (filtros.q) params.set('q', filtros.q)
+  params.set('page', String(filtros.page ?? 1))
+  params.set('limit', String(filtros.limit ?? 20))
+  if (filtros.orden) params.set('orden', filtros.orden)
+  if (filtros.dir) params.set('dir', filtros.dir)
+  return useQuery<{ consentimientos: ConsentimientoGenerado[]; total: number }>({
+    queryKey: [...CONSENTIMIENTOS_GENERADOS_KEY, filtros],
+    queryFn: () => apiFetch(`/consentimientos/generados?${params.toString()}`),
+  })
+}
+
+export function useGenerarConsentimiento() {
+  const qc = useQueryClient()
+  return useMutation<ConsentimientoGenerado, Error, ConsentimientoStandaloneInput>({
+    mutationFn: (input) =>
+      apiFetch('/consentimientos/generados', { method: 'POST', body: JSON.stringify(input) }),
+    onSuccess: () => qc.removeQueries({ queryKey: CONSENTIMIENTOS_GENERADOS_KEY }),
+  })
+}
+
+export function useFirmarConsentimiento() {
+  const qc = useQueryClient()
+  return useMutation<ConsentimientoGenerado, Error, string>({
+    mutationFn: (id) => apiFetch(`/consentimientos/generados/${id}/firmar`, { method: 'PATCH' }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: CONSENTIMIENTOS_GENERADOS_KEY }),
   })
 }
 

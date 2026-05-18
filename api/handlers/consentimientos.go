@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
@@ -29,6 +30,16 @@ func PlantillasRouter(db *pgxpool.Pool) http.Handler {
 	return r
 }
 
+// ConsentimientoGeneradoRouter — montado en /consentimientos/generados
+func ConsentimientoGeneradoRouter(db *pgxpool.Pool) http.Handler {
+	h := &ConsentimientoHandler{db: db}
+	r := chi.NewRouter()
+	r.Get("/", h.listarConsentimientos)
+	r.Post("/", h.generarConsentimiento)
+	r.Patch("/{id}/firmar", h.firmarConsentimiento)
+	return r
+}
+
 // ConsentimientoEncuentroRouter — montado bajo /{encuentroId}/consentimiento
 func ConsentimientoEncuentroRouter(db *pgxpool.Pool) http.Handler {
 	h := &ConsentimientoHandler{db: db}
@@ -37,6 +48,29 @@ func ConsentimientoEncuentroRouter(db *pgxpool.Pool) http.Handler {
 	r.Post("/", h.registrarConsentimiento)
 	return r
 }
+
+const scanConsentimiento = `
+	SELECT cg.id, cg.encuentro_id, cg.plantilla_id, pc.nombre,
+	       cg.paciente_documento, cg.paciente_nombre, cg.tipo_documento,
+	       cg.contenido_renderizado, cg.firmado, cg.fecha_firma, cg.firmado_por,
+	       cg.fecha_generacion, cg.creado_por
+	FROM consentimiento_generado cg
+	LEFT JOIN plantilla_consentimiento pc ON pc.id = cg.plantilla_id`
+
+func scanearConsentimiento(row interface {
+	Scan(...any) error
+}) (models.ConsentimientoGenerado, error) {
+	var c models.ConsentimientoGenerado
+	err := row.Scan(
+		&c.ID, &c.EncuentroID, &c.PlantillaID, &c.PlantillaNombre,
+		&c.PacienteDocumento, &c.PacienteNombre, &c.TipoDocumento,
+		&c.ContenidoRenderizado, &c.Firmado, &c.FechaFirma, &c.FirmadoPor,
+		&c.FechaGeneracion, &c.CreadoPor,
+	)
+	return c, err
+}
+
+// ── Plantillas ────────────────────────────────────────────────────────────────
 
 // GET /consentimientos/plantillas
 func (h *ConsentimientoHandler) listarPlantillas(w http.ResponseWriter, r *http.Request) {
@@ -151,20 +185,164 @@ func (h *ConsentimientoHandler) eliminarPlantilla(w http.ResponseWriter, r *http
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// ── Consentimientos standalone ────────────────────────────────────────────────
+
+// GET /consentimientos/generados?q=&page=1&limit=20&orden=fecha&dir=desc
+func (h *ConsentimientoHandler) listarConsentimientos(w http.ResponseWriter, r *http.Request) {
+	q := strings.TrimSpace(r.URL.Query().Get("q"))
+
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	if page < 1 {
+		page = 1
+	}
+	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
+	if limit < 1 || limit > 100 {
+		limit = 20
+	}
+	offset := (page - 1) * limit
+
+	ordenParam := r.URL.Query().Get("orden")
+	dirParam := strings.ToUpper(r.URL.Query().Get("dir"))
+	if dirParam != "ASC" && dirParam != "DESC" {
+		dirParam = "DESC"
+	}
+	var orderBy string
+	switch ordenParam {
+	case "paciente":
+		orderBy = "cg.paciente_nombre " + dirParam
+	case "plantilla":
+		orderBy = "pc.nombre " + dirParam + " NULLS LAST"
+	case "estado":
+		orderBy = "cg.firmado " + dirParam
+	default:
+		orderBy = "cg.fecha_generacion " + dirParam
+	}
+
+	var args argList
+	where := "WHERE 1=1"
+	if q != "" {
+		like := args.Add("%" + q + "%")
+		where += ` AND (cg.paciente_documento ILIKE ` + like + ` OR cg.paciente_nombre ILIKE ` + like + `)`
+	}
+
+	var total int
+	if err := h.db.QueryRow(r.Context(),
+		`SELECT COUNT(*) FROM consentimiento_generado cg
+		 LEFT JOIN plantilla_consentimiento pc ON pc.id = cg.plantilla_id `+where,
+		args.Slice()...,
+	).Scan(&total); err != nil {
+		log.Printf("listar consentimientos count: %v", err)
+		responderError(w, http.StatusInternalServerError, "error al consultar")
+		return
+	}
+
+	query := scanConsentimiento + ` ` + where +
+		` ORDER BY ` + orderBy +
+		` LIMIT ` + args.Add(limit) +
+		` OFFSET ` + args.Add(offset)
+
+	rows, err := h.db.Query(r.Context(), query, args.Slice()...)
+	if err != nil {
+		log.Printf("listar consentimientos: %v", err)
+		responderError(w, http.StatusInternalServerError, "error al consultar")
+		return
+	}
+	defer rows.Close()
+
+	result := make([]models.ConsentimientoGenerado, 0)
+	for rows.Next() {
+		c, err := scanearConsentimiento(rows)
+		if err != nil {
+			responderError(w, http.StatusInternalServerError, "error al leer")
+			return
+		}
+		result = append(result, c)
+	}
+	responderJSON(w, http.StatusOK, map[string]any{
+		"consentimientos": result,
+		"total":           total,
+	})
+}
+
+// POST /consentimientos/generados
+func (h *ConsentimientoHandler) generarConsentimiento(w http.ResponseWriter, r *http.Request) {
+	var input models.ConsentimientoStandaloneInput
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		responderError(w, http.StatusBadRequest, "body inválido")
+		return
+	}
+	if strings.TrimSpace(input.PacienteDocumento) == "" || strings.TrimSpace(input.ContenidoRenderizado) == "" {
+		responderError(w, http.StatusBadRequest, "paciente_documento y contenido_renderizado son obligatorios")
+		return
+	}
+
+	u := appmiddleware.UsuarioDesdeContexto(r.Context())
+	var plantillaID *string
+	if input.PlantillaID != "" {
+		plantillaID = &input.PlantillaID
+	}
+
+	var c models.ConsentimientoGenerado
+	err := h.db.QueryRow(r.Context(), `
+		INSERT INTO consentimiento_generado
+		  (plantilla_id, paciente_documento, paciente_nombre, tipo_documento, contenido_renderizado, creado_por)
+		VALUES ($1, $2, $3, $4, $5, $6)
+		RETURNING id, encuentro_id, plantilla_id, NULL::text,
+		          paciente_documento, paciente_nombre, tipo_documento,
+		          contenido_renderizado, firmado, fecha_firma, firmado_por,
+		          fecha_generacion, creado_por`,
+		plantillaID, input.PacienteDocumento, input.PacienteNombre,
+		input.TipoDocumento, input.ContenidoRenderizado, u.Nombre,
+	).Scan(
+		&c.ID, &c.EncuentroID, &c.PlantillaID, &c.PlantillaNombre,
+		&c.PacienteDocumento, &c.PacienteNombre, &c.TipoDocumento,
+		&c.ContenidoRenderizado, &c.Firmado, &c.FechaFirma, &c.FirmadoPor,
+		&c.FechaGeneracion, &c.CreadoPor,
+	)
+	if err != nil {
+		log.Printf("generar consentimiento: %v", err)
+		responderError(w, http.StatusInternalServerError, "error al generar consentimiento")
+		return
+	}
+	responderJSON(w, http.StatusCreated, c)
+}
+
+// PATCH /consentimientos/generados/:id/firmar
+func (h *ConsentimientoHandler) firmarConsentimiento(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	u := appmiddleware.UsuarioDesdeContexto(r.Context())
+
+	row := h.db.QueryRow(r.Context(), `
+		UPDATE consentimiento_generado
+		SET firmado = TRUE, fecha_firma = NOW(), firmado_por = $1
+		WHERE id = $2
+		RETURNING id, encuentro_id, plantilla_id, NULL::text,
+		          paciente_documento, paciente_nombre, tipo_documento,
+		          contenido_renderizado, firmado, fecha_firma, firmado_por,
+		          fecha_generacion, creado_por`,
+		u.Nombre, id,
+	)
+	c, err := scanearConsentimiento(row)
+	if err != nil {
+		responderError(w, http.StatusNotFound, "consentimiento no encontrado")
+		return
+	}
+	responderJSON(w, http.StatusOK, c)
+}
+
+// ── Por encuentro (legacy) ────────────────────────────────────────────────────
+
 // GET /pacientes/:doc/encuentros/:encId/consentimiento
 func (h *ConsentimientoHandler) obtenerConsentimiento(w http.ResponseWriter, r *http.Request) {
 	encuentroID := chi.URLParam(r, "encuentroId")
 
-	var c models.ConsentimientoGenerado
-	err := h.db.QueryRow(r.Context(), `
-		SELECT id, encuentro_id, plantilla_id, paciente_documento,
-		       contenido_renderizado, fecha_generacion, creado_por
-		FROM consentimiento_generado
-		WHERE encuentro_id = $1
-		ORDER BY fecha_generacion DESC LIMIT 1`,
+	row := h.db.QueryRow(r.Context(),
+		scanConsentimiento+`
+		WHERE cg.encuentro_id = $1
+		ORDER BY cg.fecha_generacion DESC LIMIT 1`,
 		encuentroID,
-	).Scan(&c.ID, &c.EncuentroID, &c.PlantillaID, &c.PacienteDocumento,
-		&c.ContenidoRenderizado, &c.FechaGeneracion, &c.CreadoPor)
+	)
+	c, err := scanearConsentimiento(row)
 	if err != nil {
 		responderError(w, http.StatusNotFound, "sin consentimiento generado")
 		return
@@ -194,11 +372,17 @@ func (h *ConsentimientoHandler) registrarConsentimiento(w http.ResponseWriter, r
 		INSERT INTO consentimiento_generado
 		  (encuentro_id, plantilla_id, paciente_documento, contenido_renderizado, creado_por)
 		VALUES ($1, $2, $3, $4, $5)
-		RETURNING id, encuentro_id, plantilla_id, paciente_documento,
-		          contenido_renderizado, fecha_generacion, creado_por`,
+		RETURNING id, encuentro_id, plantilla_id, NULL::text,
+		          paciente_documento, paciente_nombre, tipo_documento,
+		          contenido_renderizado, firmado, fecha_firma, firmado_por,
+		          fecha_generacion, creado_por`,
 		encuentroID, plantillaID, documento, input.ContenidoRenderizado, u.Nombre,
-	).Scan(&c.ID, &c.EncuentroID, &c.PlantillaID, &c.PacienteDocumento,
-		&c.ContenidoRenderizado, &c.FechaGeneracion, &c.CreadoPor)
+	).Scan(
+		&c.ID, &c.EncuentroID, &c.PlantillaID, &c.PlantillaNombre,
+		&c.PacienteDocumento, &c.PacienteNombre, &c.TipoDocumento,
+		&c.ContenidoRenderizado, &c.Firmado, &c.FechaFirma, &c.FirmadoPor,
+		&c.FechaGeneracion, &c.CreadoPor,
+	)
 	if err != nil {
 		log.Printf("registrar consentimiento: %v", err)
 		responderError(w, http.StatusInternalServerError, "error al registrar consentimiento")

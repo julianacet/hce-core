@@ -307,15 +307,21 @@ CREATE TABLE plantilla_consentimiento (
 
 CREATE TABLE consentimiento_generado (
     id                   UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-    encuentro_id         UUID        NOT NULL,
+    encuentro_id         UUID,                              -- nullable: consentimientos standalone
     plantilla_id         UUID        REFERENCES plantilla_consentimiento(id),
     paciente_documento   VARCHAR(20) NOT NULL,
-    contenido_renderizado TEXT       NOT NULL,  -- texto final con variables sustituidas
+    paciente_nombre      TEXT        NOT NULL DEFAULT '',   -- desnormalizado para historial
+    tipo_documento       TEXT        NOT NULL DEFAULT '',
+    contenido_renderizado TEXT       NOT NULL,
+    firmado              BOOLEAN     NOT NULL DEFAULT FALSE,
+    fecha_firma          TIMESTAMPTZ,
+    firmado_por          TEXT,
     fecha_generacion     TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     creado_por           TEXT        NOT NULL
 );
 
 CREATE INDEX idx_consentimiento_encuentro ON consentimiento_generado(encuentro_id);
+CREATE INDEX idx_consentimiento_paciente  ON consentimiento_generado(paciente_documento);
 
 INSERT INTO plantilla_consentimiento (nombre, contenido, creado_por) VALUES (
     'Consentimiento informado general',
