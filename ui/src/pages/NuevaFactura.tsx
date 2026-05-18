@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router'
 import { Search, Plus, Trash2, UserRound } from 'lucide-react'
 import { Breadcrumb } from '../components/Breadcrumb'
 import { type Paciente } from '../api/pacientes'
 import { useCups, type CupsCodigo } from '../api/cups'
 import { useCrearFactura, type FacturaItemInput } from '../api/facturas'
+import { useTarifas } from '../api/tarifas'
 import { nombreCompleto } from '../utils/paciente'
 import { BuscadorPaciente } from '../components/BuscadorPaciente'
 
@@ -25,6 +26,12 @@ export default function NuevaFactura() {
   const [items, setItems] = useState<ItemFormulario[]>([])
 
   const { data: resultadosCups = [], isFetching: cargandoCups } = useCups(busquedaCups)
+  const { data: todasLasTarifas = [] } = useTarifas()
+
+  const mapaPrecios = useMemo(() =>
+    new Map(todasLasTarifas.map(t => [t.codigo_cups, t.valor])),
+    [todasLasTarifas]
+  )
 
   const total = items.reduce((acc, item) => acc + item.cantidad * item.valor_unitario, 0)
 
@@ -38,7 +45,7 @@ export default function NuevaFactura() {
       codigo_cups: cups.codigo,
       descripcion: cups.descripcion,
       cantidad: 1,
-      valor_unitario: 0,
+      valor_unitario: mapaPrecios.get(cups.codigo) ?? 0,
     }])
     setBusquedaCups('')
   }

@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { MoreVertical, Loader2 } from 'lucide-react'
 
 export type RowMenuItem = {
@@ -11,26 +12,44 @@ export type RowMenuItem = {
 
 export function RowMenu({ items, loading = false }: { items: RowMenuItem[]; loading?: boolean }) {
   const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
+  const [pos, setPos] = useState({ top: 0, right: 0 })
+  const btnRef = useRef<HTMLButtonElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (!open) return
     function onMouseDown(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+      if (
+        menuRef.current && !menuRef.current.contains(e.target as Node) &&
+        btnRef.current && !btnRef.current.contains(e.target as Node)
+      ) {
+        setOpen(false)
+      }
     }
     document.addEventListener('mousedown', onMouseDown)
     return () => document.removeEventListener('mousedown', onMouseDown)
   }, [open])
 
-  // Close menu when a mutation completes (loading goes false)
   useEffect(() => {
     if (!loading) setOpen(false)
   }, [loading])
 
+  function handleToggle() {
+    if (!open && btnRef.current) {
+      const rect = btnRef.current.getBoundingClientRect()
+      setPos({
+        top: rect.bottom + 4,
+        right: window.innerWidth - rect.right,
+      })
+    }
+    setOpen(o => !o)
+  }
+
   return (
-    <div ref={ref} className="relative shrink-0">
+    <div className="shrink-0">
       <button
-        onClick={() => setOpen(o => !o)}
+        ref={btnRef}
+        onClick={handleToggle}
         disabled={loading}
         className="p-1.5 rounded text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors disabled:opacity-40"
         title="Acciones"
@@ -40,10 +59,11 @@ export function RowMenu({ items, loading = false }: { items: RowMenuItem[]; load
           : <MoreVertical size={15} />}
       </button>
 
-      {open && (
+      {open && createPortal(
         <div
-          className="absolute right-0 top-full mt-1 z-50 w-48 rounded-lg shadow-lg border bg-white py-1"
-          style={{ borderColor: 'var(--hce-border)' }}
+          ref={menuRef}
+          className="fixed z-50 w-48 rounded-lg shadow-lg border bg-white py-1"
+          style={{ top: pos.top, right: pos.right, borderColor: 'var(--hce-border)' }}
         >
           {items.map((item, i) => (
             <button
@@ -60,7 +80,8 @@ export function RowMenu({ items, loading = false }: { items: RowMenuItem[]; load
               {item.label}
             </button>
           ))}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )

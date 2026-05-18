@@ -121,6 +121,7 @@ func main() {
 		r.Mount("/tipos-evento-adverso", handlers.TiposEventoAdversoRouter(db))
 		r.Mount("/eventos-adversos", handlers.EventosAdversosRouter(db))
 		r.Mount("/proveedores", handlers.ProveedoresRouter(db))
+		r.Mount("/tarifas", handlers.TarifasRouter(db))
 		r.Mount("/citas", handlers.CitasRouter(db))
 		r.Mount("/medicamentos-predefinidos", handlers.MedicamentosPredefinidosRouter(db))
 		r.Put("/configuracion/tema", handlers.PutConfiguracionTema(db))

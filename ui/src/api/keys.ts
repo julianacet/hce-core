@@ -61,3 +61,5 @@ export const RIPS_HISTORIAL_KEY = ['rips-historial'] as const
 export const USUARIOS_KEY = ['usuarios'] as const
 
 export const AUDITORIA_KEY = ['auditoria'] as const
+
+export const TARIFAS_KEY = ['tarifas'] as const

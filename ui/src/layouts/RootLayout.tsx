@@ -1,5 +1,5 @@
 import { Outlet, NavLink, useNavigate } from 'react-router'
-import { LayoutDashboard, UserSearch, Users, ShieldCheck, LogOut, FileCode2, Star, Package, AlertTriangle, Building2, CalendarDays, Receipt, Activity } from 'lucide-react'
+import { LayoutDashboard, UserSearch, Users, ShieldCheck, LogOut, FileCode2, Star, Package, AlertTriangle, Building2, CalendarDays, Receipt, Activity, BadgeDollarSign } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useTema } from '../context/TemaContext'
 
@@ -36,6 +36,7 @@ export default function RootLayout() {
     {
       label: 'Gestión del consultorio',
       items: [
+        { to: '/tarifas', label: 'Tarifas', icon: BadgeDollarSign },
         { to: '/inventario', label: 'Inventario', icon: Package },
         { to: '/proveedores', label: 'Proveedores', icon: Building2 },
         { to: '/eventos-adversos', label: 'Eventos adversos', icon: AlertTriangle },

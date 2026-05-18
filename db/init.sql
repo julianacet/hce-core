@@ -1033,6 +1033,23 @@ CREATE INDEX IF NOT EXISTS idx_medicamento_tipo   ON medicamento_predefinido(tip
 CREATE INDEX IF NOT EXISTS idx_medicamento_nombre ON medicamento_predefinido
     USING gin(to_tsvector('spanish', nombre));
 
+-- ============================================================
+-- 24. Tarifas de procedimientos por código CUPS
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS tarifa (
+    id              UUID            PRIMARY KEY DEFAULT gen_random_uuid(),
+    codigo_cups     VARCHAR(6)      NOT NULL UNIQUE REFERENCES cups_codigo(codigo) ON UPDATE CASCADE,
+    descripcion     TEXT,
+    valor           NUMERIC(15,2)   NOT NULL DEFAULT 0 CHECK (valor >= 0),
+    notas           TEXT,
+    esta_activo     BOOLEAN         NOT NULL DEFAULT TRUE,
+    fecha_creacion  TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
+    creado_por      TEXT            NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_tarifa_cups ON tarifa(codigo_cups);
+
 -- Triggers de auditoría para tablas definidas después de la sección de triggers principal
 CREATE TRIGGER trg_auditoria_cita
     AFTER INSERT OR UPDATE OR DELETE ON cita
