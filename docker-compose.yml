@@ -19,6 +19,7 @@ services:
       - ./db/seed_ocupaciones.sql:/docker-entrypoint-initdb.d/03_seed_ocupaciones.sql
       - ./db/seed_eps.sql:/docker-entrypoint-initdb.d/04_seed_eps.sql
       - ./db/seed_medicamentos.sql:/docker-entrypoint-initdb.d/05_seed_medicamentos.sql
+      - ./db/seed_examenes.sql:/docker-entrypoint-initdb.d/06_seed_examenes.sql
 
   hce-api:
     build: ./api
