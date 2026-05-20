@@ -1,5 +1,4 @@
 import { Document, Page, View, Text, Image, StyleSheet } from '@react-pdf/renderer'
-import type { PageSize } from '@react-pdf/renderer'
 import type { DatosMedico } from '../../context/MedicoContext'
 import type { OrdenExamenItem } from '../../api/ordenes_examen'
 
@@ -10,7 +9,7 @@ type Props = {
   items: OrdenExamenItem[]
   indicacionesGenerales: string | null
   fecha: string
-  tamano?: PageSize
+  tamano?: string | [number, number]
   colorPrimario?: string
   logoBase64?: string | null
 }
@@ -84,7 +83,7 @@ export default function OrdenExamenPDF({
 
   return (
     <Document>
-      <Page size={tamano} style={s.page}>
+      <Page size={tamano as any} style={s.page}>
 
         {/* Header */}
         <View style={s.header}>

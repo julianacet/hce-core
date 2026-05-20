@@ -1,5 +1,4 @@
 import { Document, Page, View, Text, Image, StyleSheet } from '@react-pdf/renderer'
-import type { PageSize } from '@react-pdf/renderer'
 import type { DatosMedico } from '../../context/MedicoContext'
 import type { Factura } from '../../api/facturas'
 
@@ -26,7 +25,7 @@ type Props = {
   diagnostico: string
   colorPrimario?: string
   logoBase64?: string | null
-  tamano?: PageSize
+  tamano?: string | [number, number]
 }
 
 export default function FacturaPDF({
@@ -203,7 +202,7 @@ export default function FacturaPDF({
 
   return (
     <Document>
-      <Page size={tamano} style={s.page}>
+      <Page size={tamano as any} style={s.page}>
 
         {/* Header: logo + info consultorio + badge estado */}
         <View style={s.header}>

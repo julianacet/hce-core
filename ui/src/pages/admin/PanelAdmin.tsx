@@ -141,6 +141,7 @@ function TiposEventoAdversoAdmin({ onAbierto }: { onAbierto?: (v: boolean) => vo
   const [form, setForm] = useState<TipoInput>({ nombre: '', descripcion: null, requiere_reporte_invima: false })
   const [mostrarForm, setMostrarForm] = useState(false)
   const [error, setError] = useState('')
+  const { modal } = useConfirmar()
   useEffect(() => { onAbierto?.(mostrarForm) }, [mostrarForm, onAbierto])
 
   function abrirNuevo() {

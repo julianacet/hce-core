@@ -1,5 +1,4 @@
 import { Document, Page, View, Text, Image, StyleSheet } from '@react-pdf/renderer'
-import type { PageSize } from '@react-pdf/renderer'
 import type { DatosMedico } from '../../context/MedicoContext'
 
 export type Medicamento = {
@@ -26,14 +25,14 @@ type Props = {
   incluirFirma: boolean
   fecha: string
   tipo?: 'pos' | 'no_pos'
-  tamano?: PageSize
+  tamano?: string | [number, number]
   colorPrimario?: string
   logoBase64?: string | null
 }
 
 export default function FormulaPDF({
   medico, paciente, diagnostico, medicamentos, incluirFirma, fecha,
-  tipo, tamano = 'A4',
+  tipo: _tipo, tamano = 'A4',
   colorPrimario = '#1d4ed8', logoBase64 = null,
 }: Props) {
   const tituloFormula = 'FÓRMULA MÉDICA'
@@ -136,7 +135,7 @@ export default function FormulaPDF({
 
   return (
     <Document>
-      <Page size={tamano} style={s.page}>
+      <Page size={tamano as any} style={s.page}>
 
         {/* Header: logo + info consultorio */}
         <View style={s.header}>
