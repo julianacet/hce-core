@@ -129,6 +129,8 @@ func main() {
 		r.With(appmiddleware.RequiereRol("medico")).Put("/configuracion/tema", handlers.PutConfiguracionTema(db))
 		r.With(appmiddleware.RequiereRol("medico")).Put("/configuracion/medico", handlers.PutConfiguracionMedico(db))
 
+		r.With(appmiddleware.RequiereRol("medico")).Mount("/sistema", handlers.SistemaRouter())
+
 		// Solo admin
 		r.With(appmiddleware.RequiereRol("admin")).Mount("/usuarios", handlers.UsuariosRouter(db))
 	})

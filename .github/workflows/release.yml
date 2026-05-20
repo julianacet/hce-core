@@ -1,0 +1,87 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache-dependency-path: api/go.sum
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: ui/package-lock.json
+
+      # Extraer versión del tag (v1.2.3 → 1.2.3)
+      - name: Extraer versión
+        id: version
+        shell: bash
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+
+      # Escribir version.txt con la versión del tag
+      - name: Escribir version.txt
+        shell: bash
+        run: echo "${{ steps.version.outputs.VERSION }}" > windows/version.txt
+
+      # Compilar hce-api.exe (sin CGO, cross-compile desde Windows)
+      - name: Compilar hce-api.exe
+        working-directory: api
+        env:
+          CGO_ENABLED: '0'
+        run: go build -ldflags="-s -w" -o ..\windows\hce-api.exe .\cmd\main.go
+
+      # Compilar hce-web.exe (con CGO + WebView2, nativo Windows)
+      - name: Compilar hce-web.exe
+        working-directory: api
+        env:
+          CGO_ENABLED: '1'
+        run: go build -ldflags="-s -w -H=windowsgui" -o ..\windows\hce-web.exe .\cmd\web\main.go
+
+      # Construir frontend
+      - name: Instalar dependencias frontend
+        working-directory: ui
+        run: npm ci
+
+      - name: Construir frontend
+        working-directory: ui
+        env:
+          VITE_API_URL: http://localhost:8000
+        run: npm run build
+
+      - name: Copiar dist al directorio windows
+        shell: powershell
+        run: |
+          if (Test-Path windows\dist) { Remove-Item windows\dist -Recurse -Force }
+          Copy-Item ui\dist windows\dist -Recurse
+
+      # Instalar Inno Setup y compilar el instalador
+      - name: Instalar Inno Setup
+        run: choco install innosetup --yes --no-progress
+
+      - name: Compilar instalador
+        shell: powershell
+        run: |
+          $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+          & $iscc windows\hce.iss /DMyVersion=${{ steps.version.outputs.VERSION }}
+
+      # Publicar el release con el instalador como artifact
+      - name: Publicar release en GitHub
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "HCE Consultorio ${{ steps.version.outputs.VERSION }}"
+          files: windows/HCE-Consultorio-Setup.exe
+          generate_release_notes: true

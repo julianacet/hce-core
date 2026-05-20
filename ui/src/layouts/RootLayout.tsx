@@ -2,6 +2,7 @@ import { Outlet, NavLink, useNavigate } from 'react-router'
 import { LayoutDashboard, UserSearch, Users, ShieldCheck, LogOut, FileCode2, Star, Package, AlertTriangle, Building2, CalendarDays, Receipt, Activity, BadgeDollarSign, FileCheck2 } from 'lucide-react'
 import { useAuth, type Rol } from '../context/AuthContext'
 import { useTema } from '../context/TemaContext'
+import BannerActualizacion from '../components/BannerActualizacion'
 
 type NavItem = {
   to: string
@@ -173,8 +174,11 @@ export default function RootLayout() {
         </div>
       </aside>
 
-      <main className="flex-1 overflow-auto">
-        <Outlet />
+      <main className="flex-1 overflow-auto flex flex-col">
+        <BannerActualizacion />
+        <div className="flex-1 overflow-auto">
+          <Outlet />
+        </div>
       </main>
     </div>
   )

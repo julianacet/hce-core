@@ -1,10 +1,14 @@
 ; Inno Setup Script — HCE Consultorio
-; Compilar con: ISCC.exe hce.iss
+; Compilar con: ISCC.exe hce.iss /DMyVersion=1.0.0
 ; Requiere Inno Setup 6+: https://jrsoftware.org/isinfo.php
+
+#ifndef MyVersion
+  #define MyVersion "1.0.0"
+#endif
 
 [Setup]
 AppName=HCE Consultorio
-AppVersion=1.0.0
+AppVersion={#MyVersion}
 AppPublisher=Tu Consultorio
 AppPublisherURL=
 AppSupportURL=
@@ -20,6 +24,9 @@ WizardStyle=modern
 PrivilegesRequired=admin
 ; Requiere Windows 10 o superior
 MinVersion=10.0
+; Cerrar aplicaciones en ejecucion antes de instalar
+CloseApplications=yes
+CloseApplicationsFilter=hce-api.exe,hce-web.exe
 
 [Languages]
 Name: "spanish"; MessagesFile: "compiler:Languages\Spanish.isl"
@@ -31,25 +38,32 @@ Source: "hce-web.exe";  DestDir: "{app}"; Flags: ignoreversion
 
 ; Scripts de gestión
 Source: "primera_vez.bat"; DestDir: "{app}"; Flags: ignoreversion
-Source: "iniciar.bat";    DestDir: "{app}"; Flags: ignoreversion
-Source: "detener.bat";    DestDir: "{app}"; Flags: ignoreversion
-Source: "migrar.bat";     DestDir: "{app}"; Flags: ignoreversion
+Source: "iniciar.bat";     DestDir: "{app}"; Flags: ignoreversion
+Source: "detener.bat";     DestDir: "{app}"; Flags: ignoreversion
+Source: "migrar.bat";      DestDir: "{app}"; Flags: ignoreversion
+Source: "actualizar.bat";  DestDir: "{app}"; Flags: ignoreversion
+
+; Version actual
+Source: "version.txt"; DestDir: "{app}"; Flags: ignoreversion
 
 ; Scripts de migración desde Simedic (generados por construir_windows.sh)
-Source: "migration\migrar_pacientes.py";   DestDir: "{app}\migration"; Flags: ignoreversion
-Source: "migration\migrar_consultas.py";   DestDir: "{app}\migration"; Flags: ignoreversion
+Source: "migration\migrar_pacientes.py";    DestDir: "{app}\migration"; Flags: ignoreversion
+Source: "migration\migrar_consultas.py";    DestDir: "{app}\migration"; Flags: ignoreversion
 Source: "migration\migrar_antecedentes.py"; DestDir: "{app}\migration"; Flags: ignoreversion
+
+; Migraciones de esquema de BD (se aplican en cada actualización)
+Source: "..\db\migration\migrate_*.sql"; DestDir: "{app}\db\migration"; Flags: ignoreversion
 
 ; Frontend estático (generado por construir_windows.sh)
 Source: "dist\*"; DestDir: "{app}\dist"; Flags: ignoreversion recursesubdirs createallsubdirs
 
-; Esquema e datos de referencia
-Source: "..\db\init.sql";              DestDir: "{app}\db"; Flags: ignoreversion
-Source: "..\db\seed_divipola.sql";    DestDir: "{app}\db"; Flags: ignoreversion
-Source: "..\db\seed_ocupaciones.sql"; DestDir: "{app}\db"; Flags: ignoreversion
-Source: "..\db\seed_eps.sql";         DestDir: "{app}\db"; Flags: ignoreversion
-Source: "..\db\seed_medicamentos.sql"; DestDir: "{app}\db"; Flags: ignoreversion
-Source: "..\db\seed_examenes.sql";    DestDir: "{app}\db"; Flags: ignoreversion
+; Esquema e datos de referencia (solo se usan en primera instalación)
+Source: "..\db\init.sql";               DestDir: "{app}\db"; Flags: ignoreversion
+Source: "..\db\seed_divipola.sql";      DestDir: "{app}\db"; Flags: ignoreversion
+Source: "..\db\seed_ocupaciones.sql";   DestDir: "{app}\db"; Flags: ignoreversion
+Source: "..\db\seed_eps.sql";           DestDir: "{app}\db"; Flags: ignoreversion
+Source: "..\db\seed_medicamentos.sql";  DestDir: "{app}\db"; Flags: ignoreversion
+Source: "..\db\seed_examenes.sql";      DestDir: "{app}\db"; Flags: ignoreversion
 
 ; PostgreSQL portátil (descargar por separado — ver construir_windows.sh)
 Source: "pgsql\*"; DestDir: "{app}\pgsql"; Flags: ignoreversion recursesubdirs createallsubdirs
@@ -58,6 +72,7 @@ Source: "pgsql\*"; DestDir: "{app}\pgsql"; Flags: ignoreversion recursesubdirs c
 Name: "{app}\logs"
 Name: "{app}\data"
 Name: "{app}\migration\simedic"
+Name: "{app}\db\migration"
 
 [Icons]
 Name: "{group}\Iniciar HCE Consultorio";       Filename: "{app}\iniciar.bat";    WorkingDir: "{app}"; IconFilename: "{app}\hce-api.exe"
@@ -70,25 +85,41 @@ Name: "{commondesktop}\HCE Consultorio";       Filename: "{app}\iniciar.bat";   
 Name: "desktopicon"; Description: "Crear acceso directo en el escritorio"; GroupDescription: "Iconos adicionales:"
 
 [Run]
-; Primera vez: configurar base de datos e inicializar
+; Actualización (config.bat ya existe): aplicar migraciones y reiniciar
+Filename: "{app}\actualizar.bat"; \
+    WorkingDir: "{app}"; \
+    Flags: shellexec waituntilterminated runhidden; \
+    Check: FileExists(ExpandConstant('{app}\config.bat'))
+
+; Primera instalación: configurar base de datos
 Filename: "{app}\primera_vez.bat"; \
     Description: "Configurar HCE Consultorio"; \
     WorkingDir: "{app}"; \
     Flags: shellexec waituntilterminated; \
     Check: not FileExists(ExpandConstant('{app}\config.bat'))
 
-; Opcionalmente iniciar al terminar el instalador
+; Primera instalación: ofrecer iniciar al terminar
 Filename: "{app}\iniciar.bat"; \
     Description: "Iniciar HCE Consultorio ahora"; \
     WorkingDir: "{app}"; \
     Flags: shellexec nowait postinstall skipifsilent; \
-    Check: FileExists(ExpandConstant('{app}\config.bat'))
+    Check: not FileExists(ExpandConstant('{app}\config.bat'))
 
 [UninstallRun]
-; Detener todos los servicios antes de desinstalar
 Filename: "{app}\detener.bat"; WorkingDir: "{app}"; Flags: shellexec waituntilterminated; RunOnceId: "detener"
 
 [Code]
+procedure CurStepChanged(CurStep: TSetupStep);
+var
+  ResultCode: Integer;
+begin
+  // Antes de instalar archivos, detener servicios si es una actualización
+  if CurStep = ssInstall then
+    if FileExists(ExpandConstant('{app}\detener.bat')) then
+      Exec(ExpandConstant('{app}\detener.bat'), '', ExpandConstant('{app}'),
+           SW_HIDE, ewWaitUntilTerminated, ResultCode);
+end;
+
 function InitializeSetup(): Boolean;
 begin
   Result := True;
