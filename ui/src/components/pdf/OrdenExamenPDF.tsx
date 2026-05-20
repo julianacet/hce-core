@@ -1,4 +1,5 @@
 import { Document, Page, View, Text, Image, StyleSheet } from '@react-pdf/renderer'
+import type { PageSize } from '@react-pdf/renderer'
 import type { DatosMedico } from '../../context/MedicoContext'
 import type { OrdenExamenItem } from '../../api/ordenes_examen'
 
@@ -9,7 +10,7 @@ type Props = {
   items: OrdenExamenItem[]
   indicacionesGenerales: string | null
   fecha: string
-  tamano?: string | [number, number]
+  tamano?: PageSize
   colorPrimario?: string
   logoBase64?: string | null
 }

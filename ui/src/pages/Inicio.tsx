@@ -194,8 +194,8 @@ export default function Inicio() {
                   stroke="var(--hce-text-muted)"
                 />
                 <Tooltip
-                  formatter={(v: number) => [v, 'Consultas']}
-                  labelFormatter={fmtFechaCorta}
+                  formatter={(v) => [v, 'Consultas']}
+                  labelFormatter={(label) => fmtFechaCorta(String(label))}
                   contentStyle={{
                     fontSize: 12,
                     borderRadius: 8,

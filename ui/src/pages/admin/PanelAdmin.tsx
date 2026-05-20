@@ -141,7 +141,6 @@ function TiposEventoAdversoAdmin({ onAbierto }: { onAbierto?: (v: boolean) => vo
   const [form, setForm] = useState<TipoInput>({ nombre: '', descripcion: null, requiere_reporte_invima: false })
   const [mostrarForm, setMostrarForm] = useState(false)
   const [error, setError] = useState('')
-  const { confirmar, modal } = useConfirmar()
   useEffect(() => { onAbierto?.(mostrarForm) }, [mostrarForm, onAbierto])
 
   function abrirNuevo() {
@@ -255,6 +254,7 @@ function TiposEventoAdversoAdmin({ onAbierto }: { onAbierto?: (v: boolean) => vo
 function TipoRow({ tipo, onEditar }: { tipo: TipoEventoAdverso; onEditar: () => void }) {
   const toggle = useToggleTipo(tipo.id)
   const eliminar = useEliminarTipo()
+  const { confirmar, modal } = useConfirmar()
   const loading = toggle.isPending || eliminar.isPending
   return (
     <div className={`flex items-center gap-3 px-4 py-3 ${!tipo.esta_activo ? 'opacity-60' : ''}`}>
@@ -292,6 +292,7 @@ function TipoRow({ tipo, onEditar }: { tipo: TipoEventoAdverso; onEditar: () => 
           ),
         },
       ]} />
+      {modal}
     </div>
   )
 }

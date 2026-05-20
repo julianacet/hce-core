@@ -46,7 +46,7 @@ export default function NuevoPaciente() {
   const [touched, setTouched] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
-  function handleChange(campo: keyof PacienteInput, valor: string | boolean) {
+  function handleChange(campo: keyof PacienteInput, valor: string | boolean | number | undefined) {
     setTouched(true)
     setForm(prev => ({ ...prev, [campo]: valor }))
   }

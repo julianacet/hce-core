@@ -1,9 +1,9 @@
 import { useParams } from 'react-router'
 import { Printer, FileDown } from 'lucide-react'
-import { useState, useRef } from 'react'
+import { useState } from 'react'
 import { useTabParam } from '../../hooks/useTabParam'
 import { pdf } from '@react-pdf/renderer'
-import { useEncuentro, type ValorNormalNotas } from '../../api/encuentros'
+import { useEncuentro, type ValorNormalNotas, type EncuentroDiagnostico } from '../../api/encuentros'
 import { usePaciente } from '../../api/pacientes'
 import { useMedico } from '../../context/MedicoContext'
 import { useTema } from '../../context/TemaContext'
@@ -17,7 +17,7 @@ import { useAntecedentes } from '../../api/antecedentes'
 import AntecedentesTab from '../../components/AntecedentesTab'
 import { nombreCompleto, fmtFechaNacimiento } from '../../utils/paciente'
 import { useOrdenesExamen } from '../../api/ordenes_examen'
-import { TAMANO_PAGINA } from '../../utils/impresion'
+import { TAMANO_PAGINA, type TamanoDocumento } from '../../utils/impresion'
 
 // ── Tab Exámenes médicos (solo lectura) ───────────────────────────────────────
 
@@ -54,7 +54,7 @@ function TabExamenesMedicos({
           items={orden.items}
           indicacionesGenerales={orden.indicaciones_generales}
           fecha={fechaOrden}
-          tamano={TAMANO_PAGINA[medico.impresion?.ordenExamen ?? 'A4']}
+          tamano={TAMANO_PAGINA[(medico.impresion?.ordenExamen ?? 'A4') as TamanoDocumento]}
           colorPrimario={tema.colorPrimario}
           logoBase64={tema.logoBase64}
         />
@@ -183,7 +183,7 @@ export default function DetalleEncuentro() {
           antecedentes={antecedentes}
           formulas={formulas}
           ordenes={ordenesExamen}
-          tamano={TAMANO_PAGINA[medico.impresion?.historiaClinica ?? 'A4']}
+          tamano={TAMANO_PAGINA[(medico.impresion?.historiaClinica ?? 'A4') as TamanoDocumento]}
           colorPrimario={tema.colorPrimario}
           logoBase64={tema.logoBase64}
         />
@@ -577,7 +577,7 @@ export default function DetalleEncuentro() {
                 const impresiones = e.diagnosticos!.filter(d => d.tipo === 'impresion')
                 const confirmados = e.diagnosticos!.filter(d => d.tipo !== 'impresion')
 
-                function FilaDx({ d }: { d: typeof e.diagnosticos![0] }) {
+                function FilaDx({ d }: { d: EncuentroDiagnostico }) {
                   const badge =
                     d.tipo === 'impresion'   ? { label: 'Impresión',   cls: 'bg-violet-100 text-violet-700' } :
                     d.tipo === 'principal'   ? { label: 'Principal',   cls: 'bg-[var(--hce-primary-soft)] text-[var(--hce-primary)]' } :

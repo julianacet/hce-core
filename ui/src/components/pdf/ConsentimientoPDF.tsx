@@ -1,4 +1,5 @@
 import { Document, Page, View, Text, Image, StyleSheet } from '@react-pdf/renderer'
+import type { PageSize } from '@react-pdf/renderer'
 import type { DatosMedico } from '../../context/MedicoContext'
 
 type Props = {
@@ -8,7 +9,7 @@ type Props = {
   tipoDocumento: string
   contenidoRenderizado: string
   fecha: string
-  tamano?: string | [number, number]
+  tamano?: PageSize
   colorPrimario?: string
   logoBase64?: string | null
 }

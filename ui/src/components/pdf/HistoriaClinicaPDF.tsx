@@ -1,4 +1,5 @@
 import { Document, Page, View, Text, Image, StyleSheet, Font } from '@react-pdf/renderer'
+import type { PageSize } from '@react-pdf/renderer'
 
 // Palabras sin espacios (p.ej. test con X's o URLs) igual hacen wrap
 Font.registerHyphenationCallback(word =>
@@ -102,7 +103,7 @@ export type HistoriaClinicaProps = {
   antecedentes: AntecedentesCompletos
   formulas: FormulaGuardada[]
   ordenes?: OrdenExamen[]
-  tamano?: string | [number, number]
+  tamano?: PageSize
   colorPrimario?: string
   logoBase64?: string | null
 }

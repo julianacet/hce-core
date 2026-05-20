@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Plus, Trash2, Printer, Download } from 'lucide-react'
 import { pdf } from '@react-pdf/renderer'
-import FormulaPDF, { type Medicamento } from './pdf/FormulaPDF'
+import FormulaPDF, { type Medicamento, medVacio } from './pdf/FormulaPDF'
 import { useMedico } from '../context/MedicoContext'
 import { useTema } from '../context/TemaContext'
 import { useMedicamentosPredefinidos, type MedicamentoPredefinido } from '../api/medicamentos_predefinidos'
