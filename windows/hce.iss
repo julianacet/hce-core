@@ -47,9 +47,9 @@ Source: "actualizar.bat";  DestDir: "{app}"; Flags: ignoreversion
 Source: "version.txt"; DestDir: "{app}"; Flags: ignoreversion
 
 ; Scripts de migración desde Simedic (generados por construir_windows.sh)
-Source: "migration\migrar_pacientes.py";    DestDir: "{app}\migration"; Flags: ignoreversion
-Source: "migration\migrar_consultas.py";    DestDir: "{app}\migration"; Flags: ignoreversion
-Source: "migration\migrar_antecedentes.py"; DestDir: "{app}\migration"; Flags: ignoreversion
+Source: "..\db\migration\migrar_pacientes.py";    DestDir: "{app}\migration"; Flags: ignoreversion
+Source: "..\db\migration\migrar_consultas.py";    DestDir: "{app}\migration"; Flags: ignoreversion
+Source: "..\db\migration\migrar_antecedentes.py"; DestDir: "{app}\migration"; Flags: ignoreversion
 
 ; Migraciones de esquema de BD (se aplican en cada actualización)
 Source: "..\db\migration\migrate_*.sql"; DestDir: "{app}\db\migration"; Flags: ignoreversion
