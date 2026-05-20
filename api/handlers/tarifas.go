@@ -200,7 +200,7 @@ func (h *tarifasHandler) toggle(w http.ResponseWriter, r *http.Request) {
 
 func (h *tarifasHandler) eliminar(w http.ResponseWriter, r *http.Request) {
 	u := appmiddleware.UsuarioDesdeContexto(r.Context())
-	if u.Rol != "admin" {
+	if u.Rol != "admin" && u.Rol != "medico" {
 		responderError(w, http.StatusForbidden, "solo el administrador puede eliminar tarifas")
 		return
 	}

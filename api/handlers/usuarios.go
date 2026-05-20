@@ -29,6 +29,11 @@ func UsuariosRouter(db *pgxpool.Pool) chi.Router {
 
 type usuariosHandler struct{ db *pgxpool.Pool }
 
+var rolesValidos = map[string]bool{
+	"admin": true, "medico": true,
+	"recepcionista": true, "enfermeria": true, "facturador": true,
+}
+
 func (h *usuariosHandler) listar(w http.ResponseWriter, r *http.Request) {
 	rows, err := h.db.Query(r.Context(), `
 		SELECT id, nombre_usuario, nombre_completo, rol, esta_activo, fecha_creacion
@@ -69,8 +74,8 @@ func (h *usuariosHandler) crear(w http.ResponseWriter, r *http.Request) {
 		responderError(w, http.StatusBadRequest, "la contraseña debe tener al menos 8 caracteres")
 		return
 	}
-	if input.Rol != "admin" && input.Rol != "medico" && input.Rol != "auxiliar" {
-		responderError(w, http.StatusBadRequest, "rol debe ser admin, medico o auxiliar")
+	if !rolesValidos[input.Rol] {
+		responderError(w, http.StatusBadRequest, "rol debe ser admin, medico, recepcionista, enfermeria o facturador")
 		return
 	}
 
@@ -110,8 +115,8 @@ func (h *usuariosHandler) actualizar(w http.ResponseWriter, r *http.Request) {
 		responderError(w, http.StatusBadRequest, "body inválido")
 		return
 	}
-	if input.Rol != "admin" && input.Rol != "medico" && input.Rol != "auxiliar" {
-		responderError(w, http.StatusBadRequest, "rol debe ser admin, medico o auxiliar")
+	if !rolesValidos[input.Rol] {
+		responderError(w, http.StatusBadRequest, "rol debe ser admin, medico, recepcionista, enfermeria o facturador")
 		return
 	}
 

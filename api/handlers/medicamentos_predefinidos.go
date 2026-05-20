@@ -96,7 +96,7 @@ func (h *medicamentosHandler) listar(w http.ResponseWriter, r *http.Request) {
 
 func (h *medicamentosHandler) crear(w http.ResponseWriter, r *http.Request) {
 	u := appmiddleware.UsuarioDesdeContexto(r.Context())
-	if u.Rol != "admin" {
+	if u.Rol != "admin" && u.Rol != "medico" {
 		responderError(w, http.StatusForbidden, "solo el administrador puede crear medicamentos")
 		return
 	}
@@ -132,7 +132,7 @@ func (h *medicamentosHandler) crear(w http.ResponseWriter, r *http.Request) {
 
 func (h *medicamentosHandler) actualizar(w http.ResponseWriter, r *http.Request) {
 	u := appmiddleware.UsuarioDesdeContexto(r.Context())
-	if u.Rol != "admin" {
+	if u.Rol != "admin" && u.Rol != "medico" {
 		responderError(w, http.StatusForbidden, "solo el administrador puede editar medicamentos")
 		return
 	}
@@ -170,7 +170,7 @@ func (h *medicamentosHandler) actualizar(w http.ResponseWriter, r *http.Request)
 
 func (h *medicamentosHandler) eliminar(w http.ResponseWriter, r *http.Request) {
 	u := appmiddleware.UsuarioDesdeContexto(r.Context())
-	if u.Rol != "admin" {
+	if u.Rol != "admin" && u.Rol != "medico" {
 		responderError(w, http.StatusForbidden, "solo el administrador puede eliminar medicamentos")
 		return
 	}
@@ -190,7 +190,7 @@ func (h *medicamentosHandler) eliminar(w http.ResponseWriter, r *http.Request) {
 
 func (h *medicamentosHandler) toggle(w http.ResponseWriter, r *http.Request) {
 	u := appmiddleware.UsuarioDesdeContexto(r.Context())
-	if u.Rol != "admin" {
+	if u.Rol != "admin" && u.Rol != "medico" {
 		responderError(w, http.StatusForbidden, "solo el administrador puede activar o desactivar medicamentos")
 		return
 	}

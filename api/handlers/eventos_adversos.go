@@ -66,7 +66,7 @@ func (h *tiposEAHandler) listar(w http.ResponseWriter, r *http.Request) {
 
 func (h *tiposEAHandler) crear(w http.ResponseWriter, r *http.Request) {
 	u := appmiddleware.UsuarioDesdeContexto(r.Context())
-	if u.Rol != "admin" {
+	if u.Rol != "admin" && u.Rol != "medico" {
 		responderError(w, http.StatusForbidden, "solo el administrador puede crear tipos")
 		return
 	}
@@ -102,7 +102,7 @@ func (h *tiposEAHandler) crear(w http.ResponseWriter, r *http.Request) {
 
 func (h *tiposEAHandler) actualizar(w http.ResponseWriter, r *http.Request) {
 	u := appmiddleware.UsuarioDesdeContexto(r.Context())
-	if u.Rol != "admin" {
+	if u.Rol != "admin" && u.Rol != "medico" {
 		responderError(w, http.StatusForbidden, "solo el administrador puede editar tipos")
 		return
 	}
@@ -139,7 +139,7 @@ func (h *tiposEAHandler) actualizar(w http.ResponseWriter, r *http.Request) {
 
 func (h *tiposEAHandler) desactivar(w http.ResponseWriter, r *http.Request) {
 	u := appmiddleware.UsuarioDesdeContexto(r.Context())
-	if u.Rol != "admin" {
+	if u.Rol != "admin" && u.Rol != "medico" {
 		responderError(w, http.StatusForbidden, "solo el administrador puede activar o desactivar tipos")
 		return
 	}
@@ -158,7 +158,7 @@ func (h *tiposEAHandler) desactivar(w http.ResponseWriter, r *http.Request) {
 
 func (h *tiposEAHandler) eliminarTipo(w http.ResponseWriter, r *http.Request) {
 	u := appmiddleware.UsuarioDesdeContexto(r.Context())
-	if u.Rol != "admin" {
+	if u.Rol != "admin" && u.Rol != "medico" {
 		responderError(w, http.StatusForbidden, "solo el administrador puede eliminar tipos")
 		return
 	}
@@ -357,7 +357,7 @@ func (h *eventosAdversosHandler) crear(w http.ResponseWriter, r *http.Request) {
 
 func (h *eventosAdversosHandler) toggle(w http.ResponseWriter, r *http.Request) {
 	u := appmiddleware.UsuarioDesdeContexto(r.Context())
-	if u.Rol != "admin" {
+	if u.Rol != "admin" && u.Rol != "medico" {
 		responderError(w, http.StatusForbidden, "solo el administrador puede activar o desactivar eventos")
 		return
 	}
@@ -376,7 +376,7 @@ func (h *eventosAdversosHandler) toggle(w http.ResponseWriter, r *http.Request) 
 
 func (h *eventosAdversosHandler) eliminar(w http.ResponseWriter, r *http.Request) {
 	u := appmiddleware.UsuarioDesdeContexto(r.Context())
-	if u.Rol != "admin" {
+	if u.Rol != "admin" && u.Rol != "medico" {
 		responderError(w, http.StatusForbidden, "solo el administrador puede eliminar eventos")
 		return
 	}

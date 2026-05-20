@@ -447,7 +447,7 @@ func (h *FacturaHandler) anular(w http.ResponseWriter, r *http.Request) {
 // DELETE /facturas/{facturaId} — elimina todas las versiones de la factura
 func (h *FacturaHandler) eliminar(w http.ResponseWriter, r *http.Request) {
 	u := appmiddleware.UsuarioDesdeContexto(r.Context())
-	if u.Rol != "admin" {
+	if u.Rol != "admin" && u.Rol != "medico" {
 		responderError(w, http.StatusForbidden, "solo el administrador puede eliminar facturas")
 		return
 	}

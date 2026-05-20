@@ -1,11 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiFetch } from './client'
 
+export type RolUsuario = 'admin' | 'medico' | 'recepcionista' | 'enfermeria' | 'facturador'
+
 export type Usuario = {
   id: string
   nombre_usuario: string
   nombre_completo: string
-  rol: 'admin' | 'medico' | 'auxiliar'
+  rol: RolUsuario
   esta_activo: boolean
   fecha_creacion: string
 }
@@ -13,7 +15,7 @@ export type Usuario = {
 export type UsuarioInput = {
   nombre_usuario: string
   nombre_completo: string
-  rol: 'admin' | 'medico' | 'auxiliar'
+  rol: RolUsuario
   contrasena: string // vacío = no cambiar
 }
 

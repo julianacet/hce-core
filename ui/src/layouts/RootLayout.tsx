@@ -1,7 +1,20 @@
 import { Outlet, NavLink, useNavigate } from 'react-router'
 import { LayoutDashboard, UserSearch, Users, ShieldCheck, LogOut, FileCode2, Star, Package, AlertTriangle, Building2, CalendarDays, Receipt, Activity, BadgeDollarSign, FileCheck2 } from 'lucide-react'
-import { useAuth } from '../context/AuthContext'
+import { useAuth, type Rol } from '../context/AuthContext'
 import { useTema } from '../context/TemaContext'
+
+type NavItem = {
+  to: string
+  label: string
+  icon: React.ElementType
+  end?: boolean
+  roles?: Rol[]
+}
+
+type NavGroup = {
+  label: string | null
+  items: NavItem[]
+}
 
 export default function RootLayout() {
   const { usuario, logout, tieneRol } = useAuth()
@@ -13,7 +26,7 @@ export default function RootLayout() {
     navigate('/login')
   }
 
-  const navGroups = [
+  const navGroups: NavGroup[] = [
     {
       label: null,
       items: [{ to: '/', label: 'Inicio', icon: LayoutDashboard, end: true }],
@@ -21,30 +34,35 @@ export default function RootLayout() {
     {
       label: 'Atención al paciente',
       items: [
-        { to: '/nueva-consulta', label: 'Consultas', icon: UserSearch },
-        { to: '/pacientes', label: 'Pacientes', icon: Users },
-        { to: '/agenda', label: 'Agenda', icon: CalendarDays },
-        { to: '/consentimientos', label: 'Consentimientos', icon: FileCheck2 },
+        { to: '/nueva-consulta', label: 'Consultas', icon: UserSearch, roles: ['medico'] },
+        { to: '/pacientes', label: 'Pacientes', icon: Users, roles: ['medico', 'recepcionista', 'enfermeria'] },
+        { to: '/agenda', label: 'Agenda', icon: CalendarDays, roles: ['medico', 'recepcionista'] },
+        { to: '/consentimientos', label: 'Consentimientos', icon: FileCheck2, roles: ['medico'] },
       ],
     },
     {
       label: 'Facturación y reportes',
       items: [
-        { to: '/facturas', label: 'Facturación', icon: Receipt },
-        { to: '/rips-mensual', label: 'RIPS Mensual', icon: FileCode2 },
+        { to: '/facturas', label: 'Facturación', icon: Receipt, roles: ['medico', 'recepcionista', 'facturador'] },
+        { to: '/rips-mensual', label: 'RIPS Mensual', icon: FileCode2, roles: ['medico', 'facturador'] },
+        { to: '/tarifas', label: 'Tarifas', icon: BadgeDollarSign, roles: ['medico', 'facturador'] },
       ],
     },
     {
       label: 'Gestión del consultorio',
       items: [
-        { to: '/tarifas', label: 'Tarifas', icon: BadgeDollarSign },
-        { to: '/inventario', label: 'Inventario', icon: Package },
-        { to: '/proveedores', label: 'Proveedores', icon: Building2 },
-        { to: '/eventos-adversos', label: 'Eventos adversos', icon: AlertTriangle },
-        { to: '/encuestas', label: 'Encuestas', icon: Star },
+        { to: '/inventario', label: 'Inventario', icon: Package, roles: ['medico', 'recepcionista'] },
+        { to: '/proveedores', label: 'Proveedores', icon: Building2, roles: ['medico'] },
+        { to: '/eventos-adversos', label: 'Eventos adversos', icon: AlertTriangle, roles: ['medico'] },
+        { to: '/encuestas', label: 'Encuestas', icon: Star, roles: ['medico', 'recepcionista'] },
       ],
     },
   ]
+
+  function itemVisible(item: NavItem) {
+    if (!item.roles || item.roles.length === 0) return true
+    return tieneRol(...item.roles)
+  }
 
   return (
     <div className="flex h-screen">
@@ -63,7 +81,10 @@ export default function RootLayout() {
 
         {/* Navegación principal */}
         <nav className="flex-1 px-3 py-4 flex flex-col overflow-y-auto">
-          {navGroups.map((group, i) => (
+          {navGroups.map((group, i) => {
+            const visibles = group.items.filter(itemVisible)
+            if (visibles.length === 0) return null
+            return (
             <div key={i} className={i > 0 ? 'mt-5' : ''}>
               {group.label && (
                 <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-white/40">
@@ -71,7 +92,7 @@ export default function RootLayout() {
                 </p>
               )}
               <div className={`flex flex-col gap-0.5 ${group.label ? 'pl-2' : ''}`}>
-                {group.items.map(({ to, label, icon: Icon, end }) => (
+                {visibles.map(({ to, label, icon: Icon, end }) => (
                   <NavLink
                     key={to}
                     to={to}
@@ -91,7 +112,8 @@ export default function RootLayout() {
                 ))}
               </div>
             </div>
-          ))}
+            )
+          })}
 
           {/* Solo admin */}
           {tieneRol('admin') && (

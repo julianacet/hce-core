@@ -98,6 +98,11 @@ func (h *RipsHandler) historial(w http.ResponseWriter, r *http.Request) {
 // POST /rips
 // Body: { anio, mes, nit, codPrestador, tipoDiagnosticoPrincipal }
 func (h *RipsHandler) generarMensual(w http.ResponseWriter, r *http.Request) {
+	u := appmiddleware.UsuarioDesdeContexto(r.Context())
+	if u.Rol != "admin" && u.Rol != "medico" {
+		responderError(w, http.StatusForbidden, "se requiere rol admin o médico")
+		return
+	}
 	var input models.RipsMensualInput
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		responderError(w, http.StatusBadRequest, "body inválido")
@@ -265,7 +270,6 @@ func (h *RipsHandler) generarMensual(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	u := appmiddleware.UsuarioDesdeContexto(r.Context())
 	var ripsID, fechaGen string
 	err = h.db.QueryRow(r.Context(), `
 		INSERT INTO rips_generado (periodo, datos_json, creado_por)

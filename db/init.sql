@@ -31,7 +31,7 @@ CREATE TABLE usuario (
     nombre_usuario  TEXT        UNIQUE NOT NULL,
     nombre_completo TEXT        NOT NULL,
     rol             VARCHAR(20) NOT NULL DEFAULT 'medico'
-                                CHECK (rol IN ('admin', 'medico', 'auxiliar')),
+                                CHECK (rol IN ('admin', 'medico', 'recepcionista', 'enfermeria', 'facturador')),
     hash_contrasena TEXT        NOT NULL,
     esta_activo     BOOLEAN     NOT NULL DEFAULT TRUE,
     fecha_creacion  TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP

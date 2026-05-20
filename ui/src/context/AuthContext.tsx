@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, type ReactNode } from 'react'
 import { apiFetch } from '../api/client'
 
-export type Rol = 'admin' | 'medico' | 'auxiliar'
+export type Rol = 'admin' | 'medico' | 'recepcionista' | 'enfermeria' | 'facturador'
 
 export type Usuario = {
   id: string
@@ -70,6 +70,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   function tieneRol(...roles: Rol[]): boolean {
     if (!usuario) return false
+    if (usuario.rol === 'admin') return true
     return roles.includes(usuario.rol)
   }
 

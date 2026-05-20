@@ -201,7 +201,7 @@ func (h *FormulaHandler) crear(w http.ResponseWriter, r *http.Request) {
 // DELETE /pacientes/{documento}/encuentros/{encuentroId}/formulas/{formulaId}
 func (h *FormulaHandler) eliminar(w http.ResponseWriter, r *http.Request) {
 	u := appmiddleware.UsuarioDesdeContexto(r.Context())
-	if u.Rol != "admin" {
+	if u.Rol != "admin" && u.Rol != "medico" {
 		responderError(w, http.StatusForbidden, "solo el administrador puede eliminar fórmulas")
 		return
 	}

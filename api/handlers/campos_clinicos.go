@@ -73,7 +73,7 @@ func (h *CampoClinicoHandler) listar(w http.ResponseWriter, r *http.Request) {
 
 func (h *CampoClinicoHandler) crear(w http.ResponseWriter, r *http.Request) {
 	u := appmiddleware.UsuarioDesdeContexto(r.Context())
-	if u.Rol != "admin" {
+	if u.Rol != "admin" && u.Rol != "medico" {
 		responderError(w, http.StatusForbidden, "solo administradores")
 		return
 	}
@@ -108,7 +108,7 @@ func (h *CampoClinicoHandler) crear(w http.ResponseWriter, r *http.Request) {
 
 func (h *CampoClinicoHandler) actualizar(w http.ResponseWriter, r *http.Request) {
 	u := appmiddleware.UsuarioDesdeContexto(r.Context())
-	if u.Rol != "admin" {
+	if u.Rol != "admin" && u.Rol != "medico" {
 		responderError(w, http.StatusForbidden, "solo administradores")
 		return
 	}
@@ -140,7 +140,7 @@ func (h *CampoClinicoHandler) actualizar(w http.ResponseWriter, r *http.Request)
 
 func (h *CampoClinicoHandler) eliminar(w http.ResponseWriter, r *http.Request) {
 	u := appmiddleware.UsuarioDesdeContexto(r.Context())
-	if u.Rol != "admin" {
+	if u.Rol != "admin" && u.Rol != "medico" {
 		responderError(w, http.StatusForbidden, "solo administradores")
 		return
 	}
@@ -159,7 +159,7 @@ func (h *CampoClinicoHandler) eliminar(w http.ResponseWriter, r *http.Request) {
 
 func (h *CampoClinicoHandler) toggle(w http.ResponseWriter, r *http.Request) {
 	u := appmiddleware.UsuarioDesdeContexto(r.Context())
-	if u.Rol != "admin" {
+	if u.Rol != "admin" && u.Rol != "medico" {
 		responderError(w, http.StatusForbidden, "solo administradores")
 		return
 	}

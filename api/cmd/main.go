@@ -115,7 +115,7 @@ func main() {
 		r.Mount("/rips", handlers.RipsMensualRouter(db))
 		r.Mount("/consentimientos/plantillas", handlers.PlantillasRouter(db))
 		r.Mount("/consentimientos/generados", handlers.ConsentimientoGeneradoRouter(db))
-		r.Mount("/antecedentes/preguntas", handlers.PreguntasAntecedentesRouter(db))
+		r.With(appmiddleware.RequiereRol("medico")).Mount("/antecedentes/preguntas", handlers.PreguntasAntecedentesRouter(db))
 		r.Mount("/encuestas", handlers.EncuestasRouter(db))
 		r.Mount("/dashboard", handlers.DashboardRouter(db))
 		r.Mount("/insumos", handlers.InsumosRouter(db))
@@ -126,8 +126,8 @@ func main() {
 		r.Mount("/examenes-predefinidos", handlers.ExamenesPredefinidosRouter(db))
 		r.Mount("/citas", handlers.CitasRouter(db))
 		r.Mount("/medicamentos-predefinidos", handlers.MedicamentosPredefinidosRouter(db))
-		r.Put("/configuracion/tema", handlers.PutConfiguracionTema(db))
-		r.Put("/configuracion/medico", handlers.PutConfiguracionMedico(db))
+		r.With(appmiddleware.RequiereRol("medico")).Put("/configuracion/tema", handlers.PutConfiguracionTema(db))
+		r.With(appmiddleware.RequiereRol("medico")).Put("/configuracion/medico", handlers.PutConfiguracionMedico(db))
 
 		// Solo admin
 		r.With(appmiddleware.RequiereRol("admin")).Mount("/usuarios", handlers.UsuariosRouter(db))

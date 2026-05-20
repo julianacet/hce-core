@@ -167,7 +167,7 @@ func (h *ConsentimientoHandler) togglePlantilla(w http.ResponseWriter, r *http.R
 // DELETE /consentimientos/plantillas/:plantillaId
 func (h *ConsentimientoHandler) eliminarPlantilla(w http.ResponseWriter, r *http.Request) {
 	u := appmiddleware.UsuarioDesdeContexto(r.Context())
-	if u.Rol != "admin" {
+	if u.Rol != "admin" && u.Rol != "medico" {
 		responderError(w, http.StatusForbidden, "solo el administrador puede eliminar plantillas")
 		return
 	}

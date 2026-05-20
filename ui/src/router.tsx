@@ -27,10 +27,16 @@ import Agenda from './pages/Agenda'
 import Consentimientos from './pages/Consentimientos'
 import NuevoConsentimiento from './pages/NuevoConsentimiento'
 
+const pacienteChildren = [
+  { index: true, element: <FichaPaciente /> },
+  { path: 'encuentros', element: <HistorialEncuentros /> },
+  { path: 'encuentros/:encId', element: <DetalleEncuentro /> },
+  { path: 'encuentros/:encId/formula', element: <NuevaFormula /> },
+]
+
 const router = createBrowserRouter([
   { path: '/login', element: <Login /> },
 
-  // Rutas protegidas — cualquier usuario autenticado
   {
     element: <RutaProtegida />,
     children: [
@@ -38,24 +44,60 @@ const router = createBrowserRouter([
         path: '/',
         element: <RootLayout />,
         children: [
+          // Accesible por todos los roles autenticados
           { index: true, element: <Inicio /> },
-          { path: 'nueva-consulta', element: <EncuentrosGlobal /> },
-          { path: 'nueva-consulta/nuevo', element: <NuevaConsulta /> },
-          { path: 'pacientes', element: <ListaPacientes /> },
-          { path: 'pacientes/nuevo', element: <NuevoPaciente /> },
-          { path: 'configuracion', element: <Navigate to="/admin" replace /> },
-          { path: 'rips-mensual', element: <RipsMensual /> },
-          { path: 'facturas', element: <Facturas /> },
-          { path: 'facturas/nueva', element: <NuevaFactura /> },
-          { path: 'facturas/:facturaId', element: <DetalleFactura /> },
-          { path: 'encuestas', element: <Encuestas /> },
-          { path: 'inventario', element: <Inventario /> },
-          { path: 'eventos-adversos', element: <EventosAdversos /> },
-          { path: 'proveedores', element: <Proveedores /> },
-          { path: 'tarifas', element: <Tarifas /> },
-          { path: 'agenda', element: <Agenda /> },
-          { path: 'consentimientos', element: <Consentimientos /> },
-          { path: 'consentimientos/nuevo', element: <NuevoConsentimiento /> },
+
+          // medico (+ admin vía superrol)
+          {
+            element: <RutaProtegida roles={['medico']} />,
+            children: [
+              { path: 'nueva-consulta', element: <EncuentrosGlobal /> },
+              { path: 'nueva-consulta/nuevo', element: <NuevaConsulta /> },
+              { path: 'consentimientos', element: <Consentimientos /> },
+              { path: 'consentimientos/nuevo', element: <NuevoConsentimiento /> },
+              { path: 'proveedores', element: <Proveedores /> },
+              { path: 'eventos-adversos', element: <EventosAdversos /> },
+            ],
+          },
+
+          // medico + recepcionista + enfermeria (+ admin)
+          {
+            element: <RutaProtegida roles={['medico', 'recepcionista', 'enfermeria']} />,
+            children: [
+              { path: 'pacientes', element: <ListaPacientes /> },
+              { path: 'pacientes/nuevo', element: <NuevoPaciente /> },
+              { path: 'pacientes/:id', element: <PacienteLayout />, children: pacienteChildren },
+            ],
+          },
+
+          // medico + recepcionista (+ admin)
+          {
+            element: <RutaProtegida roles={['medico', 'recepcionista']} />,
+            children: [
+              { path: 'agenda', element: <Agenda /> },
+              { path: 'inventario', element: <Inventario /> },
+              { path: 'encuestas', element: <Encuestas /> },
+            ],
+          },
+
+          // medico + recepcionista + facturador (+ admin)
+          {
+            element: <RutaProtegida roles={['medico', 'recepcionista', 'facturador']} />,
+            children: [
+              { path: 'facturas', element: <Facturas /> },
+              { path: 'facturas/nueva', element: <NuevaFactura /> },
+              { path: 'facturas/:facturaId', element: <DetalleFactura /> },
+            ],
+          },
+
+          // medico + facturador (+ admin)
+          {
+            element: <RutaProtegida roles={['medico', 'facturador']} />,
+            children: [
+              { path: 'rips-mensual', element: <RipsMensual /> },
+              { path: 'tarifas', element: <Tarifas /> },
+            ],
+          },
 
           // Solo admin
           {
@@ -66,19 +108,7 @@ const router = createBrowserRouter([
             ],
           },
 
-          // Rutas del paciente
-          {
-            path: 'pacientes/:id',
-            element: <PacienteLayout />,
-            children: [
-              { index: true, element: <FichaPaciente /> },
-              { path: 'encuentros', element: <HistorialEncuentros /> },
-              { path: 'encuentros/:encId', element: <DetalleEncuentro /> },
-              { path: 'encuentros/:encId/formula', element: <NuevaFormula /> },
-            ],
-          },
-
-          // Rutas desconocidas autenticadas → inicio
+          { path: 'configuracion', element: <Navigate to="/admin" replace /> },
           { path: '*', element: <Navigate to="/" replace /> },
         ],
       },

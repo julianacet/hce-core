@@ -274,7 +274,7 @@ func (h *PacienteHandler) actualizar(w http.ResponseWriter, r *http.Request) {
 // DELETE /pacientes/{documento} — elimina todas las versiones del paciente
 func (h *PacienteHandler) eliminar(w http.ResponseWriter, r *http.Request) {
 	u := appmiddleware.UsuarioDesdeContexto(r.Context())
-	if u.Rol != "admin" {
+	if u.Rol != "admin" && u.Rol != "medico" {
 		responderError(w, http.StatusForbidden, "solo el administrador puede eliminar pacientes")
 		return
 	}

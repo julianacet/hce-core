@@ -477,16 +477,26 @@ function PlantillasAdmin({ onAbierto }: { onAbierto?: (v: boolean) => void }) {
   )
 }
 
-const ROL_LABEL: Record<string, string> = { admin: 'Admin', medico: 'Médico', auxiliar: 'Auxiliar' }
+const ROL_LABEL: Record<string, string> = {
+  admin: 'Admin',
+  medico: 'Médico',
+  recepcionista: 'Recepcionista',
+  enfermeria: 'Enfermería',
+  facturador: 'Facturador',
+}
 const ROL_BADGE: Record<string, string> = {
   admin: 'bg-purple-100 text-purple-700',
   medico: 'bg-[var(--hce-primary-soft)] text-[var(--hce-primary)]',
-  auxiliar: 'bg-slate-100 text-slate-600',
+  recepcionista: 'bg-sky-100 text-sky-700',
+  enfermeria: 'bg-rose-100 text-rose-700',
+  facturador: 'bg-amber-100 text-amber-700',
 }
 const ROL_ICON: Record<string, React.ElementType> = {
   admin: ShieldCheck,
   medico: Stethoscope,
-  auxiliar: Users,
+  recepcionista: Users,
+  enfermeria: Activity,
+  facturador: ClipboardList,
 }
 
 const FORM_USUARIO_INICIAL: UsuarioInput = {
@@ -608,7 +618,9 @@ function UsuariosAdmin({ onAbierto }: { onAbierto?: (v: boolean) => void }) {
                 onChange={(e) => setForm((f) => ({ ...f, rol: e.target.value as UsuarioInput['rol'] }))}
               >
                 <option value="medico">Médico</option>
-                <option value="auxiliar">Auxiliar</option>
+                <option value="recepcionista">Recepcionista</option>
+                <option value="enfermeria">Enfermería</option>
+                <option value="facturador">Facturador</option>
                 <option value="admin">Admin</option>
               </select>
             </div>

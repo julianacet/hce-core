@@ -96,7 +96,7 @@ func (h *examenesPredefinidosHandler) listar(w http.ResponseWriter, r *http.Requ
 
 func (h *examenesPredefinidosHandler) crear(w http.ResponseWriter, r *http.Request) {
 	u := appmiddleware.UsuarioDesdeContexto(r.Context())
-	if u.Rol != "admin" {
+	if u.Rol != "admin" && u.Rol != "medico" {
 		responderError(w, http.StatusForbidden, "solo el administrador puede crear exámenes")
 		return
 	}
@@ -132,7 +132,7 @@ func (h *examenesPredefinidosHandler) crear(w http.ResponseWriter, r *http.Reque
 
 func (h *examenesPredefinidosHandler) actualizar(w http.ResponseWriter, r *http.Request) {
 	u := appmiddleware.UsuarioDesdeContexto(r.Context())
-	if u.Rol != "admin" {
+	if u.Rol != "admin" && u.Rol != "medico" {
 		responderError(w, http.StatusForbidden, "solo el administrador puede editar exámenes")
 		return
 	}
@@ -168,7 +168,7 @@ func (h *examenesPredefinidosHandler) actualizar(w http.ResponseWriter, r *http.
 
 func (h *examenesPredefinidosHandler) toggle(w http.ResponseWriter, r *http.Request) {
 	u := appmiddleware.UsuarioDesdeContexto(r.Context())
-	if u.Rol != "admin" {
+	if u.Rol != "admin" && u.Rol != "medico" {
 		responderError(w, http.StatusForbidden, "solo el administrador puede modificar exámenes")
 		return
 	}
@@ -187,7 +187,7 @@ func (h *examenesPredefinidosHandler) toggle(w http.ResponseWriter, r *http.Requ
 
 func (h *examenesPredefinidosHandler) eliminar(w http.ResponseWriter, r *http.Request) {
 	u := appmiddleware.UsuarioDesdeContexto(r.Context())
-	if u.Rol != "admin" {
+	if u.Rol != "admin" && u.Rol != "medico" {
 		responderError(w, http.StatusForbidden, "solo el administrador puede eliminar exámenes")
 		return
 	}

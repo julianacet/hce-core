@@ -60,6 +60,7 @@ func UsuarioDesdeContexto(ctx context.Context) *ClaimsUsuario {
 }
 
 // RequiereRol rechaza el request si el usuario no tiene alguno de los roles indicados.
+// Admin siempre pasa, independientemente de los roles listados.
 // Debe usarse después de RequiereAuth.
 func RequiereRol(roles ...string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
@@ -67,6 +68,10 @@ func RequiereRol(roles ...string) func(http.Handler) http.Handler {
 			u := UsuarioDesdeContexto(r.Context())
 			if u == nil {
 				http.Error(w, `{"error":"no autorizado"}`, http.StatusUnauthorized)
+				return
+			}
+			if u.Rol == "admin" {
+				next.ServeHTTP(w, r)
 				return
 			}
 			for _, rol := range roles {
