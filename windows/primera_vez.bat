@@ -69,6 +69,11 @@ echo [1] Inicializando base de datos...
 
 mkdir "%DIR%logs" 2>nul
 
+REM Dar permisos completos al directorio data para que initdb pueda operar en Program Files
+rmdir /s /q "%DATA%" 2>nul
+mkdir "%DATA%" 2>nul
+icacls "%DATA%" /grant "%USERNAME%":(OI)(CI)F >nul 2>&1
+
 REM initdb con autenticacion trust (solo localhost)
 "%PGSQL%\bin\initdb.exe" -D "%DATA%" -U postgres -E UTF8 --locale=C -A trust >"%DIR%logs\initdb.log" 2>&1
 if errorlevel 1 (
