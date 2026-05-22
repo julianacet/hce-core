@@ -1,0 +1,2 @@
+windows/*.bat text eol=crlf
+windows/*.iss text eol=crlf
