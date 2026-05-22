@@ -88,11 +88,11 @@ Filename: "{app}\actualizar.bat"; \
     Flags: shellexec waituntilterminated runhidden; \
     Check: FileExists(ExpandConstant('{app}\config.bat'))
 
-; Primera instalación: configurar base de datos
-Filename: "{app}\primera_vez.bat"; \
+; Primera instalación: configurar base de datos (sin shellexec para heredar privilegios admin)
+Filename: "{cmd}"; Parameters: "/c primera_vez.bat"; \
     Description: "Configurar HCE Consultorio"; \
     WorkingDir: "{app}"; \
-    Flags: shellexec waituntilterminated; \
+    Flags: waituntilterminated; \
     Check: not FileExists(ExpandConstant('{app}\config.bat'))
 
 ; Primera instalación: ofrecer iniciar al terminar
