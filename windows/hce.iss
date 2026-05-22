@@ -51,9 +51,6 @@ Source: "..\db\migration\migrar_pacientes.py";    DestDir: "{app}\migration"; Fl
 Source: "..\db\migration\migrar_consultas.py";    DestDir: "{app}\migration"; Flags: ignoreversion
 Source: "..\db\migration\migrar_antecedentes.py"; DestDir: "{app}\migration"; Flags: ignoreversion
 
-; Migraciones de esquema de BD (se aplican en cada actualización)
-Source: "..\db\migration\migrate_*.sql"; DestDir: "{app}\db\migration"; Flags: ignoreversion
-
 ; Frontend estático (generado por construir_windows.sh)
 Source: "dist\*"; DestDir: "{app}\dist"; Flags: ignoreversion recursesubdirs createallsubdirs
 
