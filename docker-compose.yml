@@ -35,6 +35,10 @@ services:
       ALLOWED_ORIGIN: ${DOCKER_ALLOWED_ORIGIN}
       APP_TZ: ${APP_TZ:-America/Bogota}
       TZ: ${APP_TZ:-America/Bogota}
+      PRINTER_TERMICA: ${PRINTER_TERMICA:-}
+      CUPS_SERVER: /run/cups/cups.sock
+    volumes:
+      - /run/cups/cups.sock:/run/cups/cups.sock
     ports:
       - "${DOCKER_API_PORT}:${DOCKER_API_PORT}"
 

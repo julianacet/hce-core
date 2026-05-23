@@ -11,7 +11,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o hce-api ./cmd/main.go
 # Imagen final mínima
 FROM alpine:3.20
 
-RUN apk add --no-cache ca-certificates tzdata
+RUN apk add --no-cache ca-certificates tzdata cups-client
 
 WORKDIR /app
 COPY --from=builder /app/hce-api .

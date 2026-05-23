@@ -139,6 +139,11 @@ while true; do
   fi
 done
 
+# Impresora térmica (opcional)
+echo ""
+read -rp "  Nombre de la impresora térmica en CUPS (Enter para omitir): " PRINTER_TERMICA
+PRINTER_TERMICA="${PRINTER_TERMICA:-}"
+
 # Generar JWT_SECRET aleatorio
 JWT_SECRET=$(head -c 48 /dev/urandom | base64 | tr -d '\n=')
 
@@ -167,6 +172,8 @@ APP_TZ=${APP_TZ}
 DOCKER_API_PORT=${API_PORT}
 DOCKER_ALLOWED_ORIGIN=$([ "${UI_PORT}" = "80" ] && echo "http://${SERVER_HOST}" || echo "http://${SERVER_HOST}:${UI_PORT}")
 DOCKER_VITE_API_URL=http://${SERVER_HOST}:${API_PORT}
+
+PRINTER_TERMICA=${PRINTER_TERMICA}
 EOF
 
 cat > "$SCRIPT_DIR/ui/.env" <<EOF

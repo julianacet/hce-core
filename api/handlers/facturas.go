@@ -33,6 +33,7 @@ func FacturasRouter(db *pgxpool.Pool) http.Handler {
 		r.Put("/", h.actualizar)
 		r.Patch("/anular", h.anular)
 		r.Delete("/", h.eliminar)
+		r.Post("/imprimir-termica", ImprimirTermicaFactura(db))
 	})
 	return r
 }

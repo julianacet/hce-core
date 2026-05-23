@@ -39,7 +39,6 @@ Source: "hce-web.exe";  DestDir: "{app}"; Flags: ignoreversion
 ; Scripts de gestión
 Source: "primera_vez.bat"; DestDir: "{app}"; Flags: ignoreversion
 Source: "iniciar.bat";     DestDir: "{app}"; Flags: ignoreversion
-Source: "iniciar.vbs";     DestDir: "{app}"; Flags: ignoreversion
 Source: "detener.bat";     DestDir: "{app}"; Flags: ignoreversion
 Source: "migrar.bat";      DestDir: "{app}"; Flags: ignoreversion
 Source: "actualizar.bat";  DestDir: "{app}"; Flags: ignoreversion
@@ -73,11 +72,11 @@ Name: "{app}\migration\simedic"
 Name: "{app}\db\migration"
 
 [Icons]
-Name: "{group}\Iniciar HCE Consultorio";       Filename: "{app}\iniciar.vbs";    WorkingDir: "{app}"; IconFilename: "{app}\hce-api.exe"
+Name: "{group}\Iniciar HCE Consultorio";       Filename: "{app}\hce-web.exe";    WorkingDir: "{app}"
 Name: "{group}\Detener HCE Consultorio";       Filename: "{app}\detener.bat";    WorkingDir: "{app}"
 Name: "{group}\Migrar datos desde Simedic";    Filename: "{app}\migrar.bat";     WorkingDir: "{app}"
 Name: "{group}\Desinstalar HCE Consultorio";   Filename: "{uninstallexe}"
-Name: "{commondesktop}\HCE Consultorio";       Filename: "{app}\iniciar.vbs";    WorkingDir: "{app}"; IconFilename: "{app}\hce-api.exe"; Tasks: desktopicon
+Name: "{commondesktop}\HCE Consultorio";       Filename: "{app}\hce-web.exe";    WorkingDir: "{app}"; Tasks: desktopicon
 
 [Tasks]
 Name: "desktopicon"; Description: "Crear acceso directo en el escritorio"; GroupDescription: "Iconos adicionales:"
@@ -97,10 +96,10 @@ Filename: "{cmd}"; Parameters: "/c primera_vez.bat"; \
     Check: not FileExists(ExpandConstant('{app}\config.bat'))
 
 ; Primera instalación: ofrecer iniciar al terminar
-Filename: "{app}\iniciar.vbs"; \
+Filename: "{app}\hce-web.exe"; \
     Description: "Iniciar HCE Consultorio ahora"; \
     WorkingDir: "{app}"; \
-    Flags: shellexec nowait postinstall skipifsilent; \
+    Flags: nowait postinstall skipifsilent; \
     Check: not FileExists(ExpandConstant('{app}\config.bat'))
 
 [UninstallRun]
@@ -111,11 +110,15 @@ procedure CurStepChanged(CurStep: TSetupStep);
 var
   ResultCode: Integer;
 begin
-  // Antes de instalar archivos, detener servicios si es una actualización
-  if CurStep = ssInstall then
+  if CurStep = ssInstall then begin
+    // Detener servicios si es una actualización
     if FileExists(ExpandConstant('{app}\detener.bat')) then
       Exec(ExpandConstant('{app}\detener.bat'), '', ExpandConstant('{app}'),
            SW_HIDE, ewWaitUntilTerminated, ResultCode);
+    // Eliminar acceso directo antiguo del escritorio del usuario (creado por primera_vez.bat)
+    if FileExists(ExpandConstant('{userdesktop}\HCE Consultorio.lnk')) then
+      DeleteFile(ExpandConstant('{userdesktop}\HCE Consultorio.lnk'));
+  end;
 end;
 
 function InitializeSetup(): Boolean;

@@ -10,6 +10,7 @@ import { useTema } from '../context/TemaContext'
 import FacturaPDF from '../components/pdf/FacturaPDF'
 import FacturaTermicaPDF from '../components/pdf/FacturaTermicaPDF'
 import { TAMANO_PAGINA } from '../utils/impresion'
+import { apiFetch } from '../api/client'
 
 function formatCOP(valor: number) {
   return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(valor)
@@ -88,16 +89,10 @@ export default function DetalleFactura() {
   async function imprimirTermica() {
     setImprimiendoTermica(true)
     try {
-      const blob = await pdf(docTermica).toBlob()
-      const url = URL.createObjectURL(blob)
-      const ventana = window.open(url)
-      if (ventana) {
-        ventana.addEventListener('load', () => {
-          ventana.focus()
-          ventana.print()
-          ventana.addEventListener('afterprint', () => URL.revokeObjectURL(url))
-        })
-      }
+      await apiFetch(`/facturas/${facturaId}/imprimir-termica`, { method: 'POST' })
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Error al imprimir'
+      alert(msg)
     } finally {
       setImprimiendoTermica(false)
     }

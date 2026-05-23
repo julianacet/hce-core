@@ -59,6 +59,9 @@ if errorlevel 1 (
 )
 
 echo.
+set /p "PRINTER_TERMICA=  Nombre de la impresora termica en Windows (Enter para omitir): "
+
+echo.
 echo [1] Inicializando base de datos...
 
 mkdir "%DIR%logs" 2>nul
@@ -131,6 +134,7 @@ REM Escribir config.bat
     echo set "PGSQL_DATA=%%~dp0data"
     echo set "APP_TZ=America/Bogota"
     echo set "TZ=America/Bogota"
+    echo set "PRINTER_TERMICA=!PRINTER_TERMICA!"
 ) > "%CONFIG%"
 
 echo [7] Configurando inicio automatico...
@@ -141,7 +145,7 @@ echo.
 set /p "AUTOSTART=  Iniciar HCE automaticamente cuando encienda el equipo? [s/N]: "
 if /i "!AUTOSTART!"=="s" (
     for /f "delims=" %%s in ('powershell -nologo -noprofile -command "[Environment]::GetFolderPath(\"Startup\")"') do set "STARTUP=%%s"
-    powershell -nologo -noprofile -command "$ws=New-Object -ComObject WScript.Shell; $s=$ws.CreateShortcut('!STARTUP!\HCE Consultorio.lnk'); $s.TargetPath='!DIR!iniciar.vbs'; $s.WorkingDirectory='!DIR!'; $s.IconLocation='!DIR!hce-api.exe,0'; $s.Save()" >nul 2>&1
+    powershell -nologo -noprofile -command "$ws=New-Object -ComObject WScript.Shell; $s=$ws.CreateShortcut('!STARTUP!\HCE Consultorio.lnk'); $s.TargetPath='!DIR!hce-web.exe'; $s.WorkingDirectory='!DIR!'; $s.IconLocation='!DIR!hce-web.exe,0'; $s.Save()" >nul 2>&1
     echo       Inicio automatico configurado.
 )
 
