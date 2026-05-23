@@ -2,6 +2,13 @@
 setlocal enabledelayedexpansion
 chcp 65001 >nul 2>&1
 
+REM Auto-elevacion: relanzar como administrador si es necesario
+net session >nul 2>&1
+if errorlevel 1 (
+    powershell -Command "Start-Process -FilePath '%~f0' -Verb RunAs -Wait"
+    exit /b
+)
+
 set "DIR=%~dp0"
 set "PGSQL=%DIR%pgsql"
 set "DATA=%DIR%data"
