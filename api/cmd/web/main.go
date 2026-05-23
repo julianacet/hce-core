@@ -5,7 +5,6 @@ package main
 import (
 	"fmt"
 	"log"
-	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -21,24 +20,22 @@ func main() {
 		rootDir = filepath.Join(filepath.Dir(exe), "dist")
 	}
 
-	// Puerto aleatorio — solo accesible desde localhost
-	ln, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		log.Fatal("No se pudo abrir puerto:", err)
+	webPort := os.Getenv("WEB_PORT")
+	if webPort == "" {
+		webPort = "8080"
 	}
-	port := ln.Addr().(*net.TCPAddr).Port
-	ln.Close()
 
+	addr := fmt.Sprintf("127.0.0.1:%s", webPort)
 	go func() {
 		mux := http.NewServeMux()
 		mux.HandleFunc("/", spaHandler(rootDir))
-		if err := http.ListenAndServe(fmt.Sprintf("127.0.0.1:%d", port), mux); err != nil {
+		if err := http.ListenAndServe(addr, mux); err != nil {
 			log.Fatal(err)
 		}
 	}()
 
 	// Esperar que el servidor de archivos arranque
-	url := fmt.Sprintf("http://127.0.0.1:%d", port)
+	url := fmt.Sprintf("http://localhost:%s", webPort)
 	for range 20 {
 		time.Sleep(100 * time.Millisecond)
 		if resp, err := http.Get(url); err == nil {
