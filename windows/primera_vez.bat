@@ -44,20 +44,17 @@ if "!API_PORT!"=="" set API_PORT=8000
 
 :ask_password
 set "DB_PASS="
-set /p "DB_PASS=  Contrasena para la base de datos (min. 8 caracteres, sin ' @ / : ? # %% +): "
+set /p "DB_PASS=  Contrasena para la base de datos (min. 8 caracteres, sin ' @ / : ? # + \): "
 if "!DB_PASS!"=="" goto ask_password
 
-REM Verificar longitud >= 8 con PowerShell
-powershell -nologo -noprofile -command "if ('%DB_PASS%'.Length -lt 8) { exit 1 }" >nul 2>&1
-if errorlevel 1 (
-    echo   [!] La contrasena debe tener al menos 8 caracteres.
+REM Validar longitud y caracteres prohibidos leyendo $env:DB_PASS (evita bugs de FINDSTR con pipes)
+powershell -nologo -noprofile -command "if($env:DB_PASS.Length -lt 8){exit 1}; if($env:DB_PASS -match '[''@/:?#&+\\]'){exit 2}" >nul 2>&1
+if errorlevel 2 (
+    echo   [!] La contrasena no puede contener: ' @ / : ? # + \
     goto ask_password
 )
-
-REM Verificar caracteres que rompen SQL o la URL de conexion
-echo !DB_PASS! | findstr /r "[\"'@/:?#%%&+\\]" >nul 2>&1
-if not errorlevel 1 (
-    echo   [!] La contrasena no puede contener: ' " @ / : ? # %% + \
+if errorlevel 1 (
+    echo   [!] La contrasena debe tener al menos 8 caracteres.
     goto ask_password
 )
 
@@ -136,19 +133,15 @@ REM Escribir config.bat
     echo set "TZ=America/Bogota"
 ) > "%CONFIG%"
 
-echo [7] Creando accesos directos...
+echo [7] Configurando inicio automatico...
 
-REM Acceso directo en el escritorio
-for /f "delims=" %%d in ('powershell -nologo -noprofile -command "[Environment]::GetFolderPath(\"Desktop\")"') do set "DESKTOP=%%d"
-powershell -nologo -noprofile -command "$ws=New-Object -ComObject WScript.Shell; $s=$ws.CreateShortcut('!DESKTOP!\HCE Consultorio.lnk'); $s.TargetPath='!DIR!iniciar.bat'; $s.WorkingDirectory='!DIR!'; $s.IconLocation='!DIR!hce-api.exe,0'; $s.WindowStyle=1; $s.Save()" >nul 2>&1
-echo       Acceso directo creado en el escritorio.
-
+REM El acceso directo del escritorio lo crea el instalador (Inno Setup)
 REM Preguntar inicio automatico con Windows
 echo.
 set /p "AUTOSTART=  Iniciar HCE automaticamente cuando encienda el equipo? [s/N]: "
 if /i "!AUTOSTART!"=="s" (
     for /f "delims=" %%s in ('powershell -nologo -noprofile -command "[Environment]::GetFolderPath(\"Startup\")"') do set "STARTUP=%%s"
-    powershell -nologo -noprofile -command "$ws=New-Object -ComObject WScript.Shell; $s=$ws.CreateShortcut('!STARTUP!\HCE Consultorio.lnk'); $s.TargetPath='!DIR!iniciar.bat'; $s.WorkingDirectory='!DIR!'; $s.WindowStyle=1; $s.Save()" >nul 2>&1
+    powershell -nologo -noprofile -command "$ws=New-Object -ComObject WScript.Shell; $s=$ws.CreateShortcut('!STARTUP!\HCE Consultorio.lnk'); $s.TargetPath='!DIR!iniciar.vbs'; $s.WorkingDirectory='!DIR!'; $s.IconLocation='!DIR!hce-api.exe,0'; $s.Save()" >nul 2>&1
     echo       Inicio automatico configurado.
 )
 
@@ -158,8 +151,7 @@ echo   Configuracion completada exitosamente
 echo ================================================
 echo.
 echo   Para iniciar HCE Consultorio, haz doble clic en:
-echo     El acceso directo del escritorio, o
-echo     iniciar.bat
+echo     El acceso directo "HCE Consultorio" del escritorio.
 echo.
 echo   Credenciales iniciales:
 echo     Usuario:    admin
