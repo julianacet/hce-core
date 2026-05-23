@@ -39,6 +39,7 @@ Source: "hce-web.exe";  DestDir: "{app}"; Flags: ignoreversion
 ; Scripts de gestión
 Source: "primera_vez.bat"; DestDir: "{app}"; Flags: ignoreversion
 Source: "iniciar.bat";     DestDir: "{app}"; Flags: ignoreversion
+Source: "iniciar.vbs";     DestDir: "{app}"; Flags: ignoreversion
 Source: "detener.bat";     DestDir: "{app}"; Flags: ignoreversion
 Source: "migrar.bat";      DestDir: "{app}"; Flags: ignoreversion
 Source: "actualizar.bat";  DestDir: "{app}"; Flags: ignoreversion
@@ -72,11 +73,11 @@ Name: "{app}\migration\simedic"
 Name: "{app}\db\migration"
 
 [Icons]
-Name: "{group}\Iniciar HCE Consultorio";       Filename: "{app}\iniciar.bat";    WorkingDir: "{app}"; IconFilename: "{app}\hce-api.exe"
+Name: "{group}\Iniciar HCE Consultorio";       Filename: "{app}\iniciar.vbs";    WorkingDir: "{app}"; IconFilename: "{app}\hce-api.exe"
 Name: "{group}\Detener HCE Consultorio";       Filename: "{app}\detener.bat";    WorkingDir: "{app}"
 Name: "{group}\Migrar datos desde Simedic";    Filename: "{app}\migrar.bat";     WorkingDir: "{app}"
 Name: "{group}\Desinstalar HCE Consultorio";   Filename: "{uninstallexe}"
-Name: "{commondesktop}\HCE Consultorio";       Filename: "{app}\iniciar.bat";    WorkingDir: "{app}"; IconFilename: "{app}\hce-api.exe"; Tasks: desktopicon
+Name: "{commondesktop}\HCE Consultorio";       Filename: "{app}\iniciar.vbs";    WorkingDir: "{app}"; IconFilename: "{app}\hce-api.exe"; Tasks: desktopicon
 
 [Tasks]
 Name: "desktopicon"; Description: "Crear acceso directo en el escritorio"; GroupDescription: "Iconos adicionales:"
@@ -96,7 +97,7 @@ Filename: "{cmd}"; Parameters: "/c primera_vez.bat"; \
     Check: not FileExists(ExpandConstant('{app}\config.bat'))
 
 ; Primera instalación: ofrecer iniciar al terminar
-Filename: "{app}\iniciar.bat"; \
+Filename: "{app}\iniciar.vbs"; \
     Description: "Iniciar HCE Consultorio ahora"; \
     WorkingDir: "{app}"; \
     Flags: shellexec nowait postinstall skipifsilent; \

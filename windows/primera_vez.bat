@@ -23,16 +23,6 @@ echo.
 
 REM ── Verificaciones previas ────────────────────────────────────────────────────
 
-if not exist "%PGSQL%\bin\initdb.exe" (
-    echo [ERROR] No se encontro PostgreSQL portatil en la carpeta pgsql\
-    echo.
-    echo Descarga PostgreSQL portatil desde:
-    echo   https://www.postgresql.org/download/windows/ (ZIP / binaries only)
-    echo Extrae el contenido como la carpeta pgsql\ dentro de esta carpeta.
-    echo.
-    pause
-    exit /b 1
-)
 
 if exist "%DATA%\PG_VERSION" (
     echo [!] La base de datos ya fue inicializada.
@@ -118,6 +108,9 @@ echo [4] Cargando esquema y datos de referencia...
 if errorlevel 1 (
     echo [ADVERTENCIA] Hubo errores al cargar los datos. Revisa logs\init_sql.log
 )
+
+echo [4b] Otorgando permisos al usuario hce...
+"%PGSQL%\bin\psql.exe" -U postgres -p 5433 -d hce_provider -c "GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO hce; GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO hce; GRANT USAGE ON SCHEMA public TO hce;" >>"%DIR%logs\init_sql.log" 2>&1
 
 echo [5] Deteniendo PostgreSQL...
 "%PGSQL%\bin\pg_ctl.exe" stop -D "%DATA%" -m fast >nul 2>&1
