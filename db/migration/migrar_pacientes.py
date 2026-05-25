@@ -440,7 +440,7 @@ def exportar_csv(registros_raw: list[dict], ruta_csv: str):
             writer.writerow(fila)
 
     _guardar_log(advertencias)
-    print(f"\nCSV generado: {ruta_csv}")
+    print(f"\nCSV generado: {os.path.abspath(ruta_csv)}")
     print(f"  {len(transformados)} filas  ·  {con_default} con municipio por defecto (Rovira)")
     print()
     print("Para cargarlo en la BD:")
@@ -479,13 +479,16 @@ def main():
                         help='Exportar datos transformados a CSV en lugar de insertar en BD')
     args = parser.parse_args()
 
-    if not os.path.exists(args.archivo):
-        sys.exit(f"Archivo no encontrado: {args.archivo}")
+    archivo = os.path.abspath(args.archivo)
+    if not os.path.exists(archivo):
+        sys.exit(f"Archivo no encontrado: {archivo}")
 
-    registros = leer_excel(args.archivo)
+    registros = leer_excel(archivo)
 
     if args.csv:
-        exportar_csv(registros, args.csv)
+        # Si es solo un nombre sin directorio, crearlo junto al xlsx
+        ruta_csv = args.csv if os.path.dirname(args.csv) else os.path.join(os.path.dirname(archivo), args.csv)
+        exportar_csv(registros, os.path.abspath(ruta_csv))
     else:
         migrar(registros, dry_run=args.dry_run)
 
