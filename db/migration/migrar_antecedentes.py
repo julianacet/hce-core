@@ -16,8 +16,11 @@ Carga en BD:
          ON CONFLICT (numero_documento, pregunta_id) DO NOTHING
 """
 
-import sys, re, argparse, csv, uuid
+import sys, re, argparse, csv, uuid, unicodedata
 from pathlib import Path
+
+def _quitar_ctrl(s: str) -> str:
+    return ''.join(c for c in s if unicodedata.category(c)[0] != 'C' or c in '\t\n\r')
 
 try:
     import openpyxl
@@ -98,7 +101,8 @@ def leer(nombre: str):
     ws = wb.active
     filas = list(ws.iter_rows(values_only=True))
     header = [str(c) if c is not None else '' for c in filas[0]]
-    return header, filas[1:]
+    data = [tuple(_quitar_ctrl(str(v)) if isinstance(v, str) else v for v in f) for f in filas[1:]]
+    return header, data
 
 
 def s(val) -> str:

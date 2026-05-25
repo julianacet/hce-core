@@ -13,8 +13,11 @@ Nota: creado_por='migracion'. Actualizar al username real del médico con:
     UPDATE encuentro_diagnostico SET ... (no tiene creado_por, hereda del encuentro)
 """
 
-import sys, os, re, argparse, csv, json, uuid
+import sys, os, re, argparse, csv, json, uuid, unicodedata
 from datetime import datetime, date
+
+def _quitar_ctrl(s: str) -> str:
+    return ''.join(c for c in s if unicodedata.category(c)[0] != 'C' or c in '\t\n\r')
 
 try:
     import openpyxl
@@ -205,7 +208,7 @@ def leer_excel(ruta: str):
     ws = wb.active
     filas = list(ws.iter_rows(values_only=True))
     header = list(filas[0])
-    data   = filas[1:]
+    data   = [tuple(_quitar_ctrl(str(v)) if isinstance(v, str) else v for v in f) for f in filas[1:]]
     print(f"  {len(data)} filas leídas.")
     return header, data
 
