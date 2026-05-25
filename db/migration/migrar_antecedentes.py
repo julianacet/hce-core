@@ -458,10 +458,13 @@ def exportar_csv(filas: list[dict], ruta: str):
         w = csv.DictWriter(f, fieldnames=COLS, extrasaction='ignore')
         w.writeheader()
         w.writerows(filas)
-    print(f"\nCSV generado: {ruta}  ({len(filas)} filas)")
-    print("\nPara cargar en la BD:")
+    ruta_abs = str(Path(ruta).resolve()).replace('\\', '/')
+    print(f"\nCSV generado: {ruta_abs}  ({len(filas)} filas)")
+    print("\nPara cargar en la BD, ejecuta dentro de psql:")
+    print()
+    print("  SET client_encoding = 'UTF8';")
     print(f"  \\COPY antecedente_respuesta (id,numero_documento,pregunta_id,valor,detalle)"
-          f" FROM '{ruta}' CSV HEADER NULL ''")
+          f" FROM '{ruta_abs}' CSV HEADER NULL ''")
 
 
 def dry_run(filas: list[dict]):

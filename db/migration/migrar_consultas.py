@@ -382,9 +382,13 @@ def exportar_csv(encuentros, diagnosticos, advertencias, prefijo: str):
     print(f"  {ruta_enc}  ({len(encuentros)} filas)")
     print(f"  {ruta_diag}  ({len(diagnosticos)} filas)")
     print()
-    print("Para cargar en la BD (en este orden):")
-    print(f"  \\COPY encuentro_clinico ({','.join(COLS_ENCUENTRO)}) FROM '{ruta_enc}' CSV HEADER NULL ''")
-    print(f"  \\COPY encuentro_diagnostico ({','.join(COLS_DIAGNOSTICO)}) FROM '{ruta_diag}' CSV HEADER NULL ''")
+    ruta_enc_abs  = os.path.abspath(ruta_enc).replace('\\', '/')
+    ruta_diag_abs = os.path.abspath(ruta_diag).replace('\\', '/')
+    print("Para cargar en la BD, ejecuta dentro de psql (en este orden):")
+    print()
+    print("  SET client_encoding = 'UTF8';")
+    print(f"  \\COPY encuentro_clinico ({','.join(COLS_ENCUENTRO)}) FROM '{ruta_enc_abs}' CSV HEADER NULL ''")
+    print(f"  \\COPY encuentro_diagnostico ({','.join(COLS_DIAGNOSTICO)}) FROM '{ruta_diag_abs}' CSV HEADER NULL ''")
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
