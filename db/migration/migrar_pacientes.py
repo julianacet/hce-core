@@ -20,6 +20,7 @@ que lo invoca en el script de instalación (install.sh o equivalente).
 import sys
 import os
 import re
+import unicodedata
 import argparse
 from datetime import datetime, date
 
@@ -134,10 +135,13 @@ EPS_NOMBRE_CODIGO: dict[str, str | None] = {
 # HELPERS DE LIMPIEZA
 # ═══════════════════════════════════════════════════════════════════════════════
 
+def _quitar_ctrl(s: str) -> str:
+    return ''.join(c for c in s if unicodedata.category(c)[0] != 'C' or c == '\n')
+
 def limpiar_str(val) -> str | None:
     if val is None:
         return None
-    s = str(val).strip()
+    s = _quitar_ctrl(str(val)).strip()
     return s if s and s.upper() not in ('NO', 'NINGUNA', 'NINGUNO', 'N/A', 'N/D') else None
 
 
@@ -230,7 +234,8 @@ def leer_excel(ruta: str) -> list[dict]:
     encabezado = [str(c).strip() if c else f'col{i}' for i, c in enumerate(filas[0])]
     registros = []
     for fila in filas[1:]:
-        registros.append(dict(zip(encabezado, fila)))
+        fila_limpia = tuple(_quitar_ctrl(str(v)) if isinstance(v, str) else v for v in fila)
+        registros.append(dict(zip(encabezado, fila_limpia)))
     print(f"  {len(registros)} filas leídas.")
     return registros
 
@@ -429,16 +434,17 @@ def exportar_csv(registros_raw: list[dict], ruta_csv: str):
         writer = csv.DictWriter(f, fieldnames=COLUMNAS_CSV, extrasaction='ignore')
         writer.writeheader()
         for pac in transformados:
-            # Convertir bool a texto que PostgreSQL COPY entiende
             pac['politica_datos_aceptada'] = 'false'
-            writer.writerow(pac)
+            fila = {k: _quitar_ctrl(str(v)) if isinstance(v, str) else v
+                    for k, v in pac.items()}
+            writer.writerow(fila)
 
     _guardar_log(advertencias)
     print(f"\nCSV generado: {ruta_csv}")
     print(f"  {len(transformados)} filas  ·  {con_default} con municipio por defecto (Rovira)")
     print()
     print("Para cargarlo en la BD:")
-    print(f"  \\COPY paciente ({', '.join(COLUMNAS_CSV)}) FROM '{ruta_csv}' CSV HEADER NULL ''")
+    print(f"  \\COPY paciente ({', '.join(COLUMNAS_CSV)}) FROM '{ruta_csv}' WITH (FORMAT CSV, HEADER, NULL '', ENCODING 'UTF8')")
 
 
 def _guardar_log(advertencias: list[str]):
