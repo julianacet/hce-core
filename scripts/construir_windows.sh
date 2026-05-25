@@ -81,7 +81,7 @@ ok "hce-web.exe generado (ventana nativa)"
 
 info "Construyendo frontend..."
 cd "$UI_DIR"
-VITE_API_URL="${VITE_API_URL_WINDOWS:-http://localhost:8000}" npm run build
+npm run build
 
 info "Copiando dist/ a windows/..."
 rm -rf "$WINDOWS_DIR/dist"

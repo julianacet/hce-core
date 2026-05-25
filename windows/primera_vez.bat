@@ -21,8 +21,64 @@ echo    HCE Consultorio - Primera configuracion
 echo ================================================
 echo.
 
-REM ── Verificaciones previas ────────────────────────────────────────────────────
+REM ── Verificar si ya fue configurado ───────────────────────────────────────────
 
+if exist "%CONFIG%" (
+    echo [!] Este equipo ya fue configurado.
+    echo     Si quieres reconfigurar, elimina config.bat y ejecuta este script de nuevo.
+    echo.
+    pause
+    exit /b 0
+)
+
+REM ── Preguntar modo de uso ─────────────────────────────────────────────────────
+
+echo Tipo de equipo:
+echo.
+echo   [1] Servidor  - equipo principal del consultorio (tiene la base de datos)
+echo   [2] Cliente   - equipo adicional que se conecta al servidor (ej. recepcion)
+echo.
+:ask_mode
+set /p "MODO_OPCION=  Elige una opcion [1/2]: "
+if "!MODO_OPCION!"=="1" set "MODE=servidor"
+if "!MODO_OPCION!"=="2" set "MODE=cliente"
+if not defined MODE (
+    echo   [!] Opcion invalida. Escribe 1 o 2.
+    goto ask_mode
+)
+
+REM ── Modo cliente: solo escribir config.bat ────────────────────────────────────
+
+if "!MODE!"=="cliente" (
+    echo.
+    echo [1] Configurando modo cliente...
+
+    (
+        echo @echo off
+        echo REM Generado por primera_vez.bat
+        echo set "MODE=cliente"
+    ) > "%CONFIG%"
+
+    echo [2] Configurando firewall para descubrimiento en red local...
+    netsh advfirewall firewall add rule name="HCE Consultorio - Descubrimiento" ^
+        dir=in action=allow protocol=UDP localport=45678 >nul 2>&1
+
+    echo.
+    echo ================================================
+    echo   Configuracion completada
+    echo ================================================
+    echo.
+    echo   Este equipo se conectara automaticamente al servidor HCE
+    echo   cuando esten en la misma red local.
+    echo.
+    echo   Asegurate de que el equipo del consultorio este encendido
+    echo   antes de abrir HCE Consultorio en este equipo.
+    echo.
+    pause
+    exit /b 0
+)
+
+REM ── Modo servidor: configuracion completa ────────────────────────────────────
 
 if exist "%DATA%\PG_VERSION" (
     echo [!] La base de datos ya fue inicializada.
@@ -32,14 +88,10 @@ if exist "%DATA%\PG_VERSION" (
     exit /b 0
 )
 
-REM ── Preguntar configuracion ────────────────────────────────────────────────────
-
-echo Configuracion del consultorio:
 echo.
-set /p "UI_PORT=  Puerto de acceso en el navegador [8080]: "
-if "!UI_PORT!"=="" set UI_PORT=8080
-
-set /p "API_PORT=  Puerto del backend API [8000]: "
+echo Configuracion del servidor:
+echo.
+set /p "API_PORT=  Puerto del servidor [8000]: "
 if "!API_PORT!"=="" set API_PORT=8000
 
 :ask_password
@@ -47,7 +99,6 @@ set "DB_PASS="
 set /p "DB_PASS=  Contrasena para la base de datos (min. 8 caracteres, sin ' @ / : ? # + \): "
 if "!DB_PASS!"=="" goto ask_password
 
-REM Validar longitud y caracteres prohibidos leyendo $env:DB_PASS (evita bugs de FINDSTR con pipes)
 powershell -nologo -noprofile -command "if($env:DB_PASS.Length -lt 8){exit 1}; if($env:DB_PASS -match '[''@/:?#&+\\]'){exit 2}" >nul 2>&1
 if errorlevel 2 (
     echo   [!] La contrasena no puede contener: ' @ / : ? # + \
@@ -66,12 +117,10 @@ echo [1] Inicializando base de datos...
 
 mkdir "%DIR%logs" 2>nul
 
-REM Dar permisos completos al directorio data para que initdb pueda operar en Program Files
 rmdir /s /q "%DATA%" 2>nul
 mkdir "%DATA%" 2>nul
 icacls "%DATA%" /grant "%USERNAME%":(OI)(CI)F >nul 2>&1
 
-REM initdb con autenticacion trust (solo localhost)
 "%PGSQL%\bin\initdb.exe" -D "%DATA%" -U postgres -E UTF8 --locale=C -A trust >"%DIR%logs\initdb.log" 2>&1
 if errorlevel 1 (
     echo [ERROR] Fallo initdb.exe. Revisa logs\initdb.log
@@ -79,11 +128,9 @@ if errorlevel 1 (
     exit /b 1
 )
 
-REM Configurar puerto 5433 y solo localhost
 powershell -nologo -noprofile -command ^
     "(Get-Content '%DATA%\postgresql.conf') | ForEach-Object { $_ -replace '^#?port\s*=\s*\d+', 'port = 5433' -replace \"^#?listen_addresses\s*=\s*'[^']*'\", \"listen_addresses = 'localhost'\" } | Set-Content '%DATA%\postgresql.conf'"
 
-REM Agregar regla md5 para usuario hce (antes de la regla trust)
 echo host    hce_provider    hce    127.0.0.1/32    md5>>"%DATA%\pg_hba.conf"
 
 echo [2] Iniciando PostgreSQL temporalmente...
@@ -117,30 +164,29 @@ echo [5] Deteniendo PostgreSQL...
 
 echo [6] Generando configuracion...
 
-REM Generar JWT_SECRET aleatorio con PowerShell
 for /f "delims=" %%i in ('powershell -nologo -noprofile -command "[Convert]::ToBase64String([Security.Cryptography.RandomNumberGenerator]::GetBytes(48))"') do set JWT_SECRET=%%i
 
-REM Escribir config.bat
 (
     echo @echo off
     echo REM Generado por primera_vez.bat - no editar manualmente
+    echo set "MODE=servidor"
     echo set "DB_PASS=!DB_PASS!"
     echo set "DATABASE_URL=postgresql://hce:!DB_PASS!@127.0.0.1:5433/hce_provider?sslmode=disable"
     echo set "JWT_SECRET=!JWT_SECRET!"
     echo set "PORT=!API_PORT!"
-    echo set "ALLOWED_ORIGIN=http://localhost:!UI_PORT!"
-    echo set "WEB_PORT=!UI_PORT!"
-    echo set "WEB_DIR=%%~dp0dist"
     echo set "PGSQL_DATA=%%~dp0data"
     echo set "APP_TZ=America/Bogota"
     echo set "TZ=America/Bogota"
     echo set "PRINTER_TERMICA=!PRINTER_TERMICA!"
 ) > "%CONFIG%"
 
-echo [7] Configurando inicio automatico...
+echo [7] Configurando firewall para acceso desde la red local...
+netsh advfirewall firewall add rule name="HCE Consultorio - Servidor" ^
+    dir=in action=allow protocol=TCP localport=!API_PORT! >nul 2>&1
+netsh advfirewall firewall add rule name="HCE Consultorio - Descubrimiento" ^
+    dir=in action=allow protocol=UDP localport=45678 >nul 2>&1
 
-REM El acceso directo del escritorio lo crea el instalador (Inno Setup)
-REM Preguntar inicio automatico con Windows
+echo [8] Configurando inicio automatico...
 echo.
 set /p "AUTOSTART=  Iniciar HCE automaticamente cuando encienda el equipo? [s/N]: "
 if /i "!AUTOSTART!"=="s" (

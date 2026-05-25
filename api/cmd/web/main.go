@@ -4,7 +4,10 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
+	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/exec"
@@ -35,8 +38,20 @@ func main() {
 		fatalDialog("No se encontró config.bat.\nPor favor reinstala la aplicación.")
 	}
 
+	mode := cfgVal(cfg, "MODE", "servidor")
+
+	if mode == "cliente" {
+		runModoCliente()
+	} else {
+		runModoServidor(exeDir, cfg, logDir)
+	}
+}
+
+// runModoServidor arranca PostgreSQL + API y abre la ventana apuntando a localhost.
+func runModoServidor(exeDir string, cfg map[string]string, logDir string) {
 	pgCtl := filepath.Join(exeDir, "pgsql", "bin", "pg_ctl.exe")
 	dataDir := filepath.Join(exeDir, "data")
+
 	if err := startPostgres(pgCtl, dataDir, logDir); err != nil {
 		fatalDialog("No se pudo iniciar la base de datos:\n" + err.Error() + "\n\nRevisa logs\\postgres.log")
 	}
@@ -51,32 +66,63 @@ func main() {
 		}
 	}
 
-	webPort := cfgVal(cfg, "WEB_PORT", "8080")
-	rootDir := filepath.Join(exeDir, "dist")
-	go func() {
-		mux := http.NewServeMux()
-		mux.HandleFunc("/", spaHandler(rootDir))
-		if err := http.ListenAndServe("127.0.0.1:"+webPort, mux); err != nil {
-			log.Println("servidor web:", err)
-		}
-	}()
+	// El API ahora sirve también el frontend — un solo puerto
+	openWebview("http://localhost:"+apiPort, "HCE Consultorio")
+}
 
-	url := "http://localhost:" + webPort
-	for range 20 {
-		time.Sleep(100 * time.Millisecond)
-		if resp, err := http.Get(url); err == nil {
-			resp.Body.Close()
-			break
+// runModoCliente descubre el servidor en la red local vía UDP y abre la ventana.
+func runModoCliente() {
+	for {
+		url, err := discoverServer(15 * time.Second)
+		if err != nil {
+			if !errorDialogConReintento("No se encontró el servidor HCE en la red.\n\nAsegúrate de que el equipo del consultorio esté encendido y en la misma red.") {
+				return
+			}
+			continue
 		}
+		openWebview(url, "HCE Consultorio")
+		return
 	}
+}
 
+// discoverServer escucha el broadcast UDP del servidor hasta timeout.
+// Retorna la URL completa del servidor (ej. "http://192.168.1.10:8000").
+func discoverServer(timeout time.Duration) (string, error) {
+	conn, err := net.ListenPacket("udp4", ":45678")
+	if err != nil {
+		return "", fmt.Errorf("no se pudo escuchar en puerto UDP 45678: %w", err)
+	}
+	defer conn.Close()
+
+	conn.SetDeadline(time.Now().Add(timeout))
+
+	buf := make([]byte, 512)
+	for {
+		n, addr, err := conn.ReadFrom(buf)
+		if err != nil {
+			return "", fmt.Errorf("tiempo de espera agotado")
+		}
+
+		var msg struct {
+			App  string `json:"app"`
+			Port string `json:"port"`
+		}
+		if json.Unmarshal(buf[:n], &msg) != nil || msg.App != "hce" {
+			continue
+		}
+
+		serverIP := addr.(*net.UDPAddr).IP.String()
+		return fmt.Sprintf("http://%s:%s", serverIP, msg.Port), nil
+	}
+}
+
+func openWebview(url, title string) {
 	w := webview.New(false)
 	defer w.Destroy()
-	w.SetTitle("HCE Consultorio")
+	w.SetTitle(title)
 	w.SetSize(1280, 800, webview.HintNone)
 	w.Navigate(url)
 	w.Run()
-	// Los servicios (PostgreSQL + API) siguen en segundo plano al cerrar la ventana
 }
 
 // parseConfig lee líneas `set "KEY=VALUE"` de config.bat
@@ -94,8 +140,8 @@ func parseConfig(path string) (map[string]string, error) {
 		if !strings.HasPrefix(strings.ToLower(line), "set \"") {
 			continue
 		}
-		inner := line[5:]                       // quitar: set "
-		inner = strings.TrimSuffix(inner, "\"") // quitar: "  final
+		inner := line[5:]
+		inner = strings.TrimSuffix(inner, "\"")
 		idx := strings.Index(inner, "=")
 		if idx < 0 {
 			continue
@@ -135,7 +181,7 @@ func startAPI(apiExe, workDir string, cfg map[string]string, logDir string) erro
 
 func buildEnv(cfg map[string]string) []string {
 	env := os.Environ()
-	for _, k := range []string{"DATABASE_URL", "JWT_SECRET", "PORT", "ALLOWED_ORIGIN", "APP_TZ", "TZ", "PRINTER_TERMICA"} {
+	for _, k := range []string{"DATABASE_URL", "JWT_SECRET", "PORT", "APP_TZ", "TZ", "PRINTER_TERMICA"} {
 		if v, ok := cfg[k]; ok {
 			env = append(env, k+"="+v)
 		}
@@ -177,13 +223,14 @@ func fatalDialog(msg string) {
 	os.Exit(1)
 }
 
-func spaHandler(rootDir string) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		path := filepath.Join(rootDir, filepath.Clean("/"+r.URL.Path))
-		if _, err := os.Stat(path); os.IsNotExist(err) {
-			http.ServeFile(w, r, filepath.Join(rootDir, "index.html"))
-			return
-		}
-		http.FileServer(http.Dir(rootDir)).ServeHTTP(w, r)
-	}
+// errorDialogConReintento muestra un diálogo Sí/No. Retorna true si el usuario elige Sí (reintentar).
+func errorDialogConReintento(msg string) bool {
+	texto := msg + "\n\n¿Desea intentar de nuevo?"
+	m, _ := syscall.UTF16PtrFromString(texto)
+	t, _ := syscall.UTF16PtrFromString("HCE Consultorio")
+	ret, _, _ := syscall.NewLazyDLL("user32.dll").NewProc("MessageBoxW").Call(
+		0, uintptr(unsafe.Pointer(m)), uintptr(unsafe.Pointer(t)),
+		0x34, // MB_YESNO | MB_ICONWARNING
+	)
+	return ret == 6 // IDYES
 }

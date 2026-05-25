@@ -61,7 +61,7 @@ export function MedicoProvider({ children }: { children: ReactNode }) {
 
   // Sincronizar desde el servidor al montar
   useEffect(() => {
-    fetch(`${import.meta.env.VITE_API_URL}/configuracion`)
+    fetch('/api/configuracion')
       .then(r => r.ok ? r.json() : null)
       .catch(() => null)
       .then((data: { medico?: Partial<DatosMedico> } | null) => {
