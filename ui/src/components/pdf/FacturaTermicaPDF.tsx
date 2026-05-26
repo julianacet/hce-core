@@ -136,10 +136,9 @@ export default function FacturaTermicaPDF({
         )}
 
         {/* Encabezado consultorio */}
-        <Text style={[s.c, s.bold, { fontSize: 8 }]}>
+        <Text style={[s.c, s.bold, { fontSize: 6.5 }]}>
           {medico.nombreConsultorio || 'Consultorio Médico'}
         </Text>
-        {medico.nombre ? <Text style={[s.c, { fontSize: 6.5 }]}>{medico.nombre}</Text> : null}
         {medico.especialidad ? <Text style={[s.c, { fontSize: 6 }]}>{medico.especialidad}</Text> : null}
         {(medico.direccion || medico.ciudad) ? (
           <Text style={[s.c, { fontSize: 6 }]}>

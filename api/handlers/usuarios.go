@@ -32,6 +32,7 @@ type usuariosHandler struct{ db *pgxpool.Pool }
 var rolesValidos = map[string]bool{
 	"admin": true, "medico": true,
 	"recepcionista": true, "enfermeria": true, "facturador": true,
+	"farmacia": true,
 }
 
 func (h *usuariosHandler) listar(w http.ResponseWriter, r *http.Request) {
@@ -75,7 +76,7 @@ func (h *usuariosHandler) crear(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !rolesValidos[input.Rol] {
-		responderError(w, http.StatusBadRequest, "rol debe ser admin, medico, recepcionista, enfermeria o facturador")
+		responderError(w, http.StatusBadRequest, "rol debe ser admin, medico, recepcionista, enfermeria, facturador o farmacia")
 		return
 	}
 
@@ -116,7 +117,7 @@ func (h *usuariosHandler) actualizar(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !rolesValidos[input.Rol] {
-		responderError(w, http.StatusBadRequest, "rol debe ser admin, medico, recepcionista, enfermeria o facturador")
+		responderError(w, http.StatusBadRequest, "rol debe ser admin, medico, recepcionista, enfermeria, facturador o farmacia")
 		return
 	}
 
