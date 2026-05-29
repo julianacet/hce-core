@@ -136,6 +136,15 @@ func main() {
 
 			// Solo admin
 			r.With(appmiddleware.RequiereRol("admin")).Mount("/usuarios", handlers.UsuariosRouter(db))
+
+			// ── Módulo farmacia — requiere rol "farmacia" (o admin) ───────────
+			r.Group(func(r chi.Router) {
+				r.Use(appmiddleware.RequiereRol("farmacia"))
+				r.Mount("/farmacia/facturas", handlers.FarmaciaFacturasRouter(db))
+				r.Mount("/farmacia/dashboard", handlers.FarmaciaDashboardRouter(db))
+				r.Mount("/farmacia/pacientes", handlers.FarmaciaPacientesRouter(db))
+				r.Mount("/farmacia/medicamentos", handlers.FarmaciaMedicamentosRouter(db))
+			})
 		})
 	})
 

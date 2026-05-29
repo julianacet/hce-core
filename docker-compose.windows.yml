@@ -1,0 +1,16 @@
+# Sobreescritura para Windows (Docker Desktop + WSL2)
+#
+# Uso — copiar .env.windows.example a .env.windows, completar credenciales y:
+#
+#   docker compose --env-file .env.windows -f docker-compose.yml -f docker-compose.windows.yml up -d --build
+#
+# Requisito: hce-print-relay.exe debe estar corriendo antes de levantar
+# los contenedores. Ver print-relay/README.md.
+
+services:
+  hce-api:
+    environment:
+      PRINTER_MODE: http
+      PRINTER_HTTP_URL: http://host.docker.internal:8765
+      # ALLOWED_ORIGIN apunta al nuevo puerto de la UI (8090 en vez de 80)
+      ALLOWED_ORIGIN: ${DOCKER_ALLOWED_ORIGIN:-http://localhost:8090}
