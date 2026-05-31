@@ -26,18 +26,8 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: tema.colorFondo }}>
       <div className="w-full max-w-sm">
 
-        {/* Logo / nombre */}
+        {/* Nombre del sistema */}
         <div className="flex flex-col items-center mb-8">
-          {tema.logoBase64 ? (
-            <img src={tema.logoBase64} alt="Logo" className="h-16 object-contain mb-3" />
-          ) : (
-            <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-3"
-              style={{ backgroundColor: tema.colorSidebar }}>
-              <span className="text-2xl font-bold" style={{ color: tema.colorSidebarTexto }}>
-                {tema.nombreSistema.charAt(0)}
-              </span>
-            </div>
-          )}
           <h1 className="text-xl font-semibold" style={{ color: tema.colorTexto }}>
             {tema.nombreSistema}
           </h1>

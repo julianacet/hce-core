@@ -18,6 +18,7 @@ DefaultGroupName=HCE Consultorio
 DisableProgramGroupPage=yes
 OutputDir=.
 OutputBaseFilename=HCE-Consultorio-Setup
+SetupIconFile=hce.ico
 Compression=lzma2/ultra64
 SolidCompression=yes
 WizardStyle=modern
@@ -35,6 +36,9 @@ Name: "spanish"; MessagesFile: "compiler:Languages\Spanish.isl"
 ; Binarios de la aplicación (compilados por construir_windows.sh)
 Source: "hce-api.exe";  DestDir: "{app}"; Flags: ignoreversion
 Source: "hce-web.exe";  DestDir: "{app}"; Flags: ignoreversion
+
+; Icono de la aplicación (generado en CI desde ui/public/favicon.svg)
+Source: "hce.ico"; DestDir: "{app}"; Flags: ignoreversion
 
 ; Scripts de gestión
 Source: "primera_vez.bat"; DestDir: "{app}"; Flags: ignoreversion
@@ -75,11 +79,11 @@ Name: "{app}\migration\simedic"
 Name: "{app}\db\migration"
 
 [Icons]
-Name: "{group}\Iniciar HCE Consultorio";       Filename: "{app}\hce-web.exe";    WorkingDir: "{app}"
+Name: "{group}\Iniciar HCE Consultorio";       Filename: "{app}\hce-web.exe";    WorkingDir: "{app}"; IconFilename: "{app}\hce.ico"
 Name: "{group}\Detener HCE Consultorio";       Filename: "{app}\detener.bat";    WorkingDir: "{app}"
 Name: "{group}\Migrar datos desde Simedic";    Filename: "{app}\migrar.bat";     WorkingDir: "{app}"
 Name: "{group}\Desinstalar HCE Consultorio";   Filename: "{uninstallexe}"
-Name: "{commondesktop}\HCE Consultorio";       Filename: "{app}\hce-web.exe";    WorkingDir: "{app}"; Tasks: desktopicon
+Name: "{commondesktop}\HCE Consultorio";       Filename: "{app}\hce-web.exe";    WorkingDir: "{app}"; IconFilename: "{app}\hce.ico"; Tasks: desktopicon
 
 [Tasks]
 Name: "desktopicon"; Description: "Crear acceso directo en el escritorio"; GroupDescription: "Iconos adicionales:"

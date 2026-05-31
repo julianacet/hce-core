@@ -37,6 +37,14 @@ jobs:
         shell: bash
         run: echo "${{ steps.version.outputs.VERSION }}" > windows/version.txt
 
+      # Compilar resource.rc → .syso para embeber el icono en los exes
+      - name: Compilar recursos Windows
+        shell: powershell
+        run: |
+          $windres = "C:\msys64\mingw64\bin\windres.exe"
+          & $windres windows/resource.rc -O coff -o api/cmd/resource.syso
+          & $windres windows/resource.rc -O coff -o api/cmd/web/resource.syso
+
       # Compilar hce-api.exe (sin CGO, cross-compile desde Windows)
       - name: Compilar hce-api.exe
         working-directory: api
