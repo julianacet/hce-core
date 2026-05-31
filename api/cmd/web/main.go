@@ -181,10 +181,8 @@ func startAPI(apiExe, workDir string, cfg map[string]string, logDir string) erro
 
 func buildEnv(cfg map[string]string) []string {
 	env := os.Environ()
-	for _, k := range []string{"DATABASE_URL", "JWT_SECRET", "PORT", "APP_TZ", "TZ", "PRINTER_TERMICA"} {
-		if v, ok := cfg[k]; ok {
-			env = append(env, k+"="+v)
-		}
+	for k, v := range cfg {
+		env = append(env, k+"="+v)
 	}
 	return env
 }

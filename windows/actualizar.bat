@@ -30,6 +30,12 @@ if not exist "%CONFIG%" (
 )
 call "%CONFIG%"
 
+REM ── Migrar config.bat si hay variables nuevas requeridas ─────────────────────
+REM    Patron para versiones futuras:
+REM      findstr /i "NUEVA_VAR" "%CONFIG%" >nul 2>&1
+REM      if errorlevel 1 ( echo set "NUEVA_VAR=valor_defecto">> "%CONFIG%" )
+REM    Por ahora no hay variables pendientes de migrar.
+
 mkdir "%DIR%logs" 2>nul
 
 REM ── Iniciar PostgreSQL si no esta corriendo ───────────────────────────────────
@@ -80,3 +86,9 @@ REM ── Reiniciar servicios ────────────────�
 
 echo [3] Iniciando servicios...
 call "%DIR%iniciar.bat"
+
+REM ── Reabrir la interfaz ───────────────────────────────────────────────────────
+
+if exist "%DIR%hce-web.exe" (
+    start "" "%DIR%hce-web.exe"
+)

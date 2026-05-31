@@ -54,6 +54,9 @@ Source: "..\db\migration\migrar_antecedentes.py"; DestDir: "{app}\migration"; Fl
 ; Frontend estático (generado por construir_windows.sh)
 Source: "dist\*"; DestDir: "{app}\dist"; Flags: ignoreversion recursesubdirs createallsubdirs
 
+; Migraciones de esquema (aplicadas en actualizaciones por actualizar.bat)
+Source: "..\db\migration\migrate_*.sql"; DestDir: "{app}\db\migration"; Flags: ignoreversion skipifsourcedoesntexist
+
 ; Esquema e datos de referencia (solo se usan en primera instalación)
 Source: "..\db\init.sql";               DestDir: "{app}\db"; Flags: ignoreversion
 Source: "..\db\seed_divipola.sql";      DestDir: "{app}\db"; Flags: ignoreversion

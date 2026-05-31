@@ -98,12 +98,8 @@ cp "$ROOT/db/migration/migrar_antecedentes.py" "$WINDOWS_DIR/migration/"
 ok "Scripts de migración en windows/migration/"
 
 info "Copiando migraciones de esquema de BD..."
-# Las migraciones de esquema van en db/migration/ dentro del instalador.
-# Se aplican automáticamente en cada actualización (actualizar.bat).
-for f in "$ROOT/db/migration"/migrate_*.sql; do
-    [[ -f "$f" ]] && cp "$f" "$WINDOWS_DIR/../db/migration/" 2>/dev/null || true
-done
-ok "Migraciones de esquema listas"
+# hce.iss las toma directamente de db/migration/ — no hace falta copiarlas.
+ok "Migraciones de esquema listas (referenciadas desde db/migration/)"
 
 # ── 5. Verificar PostgreSQL portátil ─────────────────────────────────────────
 
