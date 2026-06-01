@@ -37,13 +37,12 @@ jobs:
         shell: bash
         run: echo "${{ steps.version.outputs.VERSION }}" > windows/version.txt
 
-      # Compilar resource.rc → .syso para embeber el icono en los exes
+      # Embeber icono en los exes via rsrc (genera .syso, no requiere windres)
       - name: Compilar recursos Windows
-        shell: powershell
+        shell: bash
         run: |
-          $windres = "C:\msys64\mingw64\bin\windres.exe"
-          & $windres windows/resource.rc -O coff -o api/cmd/resource.syso
-          & $windres windows/resource.rc -O coff -o api/cmd/web/resource.syso
+          go run github.com/akavel/rsrc@latest -ico windows/hce.ico -o api/cmd/resource.syso
+          go run github.com/akavel/rsrc@latest -ico windows/hce.ico -o api/cmd/web/resource.syso
 
       # Compilar hce-api.exe (sin CGO, cross-compile desde Windows)
       - name: Compilar hce-api.exe
