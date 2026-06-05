@@ -223,7 +223,7 @@ export default function PacienteFormFields({
       {/* Información de salud */}
       <Seccion titulo="Información de salud">
         <div className="grid grid-cols-2 gap-4">
-          <Campo label="Tipo de usuario" required>
+          <Campo label="Tipo de usuario (RIPS)" required>
             <select value={form.tipo_usuario ?? '04'} onChange={e => set('tipo_usuario', e.target.value)} className="input-hce">
               <option value="01">Contributivo</option>
               <option value="02">Subsidiado</option>
@@ -234,10 +234,12 @@ export default function PacienteFormFields({
             </select>
           </Campo>
           <div />
-          <SelectorEps
-            value={form.codigo_eps ?? ''}
-            onChange={v => set('codigo_eps', v)}
-          />
+          {!['03', '04', '06'].includes(form.tipo_usuario ?? '04') && (
+            <SelectorEps
+              value={form.codigo_eps ?? ''}
+              onChange={v => set('codigo_eps', v)}
+            />
+          )}
         </div>
 
       </Seccion>
