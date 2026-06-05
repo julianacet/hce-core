@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -251,7 +252,8 @@ func (h *FacturaHandler) obtener(w http.ResponseWriter, r *http.Request) {
 // POST /facturas   body: { paciente_documento, items }
 func (h *FacturaHandler) crear(w http.ResponseWriter, r *http.Request) {
 	var input struct {
-		PacienteDocumento string                 `json:"paciente_documento"`
+		PacienteDocumento string                   `json:"paciente_documento"`
+		FechaCreacion     string                   `json:"fecha_creacion"`
 		Items             []models.FacturaItemInput `json:"items"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
@@ -281,13 +283,18 @@ func (h *FacturaHandler) crear(w http.ResponseWriter, r *http.Request) {
 	facturaEntityID := uuid.New().String()
 	var rowID string
 
+	fechaCreacion := input.FechaCreacion
+	if fechaCreacion == "" {
+		fechaCreacion = time.Now().Format("2006-01-02")
+	}
+
 	if err := repository.ExecTx(r.Context(), h.db, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(r.Context(), `
 			INSERT INTO factura (factura_id, numero_version, es_ultima_version, esta_activo,
-			                     paciente_documento, estado, subtotal, total, creado_por)
-			VALUES ($1, 1, TRUE, TRUE, $2, 'activa', $3, $3, $4)
+			                     paciente_documento, estado, subtotal, total, creado_por, fecha_creacion)
+			VALUES ($1, 1, TRUE, TRUE, $2, 'activa', $3, $3, $4, $5::date)
 			RETURNING id`,
-			facturaEntityID, input.PacienteDocumento, subtotal, u.Nombre,
+			facturaEntityID, input.PacienteDocumento, subtotal, u.Nombre, fechaCreacion,
 		).Scan(&rowID); err != nil {
 			return err
 		}

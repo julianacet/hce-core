@@ -35,6 +35,7 @@ export type FacturaItemInput = {
 
 export type FacturaInput = {
   paciente_documento: string
+  fecha_creacion: string
   items: FacturaItemInput[]
 }
 

@@ -24,6 +24,7 @@ export default function NuevaFactura() {
   const [paciente, setPaciente] = useState<Paciente | null>(null)
   const [busquedaCups, setBusquedaCups] = useState('')
   const [items, setItems] = useState<ItemFormulario[]>([])
+  const [fechaFactura, setFechaFactura] = useState('')
 
   const { data: resultadosCups = [], isFetching: cargandoCups } = useCups(busquedaCups)
   const { data: todasLasTarifas = [] } = useTarifas()
@@ -65,6 +66,7 @@ export default function NuevaFactura() {
     if (!paciente) return
     const factura = await crear.mutateAsync({
       paciente_documento: paciente.numero_documento,
+      fecha_creacion: fechaFactura,
       items,
     })
     navigate(`/facturas/${factura.factura_id}`)
@@ -242,8 +244,17 @@ export default function NuevaFactura() {
                     </p>
                   )}
 
-                  <div className="px-4 py-3 border-t border-slate-100 flex justify-end">
-                    <button type="submit" disabled={crear.isPending || total === 0} className="btn-primary">
+                  <div className="px-4 py-3 border-t border-slate-100 flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-2">
+                      <label className="label-hce mb-0 whitespace-nowrap text-sm">Fecha de factura</label>
+                      <input
+                        type="date"
+                        value={fechaFactura}
+                        onChange={e => setFechaFactura(e.target.value)}
+                        className="input-hce w-40"
+                      />
+                    </div>
+                    <button type="submit" disabled={crear.isPending || total === 0 || !fechaFactura} className="btn-primary">
                       {crear.isPending ? 'Guardando...' : 'Guardar factura'}
                     </button>
                   </div>
