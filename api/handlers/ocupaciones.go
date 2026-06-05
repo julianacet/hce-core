@@ -40,7 +40,7 @@ func (h *OcupacionesHandler) buscar(w http.ResponseWriter, r *http.Request) {
 
 	if q != "" {
 		args = append(args, "%"+strings.ToLower(q)+"%")
-		query += ` WHERE LOWER(nombre) LIKE $1 OR codigo LIKE $1`
+		query += ` WHERE unaccent(LOWER(nombre)) LIKE unaccent($1) OR codigo LIKE $1`
 	}
 	args = append(args, limit)
 	query += ` ORDER BY nombre LIMIT $` + strconv.Itoa(len(args))

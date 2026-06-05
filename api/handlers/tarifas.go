@@ -62,8 +62,8 @@ func (h *tarifasHandler) listar(w http.ResponseWriter, r *http.Request) {
 		args = append(args, "%"+strings.ToLower(q)+"%")
 		idx := strconv.Itoa(n)
 		query += ` AND (LOWER(t.codigo_cups) LIKE $` + idx +
-			` OR LOWER(c.descripcion) LIKE $` + idx +
-			` OR LOWER(COALESCE(t.descripcion,'')) LIKE $` + idx + `)`
+			` OR unaccent(LOWER(c.descripcion)) LIKE unaccent($` + idx + `)` +
+			` OR unaccent(LOWER(COALESCE(t.descripcion,''))) LIKE unaccent($` + idx + `))`
 	}
 	query += ` ORDER BY t.codigo_cups ASC`
 

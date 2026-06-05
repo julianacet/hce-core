@@ -36,7 +36,7 @@ func (h *CupsHandler) buscar(w http.ResponseWriter, r *http.Request) {
 
 	if q != "" {
 		args = append(args, "%"+strings.ToLower(q)+"%")
-		query += ` AND (LOWER(codigo) LIKE $1 OR LOWER(descripcion) LIKE $1)`
+		query += ` AND (LOWER(codigo) LIKE $1 OR unaccent(LOWER(descripcion)) LIKE unaccent($1))`
 	}
 	args = append(args, limit)
 	query += ` ORDER BY codigo LIMIT $` + strconv.Itoa(len(args))

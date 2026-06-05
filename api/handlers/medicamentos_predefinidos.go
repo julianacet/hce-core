@@ -65,7 +65,7 @@ func (h *medicamentosHandler) listar(w http.ResponseWriter, r *http.Request) {
 		argIdx++
 	}
 	if q != "" {
-		base += fmt.Sprintf(` AND nombre ILIKE $%d`, argIdx)
+		base += fmt.Sprintf(` AND unaccent(nombre) ILIKE unaccent($%d)`, argIdx)
 		args = append(args, "%"+q+"%")
 	}
 	base += ` ORDER BY nombre LIMIT 80`

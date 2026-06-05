@@ -9,6 +9,7 @@
 
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";  -- conservada por compatibilidad
 CREATE EXTENSION IF NOT EXISTS pg_trgm;      -- búsqueda de texto por similitud (LIKE/ILIKE eficiente)
+CREATE EXTENSION IF NOT EXISTS unaccent;     -- búsqueda sin distinción de tildes
 
 -- ============================================================
 -- 2. Tabla de referencia: códigos CUPS

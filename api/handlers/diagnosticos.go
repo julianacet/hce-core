@@ -21,7 +21,7 @@ func DiagnosticosRouter(db *pgxpool.Pool) http.Handler {
 		pattern := "%" + strings.ToLower(q) + "%"
 		rows, err := db.Query(r.Context(),
 			`SELECT codigo, nombre FROM diagnostico_cie10
-			 WHERE LOWER(codigo) LIKE $1 OR LOWER(nombre) LIKE $1
+			 WHERE LOWER(codigo) LIKE $1 OR unaccent(LOWER(nombre)) LIKE unaccent($1)
 			 ORDER BY
 			   CASE WHEN LOWER(codigo) = LOWER($2) THEN 0
 			        WHEN LOWER(codigo) LIKE $1       THEN 1

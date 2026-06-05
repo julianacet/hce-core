@@ -64,7 +64,7 @@ func (h *examenesPredefinidosHandler) listar(w http.ResponseWriter, r *http.Requ
 	}
 	if q != "" {
 		args = append(args, "%"+strings.ToLower(q)+"%")
-		query += ` AND LOWER(nombre) LIKE $` + strconv.Itoa(n)
+		query += ` AND unaccent(LOWER(nombre)) LIKE unaccent($` + strconv.Itoa(n) + `)`
 		n++
 	}
 	if categoria != "" {
