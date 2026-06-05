@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Plus, Trash2, Printer, Download } from 'lucide-react'
 import { pdf } from '@react-pdf/renderer'
+import { imprimirConVisorSO } from '../utils/impresion'
 import FormulaPDF, { type Medicamento, medVacio } from './pdf/FormulaPDF'
 import { useMedico } from '../context/MedicoContext'
 import { useTema } from '../context/TemaContext'
@@ -121,14 +122,7 @@ export default function FormulaTab({ medsPos, setMedsPos, medsNoPos, setMedsNoPo
     setImprimiendo(true)
     try {
       const blob = await pdf(docPDF).toBlob()
-      const url = URL.createObjectURL(blob)
-      const w = window.open(url)
-      if (w) {
-        w.addEventListener('load', () => {
-          w.focus(); w.print()
-          w.addEventListener('afterprint', () => URL.revokeObjectURL(url))
-        })
-      }
+      await imprimirConVisorSO(blob)
     } finally { setImprimiendo(false) }
   }
 

@@ -43,3 +43,11 @@ export const LABEL_TERMICA: Record<TamanoTermica, string> = {
   Termica80: 'Térmica 80 mm',
   Termica58: 'Térmica 58 mm',
 }
+
+// Abre el PDF con el visor del SO (usa diálogo de impresión nativo en Windows).
+// Reemplaza el patrón window.open → ventana.print() que falla en Webview2.
+export async function imprimirConVisorSO(blob: Blob): Promise<void> {
+  const { apiFetchBinary } = await import('../api/client')
+  const buffer = await blob.arrayBuffer()
+  await apiFetchBinary('/sistema/abrir-pdf', buffer)
+}

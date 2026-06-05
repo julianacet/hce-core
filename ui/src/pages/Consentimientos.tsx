@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router'
 import { pdf } from '@react-pdf/renderer'
+import { imprimirConVisorSO } from '../utils/impresion'
 import { FileCheck2, Plus, CheckCircle2, Clock, Printer, Search } from 'lucide-react'
 import { useMedico } from '../context/MedicoContext'
 import { useTema } from '../context/TemaContext'
@@ -75,8 +76,7 @@ export default function Consentimientos() {
         logoBase64={tema.logoBase64}
       />
     ).toBlob()
-    const url = URL.createObjectURL(blob)
-    window.open(url, '_blank')
+    await imprimirConVisorSO(blob)
   }
 
   return (

@@ -2,6 +2,7 @@ import { useNavigate, useParams } from 'react-router'
 import { Download, Printer, ChevronLeft, Receipt } from 'lucide-react'
 import { Breadcrumb } from '../components/Breadcrumb'
 import { PDFDownloadLink, pdf } from '@react-pdf/renderer'
+import { imprimirConVisorSO } from '../utils/impresion'
 import { useState } from 'react'
 import { useFactura, useAnularFactura } from '../api/facturas'
 import { usePaciente } from '../api/pacientes'
@@ -72,15 +73,7 @@ export default function DetalleFactura() {
     setImprimiendo(true)
     try {
       const blob = await pdf(docPDF).toBlob()
-      const url = URL.createObjectURL(blob)
-      const ventana = window.open(url)
-      if (ventana) {
-        ventana.addEventListener('load', () => {
-          ventana.focus()
-          ventana.print()
-          ventana.addEventListener('afterprint', () => URL.revokeObjectURL(url))
-        })
-      }
+      await imprimirConVisorSO(blob)
     } finally {
       setImprimiendo(false)
     }

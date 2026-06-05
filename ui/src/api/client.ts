@@ -4,6 +4,17 @@ function getToken(): string | null {
   return localStorage.getItem('hce_token')
 }
 
+export async function apiFetchBinary(path: string, body: ArrayBuffer, contentType = 'application/pdf'): Promise<void> {
+  const headers: Record<string, string> = { 'Content-Type': contentType }
+  const token = getToken()
+  if (token) headers['Authorization'] = `Bearer ${token}`
+  const res = await fetch(`${BASE_URL}${path}`, { method: 'POST', headers, body })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.error ?? `Error ${res.status}`)
+  }
+}
+
 type OpcionesFetch = RequestInit & { skipAuth?: boolean }
 
 export async function apiFetch<T>(path: string, opciones: OpcionesFetch = {}): Promise<T> {

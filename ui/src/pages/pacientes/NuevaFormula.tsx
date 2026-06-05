@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router'
 import { useTabParam } from '../../hooks/useTabParam'
 import { PDFViewer, pdf } from '@react-pdf/renderer'
+import { imprimirConVisorSO } from '../../utils/impresion'
 import { Plus, Trash2, Download, Printer, ChevronLeft, Eye, EyeOff } from 'lucide-react'
 import { useMedico } from '../../context/MedicoContext'
 import { useTema } from '../../context/TemaContext'
@@ -195,15 +196,7 @@ export default function NuevaFormula() {
     try {
       await guardarEnBD()
       const blob = await pdf(docPDF).toBlob()
-      const url = URL.createObjectURL(blob)
-      const ventana = window.open(url)
-      if (ventana) {
-        ventana.addEventListener('load', () => {
-          ventana.focus()
-          ventana.print()
-          ventana.addEventListener('afterprint', () => URL.revokeObjectURL(url))
-        })
-      }
+      await imprimirConVisorSO(blob)
     } finally { setImprimiendo(false) }
   }
 

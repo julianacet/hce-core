@@ -3,6 +3,7 @@ import { Printer, FileDown } from 'lucide-react'
 import { useState } from 'react'
 import { useTabParam } from '../../hooks/useTabParam'
 import { pdf } from '@react-pdf/renderer'
+import { imprimirConVisorSO } from '../../utils/impresion'
 import { useEncuentro, type ValorNormalNotas, type EncuentroDiagnostico } from '../../api/encuentros'
 import { usePaciente } from '../../api/pacientes'
 import { useMedico } from '../../context/MedicoContext'
@@ -59,14 +60,7 @@ function TabExamenesMedicos({
           logoBase64={tema.logoBase64}
         />
       ).toBlob()
-      const url = URL.createObjectURL(blob)
-      const ventana = window.open(url)
-      if (ventana) {
-        ventana.addEventListener('load', () => {
-          ventana.focus(); ventana.print()
-          ventana.addEventListener('afterprint', () => URL.revokeObjectURL(url))
-        })
-      }
+      await imprimirConVisorSO(blob)
     } finally {
       setImprimiendoId(null)
     }
@@ -238,15 +232,7 @@ export default function DetalleEncuentro() {
           logoBase64={tema.logoBase64}
         />
       ).toBlob()
-      const url = URL.createObjectURL(blob)
-      const ventana = window.open(url)
-      if (ventana) {
-        ventana.addEventListener('load', () => {
-          ventana.focus()
-          ventana.print()
-          ventana.addEventListener('afterprint', () => URL.revokeObjectURL(url))
-        })
-      }
+      await imprimirConVisorSO(blob)
     } finally {
       setImprimiendoFormulaId(null)
     }

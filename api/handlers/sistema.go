@@ -21,7 +21,55 @@ func SistemaRouter() http.Handler {
 	r := chi.NewRouter()
 	r.Get("/version", getVersion)
 	r.Post("/actualizar", postActualizar)
+	r.Post("/abrir-pdf", abrirPDF)
 	return r
+}
+
+// POST /sistema/abrir-pdf — recibe bytes del PDF y los abre con el visor del SO
+func abrirPDF(w http.ResponseWriter, r *http.Request) {
+	data, err := io.ReadAll(io.LimitReader(r.Body, 50<<20)) // 50 MB máx
+	if err != nil || len(data) == 0 {
+		responderError(w, http.StatusBadRequest, "cuerpo vacío o error de lectura")
+		return
+	}
+
+	tmp, err := os.CreateTemp("", "hce-*.pdf")
+	if err != nil {
+		responderError(w, http.StatusInternalServerError, "error al crear archivo temporal")
+		return
+	}
+	tmpPath := tmp.Name()
+	if _, err = tmp.Write(data); err != nil {
+		tmp.Close()
+		os.Remove(tmpPath)
+		responderError(w, http.StatusInternalServerError, "error al escribir archivo temporal")
+		return
+	}
+	tmp.Close()
+
+	var cmd *exec.Cmd
+	switch runtime.GOOS {
+	case "windows":
+		cmd = exec.Command("cmd", "/c", "start", "", filepath.ToSlash(tmpPath))
+	case "darwin":
+		cmd = exec.Command("open", tmpPath)
+	default:
+		cmd = exec.Command("xdg-open", tmpPath)
+	}
+
+	if err = cmd.Start(); err != nil {
+		os.Remove(tmpPath)
+		responderError(w, http.StatusInternalServerError, "error al abrir visor de PDF")
+		return
+	}
+
+	// Limpiar el temp después de 2 minutos
+	go func() {
+		time.Sleep(2 * time.Minute)
+		os.Remove(tmpPath)
+	}()
+
+	responderJSON(w, http.StatusOK, map[string]string{"estado": "abriendo"})
 }
 
 type VersionInfo struct {
