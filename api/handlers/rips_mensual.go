@@ -148,6 +148,7 @@ func (h *RipsHandler) generarMensual(w http.ResponseWriter, r *http.Request) {
 		  ON p.numero_documento = ec.paciente_documento
 		 AND p.es_ultima_version = TRUE AND p.esta_activo = TRUE
 		WHERE ec.es_ultima_version = TRUE AND ec.esta_activo = TRUE
+		  AND ec.estado = 'finalizado'
 		  AND ec.codigo_diagnostico_principal IS NOT NULL
 		  AND ec.codigo_diagnostico_principal != ''
 		  AND EXTRACT(YEAR  FROM ec.fecha_atencion) = $1

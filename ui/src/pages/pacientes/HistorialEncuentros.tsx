@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router'
-import { Search, X, ClipboardList } from 'lucide-react'
-import { useEncuentros, type FiltrosEncuentro, type Encuentro } from '../../api/encuentros'
+import { Search, X, ClipboardList, FileEdit } from 'lucide-react'
+import { useEncuentros, useBorradorEncuentro, type FiltrosEncuentro, type Encuentro } from '../../api/encuentros'
 import { SortButton, type SortDir } from '../../components/SortButton'
 
 type OrdenHistorial = 'fecha' | 'finalidad'
@@ -34,6 +34,7 @@ export default function HistorialEncuentros() {
   }, [filtros])
 
   const { data: encuentros = [], isLoading, isError } = useEncuentros(id ?? '', filtrosDebounced)
+  const { data: borrador } = useBorradorEncuentro(id ?? '')
 
   function aplicar() {
     setFiltros({
@@ -135,6 +136,28 @@ export default function HistorialEncuentros() {
           </div>
         </div>
       </div>
+
+      {/* Aviso borrador activo */}
+      {borrador && (
+        <div
+          className="card-hce px-5 py-3 flex items-center gap-3 text-sm border-l-4"
+          style={{ borderLeftColor: 'var(--hce-warning, #f59e0b)', background: 'var(--hce-warning-soft, #fef9c3)' }}
+        >
+          <FileEdit size={16} className="shrink-0" style={{ color: '#b45309' }} />
+          <span style={{ color: '#92400e' }}>
+            Hay una consulta en borrador del{' '}
+            <strong>{new Date(borrador.fecha_atencion).toLocaleDateString('es-CO')}</strong>
+            {' '}que aún no ha sido finalizada. No aparece en este historial ni en facturación.
+          </span>
+          <button
+            onClick={() => navigate('/nueva-consulta/nuevo', { state: { documento: id } })}
+            className="btn-secondary text-xs shrink-0 ml-auto"
+            style={{ borderColor: '#b45309', color: '#92400e' }}
+          >
+            Continuar borrador
+          </button>
+        </div>
+      )}
 
       {/* Tabla */}
       <div className="card-hce overflow-hidden">

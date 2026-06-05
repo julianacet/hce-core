@@ -3,10 +3,10 @@ import { useDebounced } from '../hooks/useDebounced'
 import { DEBOUNCE_FILTROS_MS } from '../utils/constants'
 import { useNavigate } from 'react-router'
 import {
-  Search, Plus, Filter, Trash2, ClipboardList,
+  Search, Plus, Filter, Trash2, ClipboardList, AlertTriangle,
 } from 'lucide-react'
 import { Breadcrumb } from '../components/Breadcrumb'
-import { useEncuentrosPaginados, exportarEncuentros } from '../api/encuentros'
+import { useEncuentrosPaginados, exportarEncuentros, useEliminarEncuentro } from '../api/encuentros'
 import { SortButton, type SortDir } from '../components/SortButton'
 import { descargarCSV, descargarXLSX } from '../utils/csv'
 import { PaginationFooter } from '../components/PaginationFooter'
@@ -15,7 +15,7 @@ import { ExportButtons } from '../components/ExportButtons'
 
 const LIMIT = 30
 
-type OrdenEncuentro = 'fecha' | 'paciente' | 'finalidad' | 'diagnostico'
+type OrdenEncuentro = 'fecha' | 'paciente' | 'finalidad' | 'diagnostico' | 'estado'
 
 const FINALIDADES = [
   { value: '', label: 'Todas las finalidades' },
@@ -38,7 +38,7 @@ export default function EncuentrosGlobal() {
   const [dir, setDir] = useState<SortDir>('desc')
   const [filtrosAbiertos, setFiltrosAbiertos] = useState(false)
   const [filtros, setFiltros] = useState({
-    desde: '', hasta: '', finalidad: '',
+    desde: '', hasta: '', finalidad: '', estado: '',
   })
 
   const qDebounced = useDebounced(q)
@@ -62,7 +62,7 @@ export default function EncuentrosGlobal() {
   }
 
   function limpiarFiltros() {
-    setFiltros({ desde: '', hasta: '', finalidad: '' })
+    setFiltros({ desde: '', hasta: '', finalidad: '', estado: '' })
     setPage(1)
   }
 
@@ -116,6 +116,7 @@ export default function EncuentrosGlobal() {
   const encuentros = data?.encuentros ?? []
   const total = data?.total ?? 0
   const totalPages = Math.max(1, Math.ceil(total / LIMIT))
+  const eliminar = useEliminarEncuentro()
 
   return (
     <div className="page-hce">
@@ -137,6 +138,15 @@ export default function EncuentrosGlobal() {
       </div>
 
       <div className="card-hce overflow-hidden">
+        {/* Banner borradores — solo cuando hay borradores en la lista actual */}
+        {encuentros.some(e => e.estado === 'borrador') && (
+          <div className="px-5 py-2.5 flex items-center gap-2 text-xs border-b"
+            style={{ background: 'var(--hce-warning-soft, #fef9c3)', borderColor: 'var(--hce-border)', color: '#92400e' }}>
+            <AlertTriangle size={13} className="shrink-0" />
+            Las consultas en <strong>borrador</strong> no son visibles en la historia clínica ni en facturación hasta ser finalizadas.
+          </div>
+        )}
+
         {/* Barra de búsqueda y filtros */}
         <div className="px-5 py-4 border-b space-y-3" style={{ borderColor: 'var(--hce-border)' }}>
           <div className="flex gap-2">
@@ -164,6 +174,18 @@ export default function EncuentrosGlobal() {
           {filtrosAbiertos && (
             <div className="space-y-3 pt-1">
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <div>
+                  <label className="label-hce">Estado</label>
+                  <select
+                    className="input-hce"
+                    value={filtros.estado}
+                    onChange={e => setFiltro('estado', e.target.value)}
+                  >
+                    <option value="">Todos</option>
+                    <option value="finalizado">Finalizadas</option>
+                    <option value="borrador">Borradores</option>
+                  </select>
+                </div>
                 <div>
                   <label className="label-hce">Finalidad</label>
                   <select
@@ -212,10 +234,11 @@ export default function EncuentrosGlobal() {
         <div className={`overflow-x-auto transition-opacity duration-150 ${isFetching && !isLoading ? 'opacity-60' : ''}`}>
           <table className="w-full text-sm">
             <colgroup>
+              <col style={{ width: '28%' }} />
+              <col style={{ width: '12%' }} />
+              <col style={{ width: '10%' }} />
+              <col style={{ width: '20%' }} />
               <col style={{ width: '30%' }} />
-              <col style={{ width: '14%' }} />
-              <col style={{ width: '22%' }} />
-              <col style={{ width: '34%' }} />
             </colgroup>
             <thead className="thead-sticky border-b" style={{ borderColor: 'var(--hce-border)' }}>
               <tr>
@@ -224,6 +247,9 @@ export default function EncuentrosGlobal() {
                 </th>
                 <th className="th-hce">
                   <SortButton activo={orden === 'fecha'} dir={dir} onClick={() => ordenarPor('fecha')}>Fecha</SortButton>
+                </th>
+                <th className="th-hce">
+                  <SortButton activo={orden === 'estado'} dir={dir} onClick={() => ordenarPor('estado')}>Estado</SortButton>
                 </th>
                 <th className="th-hce">
                   <SortButton activo={orden === 'finalidad'} dir={dir} onClick={() => ordenarPor('finalidad')}>Finalidad</SortButton>
@@ -249,9 +275,13 @@ export default function EncuentrosGlobal() {
                   key={e.encuentro_id}
                   className="transition-colors cursor-pointer hover:bg-[var(--hce-bg)]"
                   style={{ color: 'var(--hce-text)' }}
-                  onClick={() =>
-                    navigate(`/pacientes/${e.paciente_documento}/encuentros/${e.encuentro_id}`)
-                  }
+                  onClick={() => {
+                    if (e.estado === 'borrador') {
+                      navigate('/nueva-consulta/nuevo', { state: { documento: e.paciente_documento } })
+                    } else {
+                      navigate(`/pacientes/${e.paciente_documento}/encuentros/${e.encuentro_id}`)
+                    }
+                  }}
                 >
                   <td className="px-5 py-3">
                     <p className="font-medium leading-tight">{e.paciente_nombre}</p>
@@ -262,20 +292,51 @@ export default function EncuentrosGlobal() {
                   <td className="px-4 py-3 whitespace-nowrap" style={{ color: 'var(--hce-text-muted)' }}>
                     {formatFecha(e.fecha_atencion)}
                   </td>
+                  <td className="px-4 py-3">
+                    {e.estado === 'borrador' ? (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">
+                        Borrador
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                        Finalizada
+                      </span>
+                    )}
+                  </td>
                   <td className="px-4 py-3 whitespace-nowrap text-xs" style={{ color: 'var(--hce-text-muted)' }}>
                     {e.finalidad_consulta_nombre}
                   </td>
                   <td className="px-4 py-3 max-w-xs">
-                    {e.descripcion_diagnostico ? (
-                      <p className="truncate text-xs" style={{ color: 'var(--hce-text-muted)' }}>
-                        {e.codigo_diagnostico_principal && (
-                          <span className="font-mono mr-1.5">{e.codigo_diagnostico_principal}</span>
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 min-w-0">
+                        {e.descripcion_diagnostico ? (
+                          <p className="truncate text-xs" style={{ color: 'var(--hce-text-muted)' }}>
+                            {e.codigo_diagnostico_principal && (
+                              <span className="font-mono mr-1.5">{e.codigo_diagnostico_principal}</span>
+                            )}
+                            {e.descripcion_diagnostico}
+                          </p>
+                        ) : (
+                          <span className="text-xs text-slate-300">—</span>
                         )}
-                        {e.descripcion_diagnostico}
-                      </p>
-                    ) : (
-                      <span className="text-xs text-slate-300">—</span>
-                    )}
+                      </div>
+                      {e.estado === 'borrador' && (
+                        <button
+                          type="button"
+                          title="Eliminar borrador"
+                          disabled={eliminar.isPending}
+                          onClick={ev => {
+                            ev.stopPropagation()
+                            if (confirm('¿Eliminar este borrador? Esta acción no se puede deshacer.')) {
+                              eliminar.mutate({ doc: e.paciente_documento, encuentroId: e.encuentro_id })
+                            }
+                          }}
+                          className="shrink-0 text-slate-300 hover:text-red-500 transition-colors"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}

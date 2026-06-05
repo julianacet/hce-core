@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
-import { useEncuentros, type DiagnosticoItem, type ValoresClinicos, type EncuentroInput } from '../api/encuentros'
+import { useEncuentros, type DiagnosticoItem, type ValoresClinicos, type EncuentroInput, type Encuentro } from '../api/encuentros'
+import { apiFetch } from '../api/client'
 import { useCamposClinicosActivos } from '../api/campos_clinicos'
 import DiagnosticoSearch from './DiagnosticoSearch'
 import { SignosVitalesForm, ExamenFisicoForm, RevisionSistemasForm } from './CampoClinicoForm'
@@ -41,9 +42,17 @@ type Props = {
   documento: string
   genero?: string
   paciente?: PacienteInfo
-  onSubmit: (data: EncuentroInput, formulas: FormulaData, orden: OrdenData) => Promise<void>
+  borradorId?: string
+  borradorData?: Partial<FormState & {
+    signos: Record<string, string>
+    revision: ValoresClinicos
+    examen: ValoresClinicos
+    diagnosticos: DiagnosticoItem[]
+  }>
+  onSubmit: (data: EncuentroInput, formulas: FormulaData, orden: OrdenData, encuentroId: string) => Promise<void>
   isPending: boolean
   onCancelar?: () => void
+  onBorradorCreado?: (id: string) => void
 }
 
 type TabKey = 'motivo' | 'antecedentes' | 'signos' | 'revision' | 'examen' | 'analisis' | 'diagnosticos' | 'formula' | 'examenes'
@@ -75,32 +84,94 @@ export default function EncuentroForm({
   documento,
   genero,
   paciente,
+  borradorId: borradorIdInicial,
+  borradorData,
   onSubmit,
   isPending,
   onCancelar,
+  onBorradorCreado,
 }: Props) {
   const { data: campos = [] } = useCamposClinicosActivos()
   const { data: encuentrosPrevios = [] } = useEncuentros(documento)
 
-  const DRAFT_KEY = `enc-draft-${documento}`
-
-  const draft = (() => {
-    try { return JSON.parse(sessionStorage.getItem(DRAFT_KEY) ?? 'null') } catch { return null }
-  })()
-
-  const [form, setForm] = useState<FormState>({ ...FORM_INICIAL, ...(draft?.form ?? {}) })
-  const [signos, setSignos] = useState<Record<string, string>>(draft?.signos ?? {})
-  const [revision, setRevision] = useState<ValoresClinicos>(draft?.revision ?? {})
-  const [examen, setExamen] = useState<ValoresClinicos>(draft?.examen ?? {})
-  const [diagnosticos, setDiagnosticos] = useState<DiagnosticoItem[]>(draft?.diagnosticos ?? [])
-  const [medsPos, setMedsPos] = useState<Medicamento[]>(draft?.medsPos ?? [{ ...medVacio }])
-  const [medsNoPos, setMedsNoPos] = useState<Medicamento[]>(draft?.medsNoPos ?? [{ ...medVacio }])
-  const [ordenItems, setOrdenItems] = useState<ItemOrden[]>(draft?.ordenItems ?? [])
-  const [ordenIndicaciones, setOrdenIndicaciones] = useState<string>(draft?.ordenIndicaciones ?? '')
+  const [form, setForm] = useState<FormState>({ ...FORM_INICIAL, ...(borradorData ?? {}) })
+  const [signos, setSignos] = useState<Record<string, string>>(borradorData?.signos ?? {})
+  const [revision, setRevision] = useState<ValoresClinicos>(borradorData?.revision ?? {})
+  const [examen, setExamen] = useState<ValoresClinicos>(borradorData?.examen ?? {})
+  const [diagnosticos, setDiagnosticos] = useState<DiagnosticoItem[]>(borradorData?.diagnosticos ?? [])
+  const [medsPos, setMedsPos] = useState<Medicamento[]>([{ ...medVacio }])
+  const [medsNoPos, setMedsNoPos] = useState<Medicamento[]>([{ ...medVacio }])
+  const [ordenItems, setOrdenItems] = useState<ItemOrden[]>([])
+  const [ordenIndicaciones, setOrdenIndicaciones] = useState<string>('')
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<TabKey>('motivo')
   const [showConfirmModal, setShowConfirmModal] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+
+  // Autoguardado en BD — usamos ref para borradorId para evitar stale closures en el debounce
+  const [borradorId, setBorradorId] = useState<string | undefined>(borradorIdInicial)
+  const borradorIdRef = useRef<string | undefined>(borradorIdInicial)
+  const [guardandoBorrador, setGuardandoBorrador] = useState(false)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Sincronizar ref cuando la prop cambia (ej: usuario retoma borrador desde modal)
+  useEffect(() => {
+    if (borradorIdInicial && borradorIdRef.current !== borradorIdInicial) {
+      borradorIdRef.current = borradorIdInicial
+      setBorradorId(borradorIdInicial)
+    }
+  }, [borradorIdInicial])
+
+  function setBorradorIdSync(id: string) {
+    borradorIdRef.current = id
+    setBorradorId(id)
+  }
+
+  const buildInput = useCallback((): EncuentroInput => {
+    const signosLimpios = Object.fromEntries(
+      Object.entries(signos).filter(([, v]) => v.trim() !== '')
+    )
+    return {
+      motivo_consulta: form.motivo_consulta,
+      descripcion_ingreso: form.descripcion_ingreso || undefined,
+      signos_vitales: Object.keys(signosLimpios).length > 0 ? signosLimpios : undefined,
+      revision_sistemas: Object.keys(revision).length > 0 ? revision : undefined,
+      examen_fisico: Object.keys(examen).length > 0 ? examen : undefined,
+      diagnosticos,
+      tipo_diagnostico_principal: diagnosticos.find(d => d.tipo === 'principal')?.tipo_clinico ?? '01',
+      plan_manejo: form.plan_manejo || undefined,
+      finalidad_consulta: form.finalidad_consulta,
+      causa_externa: form.causa_externa,
+      via_ingreso: form.via_ingreso,
+      encuentro_padre_id: form.finalidad_consulta === '11' && form.encuentro_padre_id
+        ? form.encuentro_padre_id : undefined,
+    }
+  }, [form, signos, revision, examen, diagnosticos])
+
+  // guardarBorrador no depende de borradorId en closure — lee siempre el ref
+  const guardarBorrador = useCallback(async () => {
+    if (!documento) return
+    setGuardandoBorrador(true)
+    try {
+      const input = buildInput()
+      const idActual = borradorIdRef.current
+      if (idActual) {
+        await apiFetch(`/pacientes/${documento}/encuentros/${idActual}`, {
+          method: 'PUT', body: JSON.stringify(input),
+        })
+      } else {
+        const nuevo = await apiFetch<Encuentro>(`/pacientes/${documento}/encuentros`, {
+          method: 'POST', body: JSON.stringify(input),
+        })
+        setBorradorIdSync(nuevo.encuentro_id)
+        onBorradorCreado?.(nuevo.encuentro_id)
+      }
+    } catch {
+      // silencioso — el usuario verá el error al intentar finalizar
+    } finally {
+      setGuardandoBorrador(false)
+    }
+  }, [documento, buildInput, onBorradorCreado])
 
   const camposSignos = campos.filter(c => c.seccion === 'signos_vitales')
   const camposRevision = campos.filter(c => c.seccion === 'revision_sistemas')
@@ -134,45 +205,43 @@ export default function EncuentroForm({
     'examenes',
   ]
 
+  // Debounce autoguardado: 2.5s después del último cambio
   useEffect(() => {
-    try { sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ form, signos, revision, examen, diagnosticos, medsPos, medsNoPos, ordenItems, ordenIndicaciones })) } catch {}
-  }, [form, signos, revision, examen, diagnosticos, medsPos, medsNoPos, ordenItems, ordenIndicaciones, DRAFT_KEY])
+    if (!hasChanges) return
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => { guardarBorrador() }, 2500)
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
+  }, [form, signos, revision, examen, diagnosticos])  // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }))
-  }
-
-  function buildInput(): EncuentroInput {
-    const signosLimpios = Object.fromEntries(
-      Object.entries(signos).filter(([, v]) => v.trim() !== '')
-    )
-    return {
-      motivo_consulta: form.motivo_consulta,
-      descripcion_ingreso: form.descripcion_ingreso || undefined,
-      signos_vitales: Object.keys(signosLimpios).length > 0 ? signosLimpios : undefined,
-      revision_sistemas: Object.keys(revision).length > 0 ? revision : undefined,
-      examen_fisico: Object.keys(examen).length > 0 ? examen : undefined,
-      diagnosticos,
-      tipo_diagnostico_principal: diagnosticos.find(d => d.tipo === 'principal')?.tipo_clinico ?? '01',
-      plan_manejo: form.plan_manejo || undefined,
-      finalidad_consulta: form.finalidad_consulta,
-      causa_externa: form.causa_externa,
-      via_ingreso: form.via_ingreso,
-      encuentro_padre_id: form.finalidad_consulta === '11' && form.encuentro_padre_id
-        ? form.encuentro_padre_id : undefined,
-    }
   }
 
   async function doSubmit() {
     setSubmitting(true)
     setError(null)
     try {
+      const input = buildInput()
+      let idParaFinalizar = borradorIdRef.current
+      if (!idParaFinalizar) {
+        const nuevo = await apiFetch<Encuentro>(`/pacientes/${documento}/encuentros`, {
+          method: 'POST', body: JSON.stringify(input),
+        })
+        idParaFinalizar = nuevo.encuentro_id
+        setBorradorIdSync(idParaFinalizar)
+        onBorradorCreado?.(idParaFinalizar)
+      } else {
+        await apiFetch(`/pacientes/${documento}/encuentros/${idParaFinalizar}`, {
+          method: 'PUT', body: JSON.stringify(input),
+        })
+      }
+      await apiFetch(`/pacientes/${documento}/encuentros/${idParaFinalizar}/finalizar`, { method: 'PATCH' })
       await onSubmit(
-        buildInput(),
+        input,
         { pos: medsPos, no_pos: medsNoPos },
         { items: ordenItems, indicaciones_generales: ordenIndicaciones },
+        idParaFinalizar,
       )
-      try { sessionStorage.removeItem(DRAFT_KEY) } catch {}
     } catch (err) {
       setSubmitting(false)
       setError((err as Error)?.message ?? 'Error al guardar la consulta.')
@@ -199,7 +268,10 @@ export default function EncuentroForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <NavigationGuard when={hasChanges && !isPending && !submitting} />
+      <NavigationGuard
+        when={hasChanges && !borradorId && !isPending && !submitting}
+        onSaveAndProceed={guardarBorrador}
+      />
 
       {/* Tab bar */}
       <div className="flex gap-1 bg-slate-100 p-1 rounded-lg w-fit overflow-x-auto">
@@ -376,20 +448,25 @@ export default function EncuentroForm({
 
       {error && <p className="form-error">{error}</p>}
 
-      <div className="flex justify-end gap-3 pb-8">
-        {onCancelar && (
-          <button type="button" onClick={onCancelar} disabled={isPending} className="btn-secondary">
-            Cancelar
+      <div className="flex justify-between items-center pb-8">
+        <span className="text-xs" style={{ color: 'var(--hce-text-muted)' }}>
+          {guardandoBorrador ? 'Guardando borrador…' : borradorId ? 'Borrador guardado' : ''}
+        </span>
+        <div className="flex gap-3">
+          {onCancelar && (
+            <button type="button" onClick={onCancelar} disabled={isPending} className="btn-secondary">
+              Cancelar
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={handleFinalizarClick}
+            disabled={isPending || submitting}
+            className="btn-primary disabled:opacity-50"
+          >
+            {submitting ? 'Finalizando…' : 'Finalizar consulta'}
           </button>
-        )}
-        <button
-          type="button"
-          onClick={handleFinalizarClick}
-          disabled={isPending}
-          className="btn-primary disabled:opacity-50"
-        >
-          {isPending ? 'Guardando...' : 'Finalizar consulta'}
-        </button>
+        </div>
       </div>
 
       {showConfirmModal && (

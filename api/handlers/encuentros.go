@@ -41,6 +41,8 @@ func EncuentrosRouter(db *pgxpool.Pool) http.Handler {
 	r.Post("/", h.crear)
 	r.Route("/{encuentroId}", func(r chi.Router) {
 		r.Get("/", h.obtener)
+		r.Put("/", h.actualizar)
+		r.Patch("/finalizar", h.finalizar)
 		r.Delete("/", h.eliminar)
 		r.Mount("/formulas", FormulasRouter(db))
 		r.Mount("/consentimiento", ConsentimientoEncuentroRouter(db))
@@ -83,14 +85,16 @@ func (h *EncuentroHandler) listar(w http.ResponseWriter, r *http.Request) {
 		FROM encuentro_clinico
 		WHERE paciente_documento = $1 AND es_ultima_version = TRUE AND esta_activo = TRUE`
 
+	if estado != "" {
+		query += ` AND estado = ` + args.Add(estado)
+	} else {
+		query += ` AND estado = 'finalizado'`
+	}
 	if desde != "" {
 		query += ` AND fecha_atencion >= ` + args.Add(desde)
 	}
 	if hasta != "" {
 		query += ` AND fecha_atencion <= ` + args.Add(hasta+" 23:59:59")
-	}
-	if estado != "" {
-		query += ` AND estado = ` + args.Add(estado)
 	}
 	if diagnostico != "" {
 		p := args.Add("%" + strings.ToLower(diagnostico) + "%")
@@ -166,22 +170,13 @@ func (h *EncuentroHandler) obtener(w http.ResponseWriter, r *http.Request) {
 	responderJSON(w, http.StatusOK, e)
 }
 
-// POST /pacientes/{documento}/encuentros
+// POST /pacientes/{documento}/encuentros  — crea borrador
 func (h *EncuentroHandler) crear(w http.ResponseWriter, r *http.Request) {
 	documento := chi.URLParam(r, "documento")
 
 	var input models.EncuentroInput
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		responderError(w, http.StatusBadRequest, "body inválido")
-		return
-	}
-
-	if strings.TrimSpace(input.MotivoConsulta) == "" {
-		responderError(w, http.StatusBadRequest, "motivo_consulta es obligatorio")
-		return
-	}
-	if !tieneDiagnosticoPrincipal(input.Diagnosticos) {
-		responderError(w, http.StatusBadRequest, "se requiere al menos un diagnóstico principal")
 		return
 	}
 
@@ -208,6 +203,169 @@ func (h *EncuentroHandler) crear(w http.ResponseWriter, r *http.Request) {
 	}
 
 	responderJSON(w, http.StatusCreated, e)
+}
+
+// PUT /pacientes/{documento}/encuentros/{encuentroId}  — actualiza borrador
+func (h *EncuentroHandler) actualizar(w http.ResponseWriter, r *http.Request) {
+	documento := chi.URLParam(r, "documento")
+	encuentroID := chi.URLParam(r, "encuentroId")
+
+	var input models.EncuentroInput
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		responderError(w, http.StatusBadRequest, "body inválido")
+		return
+	}
+
+	// Solo se puede editar si está en borrador
+	var estadoActual string
+	var rowID string
+	err := h.db.QueryRow(r.Context(),
+		`SELECT id, estado FROM encuentro_clinico WHERE encuentro_id = $1 AND paciente_documento = $2 AND es_ultima_version = TRUE AND esta_activo = TRUE`,
+		encuentroID, documento,
+	).Scan(&rowID, &estadoActual)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			responderError(w, http.StatusNotFound, "encuentro no encontrado")
+		} else {
+			responderError(w, http.StatusInternalServerError, "error al verificar encuentro")
+		}
+		return
+	}
+	if estadoActual != "borrador" {
+		responderError(w, http.StatusConflict, "solo se pueden editar encuentros en borrador")
+		return
+	}
+
+	fechaAtencion := time.Now()
+	if input.FechaAtencion != nil {
+		if t, err := time.Parse(time.RFC3339, *input.FechaAtencion); err == nil {
+			fechaAtencion = t
+		}
+	}
+
+	var codigoPrincipal *string
+	var descPrincipal *string
+	for _, d := range input.Diagnosticos {
+		if d.Tipo == "principal" {
+			codigoPrincipal = d.Codigo
+			desc := d.Descripcion
+			descPrincipal = &desc
+			break
+		}
+	}
+	tipoDiag := input.TipoDiagnosticoPrincipal
+	if tipoDiag == "" {
+		tipoDiag = "01"
+	}
+
+	if err := repository.ExecTx(r.Context(), h.db, func(tx pgx.Tx) error {
+		_, err := tx.Exec(r.Context(), `
+			UPDATE encuentro_clinico SET
+				encuentro_padre_id = $1, fecha_atencion = $2, causa_externa = $3,
+				finalidad_consulta = $4, via_ingreso = $5, motivo_consulta = $6,
+				descripcion_ingreso = $7, signos_vitales = $8, examen_fisico = $9,
+				revision_sistemas = $10, codigo_diagnostico_principal = $11,
+				descripcion_diagnostico = $12, tipo_diagnostico_principal = $13,
+				plan_manejo = $14
+			WHERE id = $15`,
+			input.EncuentroPadreID, fechaAtencion, input.CausaExterna,
+			input.FinalidadConsulta, input.ViaIngreso, input.MotivoConsulta,
+			input.DescripcionIngreso, asJSON(input.SignosVitales), asJSON(input.ExamenFisico),
+			asJSON(input.RevisionSistemas), codigoPrincipal, descPrincipal, tipoDiag,
+			input.PlanManejo, rowID,
+		)
+		if err != nil {
+			return err
+		}
+		// Reemplazar diagnósticos
+		if _, err := tx.Exec(r.Context(), `DELETE FROM encuentro_diagnostico WHERE encuentro_clinico_id = $1`, rowID); err != nil {
+			return err
+		}
+		for i, d := range input.Diagnosticos {
+			if strings.TrimSpace(d.Descripcion) == "" {
+				continue
+			}
+			if _, err := tx.Exec(r.Context(),
+				`INSERT INTO encuentro_diagnostico (encuentro_clinico_id, tipo, tipo_clinico, codigo, descripcion, orden) VALUES ($1,$2,$3,$4,$5,$6)`,
+				rowID, d.Tipo, d.TipoClinico, d.Codigo, d.Descripcion, i,
+			); err != nil {
+				return err
+			}
+		}
+		return nil
+	}); err != nil {
+		log.Printf("actualizar borrador %s: %v", encuentroID, err)
+		responderError(w, http.StatusInternalServerError, "error al actualizar borrador")
+		return
+	}
+
+	// Devolver encuentro actualizado
+	row := h.db.QueryRow(r.Context(), `SELECT`+columnasEncuentro+` FROM encuentro_clinico WHERE id = $1`, rowID)
+	e, err := escanearEncuentro(row)
+	if err != nil {
+		responderError(w, http.StatusInternalServerError, "error al leer encuentro")
+		return
+	}
+	diags, _ := cargarDiagnosticos(r.Context(), h.db, e.ID)
+	e.Diagnosticos = diags
+	responderJSON(w, http.StatusOK, e)
+}
+
+// PATCH /pacientes/{documento}/encuentros/{encuentroId}/finalizar
+func (h *EncuentroHandler) finalizar(w http.ResponseWriter, r *http.Request) {
+	documento := chi.URLParam(r, "documento")
+	encuentroID := chi.URLParam(r, "encuentroId")
+
+	var rowID, estadoActual, motivoActual string
+	err := h.db.QueryRow(r.Context(),
+		`SELECT id, estado, motivo_consulta FROM encuentro_clinico WHERE encuentro_id = $1 AND paciente_documento = $2 AND es_ultima_version = TRUE AND esta_activo = TRUE`,
+		encuentroID, documento,
+	).Scan(&rowID, &estadoActual, &motivoActual)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			responderError(w, http.StatusNotFound, "encuentro no encontrado")
+		} else {
+			responderError(w, http.StatusInternalServerError, "error al verificar encuentro")
+		}
+		return
+	}
+	if estadoActual != "borrador" {
+		responderError(w, http.StatusConflict, "el encuentro ya está finalizado")
+		return
+	}
+	if strings.TrimSpace(motivoActual) == "" {
+		responderError(w, http.StatusBadRequest, "motivo_consulta es obligatorio para finalizar")
+		return
+	}
+
+	// Verificar diagnóstico principal
+	var tienePrincipal bool
+	h.db.QueryRow(r.Context(),
+		`SELECT EXISTS(SELECT 1 FROM encuentro_diagnostico WHERE encuentro_clinico_id = $1 AND tipo = 'principal')`,
+		rowID,
+	).Scan(&tienePrincipal)
+	if !tienePrincipal {
+		responderError(w, http.StatusBadRequest, "se requiere al menos un diagnóstico principal para finalizar")
+		return
+	}
+
+	if _, err := h.db.Exec(r.Context(),
+		`UPDATE encuentro_clinico SET estado = 'finalizado' WHERE id = $1`, rowID,
+	); err != nil {
+		log.Printf("finalizar encuentro %s: %v", encuentroID, err)
+		responderError(w, http.StatusInternalServerError, "error al finalizar encuentro")
+		return
+	}
+
+	row := h.db.QueryRow(r.Context(), `SELECT`+columnasEncuentro+` FROM encuentro_clinico WHERE id = $1`, rowID)
+	e, err := escanearEncuentro(row)
+	if err != nil {
+		responderError(w, http.StatusInternalServerError, "error al leer encuentro")
+		return
+	}
+	diags, _ := cargarDiagnosticos(r.Context(), h.db, e.ID)
+	e.Diagnosticos = diags
+	responderJSON(w, http.StatusOK, e)
 }
 
 // DELETE /pacientes/{documento}/encuentros/{encuentroId} — elimina todas las versiones
@@ -291,7 +449,7 @@ func insertarEncuentro(ctx context.Context, db encuentroQuerier, encuentroID str
 			codigo_diagnostico_principal, descripcion_diagnostico, tipo_diagnostico_principal, plan_manejo,
 			creado_por
 		) VALUES (
-			$1, $2, TRUE, TRUE, 'finalizado',
+			$1, $2, TRUE, TRUE, 'borrador',
 			$3, $4,
 			$5, $6, $7, $8,
 			$9, $10,
@@ -417,6 +575,10 @@ func (h *EncuentroHandler) listarGlobal(w http.ResponseWriter, r *http.Request) 
 	var args argList
 	where := `ec.es_ultima_version = TRUE AND ec.esta_activo = TRUE`
 
+	if estado != "" {
+		where += ` AND ec.estado = ` + args.Add(estado)
+	}
+
 	if q != "" {
 		p := args.Add("%" + strings.ToLower(q) + "%")
 		where += ` AND (
@@ -434,9 +596,6 @@ func (h *EncuentroHandler) listarGlobal(w http.ResponseWriter, r *http.Request) 
 	if finalidad != "" {
 		where += ` AND ec.finalidad_consulta = ` + args.Add(finalidad)
 	}
-	if estado != "" {
-		where += ` AND ec.estado = ` + args.Add(estado)
-	}
 
 	orderDir := "DESC"
 	if strings.ToLower(strings.TrimSpace(r.URL.Query().Get("dir"))) == "asc" {
@@ -450,6 +609,8 @@ func (h *EncuentroHandler) listarGlobal(w http.ResponseWriter, r *http.Request) 
 		orderByClause = "ec.finalidad_consulta " + orderDir
 	case "diagnostico":
 		orderByClause = "COALESCE(ec.codigo_diagnostico_principal,'') " + orderDir
+	case "estado":
+		orderByClause = "ec.estado " + orderDir
 	default:
 		orderByClause = "ec.fecha_atencion " + orderDir
 	}

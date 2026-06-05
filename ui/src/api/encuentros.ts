@@ -23,7 +23,7 @@ export type Encuentro = {
   numero_version: number
   es_ultima_version: boolean
   esta_activo: boolean
-  estado: 'finalizado'
+  estado: 'borrador' | 'finalizado'
   paciente_documento: string
   encuentro_padre_id?: string
   fecha_atencion: string
@@ -72,6 +72,7 @@ export type FiltrosEncuentro = {
   desde?: string
   hasta?: string
   diagnostico?: string
+  estado?: 'borrador' | 'finalizado'
 }
 
 export function useEncuentros(documento: string, filtros?: FiltrosEncuentro) {
@@ -82,10 +83,20 @@ export function useEncuentros(documento: string, filtros?: FiltrosEncuentro) {
       if (filtros?.desde) params.set('desde', filtros.desde)
       if (filtros?.hasta) params.set('hasta', filtros.hasta)
       if (filtros?.diagnostico) params.set('diagnostico', filtros.diagnostico)
+      if (filtros?.estado) params.set('estado', filtros.estado)
       const qs = params.toString()
       return apiFetch<Encuentro[]>(`/pacientes/${documento}/encuentros${qs ? `?${qs}` : ''}`)
     },
     enabled: !!documento,
+  })
+}
+
+export function useBorradorEncuentro(documento: string) {
+  return useQuery({
+    queryKey: [...ENCUENTROS_KEY, documento, 'borrador'],
+    queryFn: () => apiFetch<Encuentro[]>(`/pacientes/${documento}/encuentros?estado=borrador`),
+    enabled: !!documento,
+    select: (data) => data[0] ?? null,
   })
 }
 
@@ -112,12 +123,53 @@ export function useCrearEncuentro(documento: string) {
   })
 }
 
+export function useActualizarEncuentro(documento: string, encuentroId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: EncuentroInput) =>
+      apiFetch<Encuentro>(`/pacientes/${documento}/encuentros/${encuentroId}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [...ENCUENTROS_KEY, documento] })
+    },
+  })
+}
+
+export function useEliminarEncuentro(documento?: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ doc, encuentroId }: { doc: string; encuentroId: string }) =>
+      apiFetch(`/pacientes/${doc}/encuentros/${encuentroId}`, { method: 'DELETE' }),
+    onSuccess: (_, { doc }) => {
+      qc.invalidateQueries({ queryKey: [...ENCUENTROS_KEY, doc] })
+      if (documento) qc.invalidateQueries({ queryKey: [...ENCUENTROS_KEY, documento] })
+      qc.invalidateQueries({ queryKey: ENCUENTROS_GLOBAL_KEY })
+    },
+  })
+}
+
+export function useFinalizarEncuentro(documento: string, encuentroId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () =>
+      apiFetch<Encuentro>(`/pacientes/${documento}/encuentros/${encuentroId}/finalizar`, {
+        method: 'PATCH',
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [...ENCUENTROS_KEY, documento] })
+      qc.invalidateQueries({ queryKey: ENCUENTROS_GLOBAL_KEY })
+    },
+  })
+}
+
 // ── Listado global de encuentros ─────────────────────────────────────────────
 
 export type EncuentroResumen = {
   encuentro_id: string
   fecha_atencion: string
-  estado: 'finalizado'
+  estado: 'borrador' | 'finalizado'
   finalidad_consulta: string
   finalidad_consulta_nombre: string
   motivo_consulta: string
@@ -140,6 +192,7 @@ type EncuentrosPaginadosParams = {
   desde: string
   hasta: string
   finalidad: string
+  estado?: string
   orden?: string
   dir?: string
 }
@@ -156,6 +209,7 @@ export function useEncuentrosPaginados(params: EncuentrosPaginadosParams) {
       if (params.desde) p.set('desde', params.desde)
       if (params.hasta) p.set('hasta', params.hasta)
       if (params.finalidad) p.set('finalidad', params.finalidad)
+      if (params.estado) p.set('estado', params.estado)
       if (params.orden) p.set('orden', params.orden)
       if (params.dir) p.set('dir', params.dir)
       return apiFetch<EncuentrosPaginados>(`/encuentros?${p}`)
