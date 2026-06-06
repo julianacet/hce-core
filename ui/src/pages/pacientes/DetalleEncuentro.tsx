@@ -168,6 +168,9 @@ export default function DetalleEncuentro() {
     if (!e || !paciente) return
     setDescargandoHistoria(true)
     try {
+      const fechaImpresion = new Date().toLocaleDateString('es-CO', {
+        day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit',
+      })
       const blob = await pdf(
         <HistoriaClinicaPDF
           medico={medico}
@@ -177,6 +180,7 @@ export default function DetalleEncuentro() {
           antecedentes={antecedentes}
           formulas={formulas}
           ordenes={ordenesExamen}
+          fechaImpresion={fechaImpresion}
           tamano={TAMANO_PAGINA[(medico.impresion?.historiaClinica ?? 'A4') as TamanoDocumento]}
           colorPrimario={tema.colorPrimario}
           logoBase64={tema.logoBase64}
@@ -254,7 +258,7 @@ export default function DetalleEncuentro() {
         <div className="flex items-start justify-between gap-4">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-3 text-sm flex-1">
             {([
-              ['Fecha', new Date(e.fecha_atencion).toLocaleString('es-CO')],
+              ['Fecha de atención', new Date(e.fecha_atencion).toLocaleString('es-CO')],
               ['Finalidad', e.finalidad_consulta_nombre],
               ['Vía de ingreso', e.via_ingreso_nombre],
               ['Registrado por', e.creado_por],

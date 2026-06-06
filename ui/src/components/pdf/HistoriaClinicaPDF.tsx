@@ -102,6 +102,7 @@ export type HistoriaClinicaProps = {
   antecedentes: AntecedentesCompletos
   formulas: FormulaGuardada[]
   ordenes?: OrdenExamen[]
+  fechaImpresion?: string
   tamano?: string | [number, number]
   colorPrimario?: string
   logoBase64?: string | null
@@ -111,7 +112,7 @@ export type HistoriaClinicaProps = {
 
 export default function HistoriaClinicaPDF({
   medico, paciente, encuentro, campos, antecedentes, formulas, ordenes = [],
-  tamano = 'A4', colorPrimario = '#1d4ed8', logoBase64 = null,
+  fechaImpresion, tamano = 'A4', colorPrimario = '#1d4ed8', logoBase64 = null,
 }: HistoriaClinicaProps) {
   const PRIMARY = colorPrimario
   const LOGO_W  = 60
@@ -359,7 +360,8 @@ export default function HistoriaClinicaPDF({
           </View>
         </View>
         <Text style={s.subtituloDoc}>
-          {`Emitida el ${fmtLarga(new Date().toISOString())}`}
+          {`Fecha de atención: ${fmtLarga(encuentro.fecha_atencion)}`}
+          {fechaImpresion ? `   ·   Fecha de impresión: ${fechaImpresion}` : ''}
         </Text>
 
         <View style={s.divider} />
