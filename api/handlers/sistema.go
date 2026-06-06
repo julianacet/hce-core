@@ -22,6 +22,8 @@ func SistemaRouter() http.Handler {
 	r.Get("/version", getVersion)
 	r.Post("/actualizar", postActualizar)
 	r.Post("/abrir-pdf", abrirPDF)
+	r.Get("/impresoras", getImpresoras)
+	r.Post("/impresoras/termica", setImpresoraTermica)
 	return r
 }
 

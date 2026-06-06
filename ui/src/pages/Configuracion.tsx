@@ -1,11 +1,13 @@
 import { useState, useRef } from 'react'
+import { useQuery, useMutation } from '@tanstack/react-query'
 import { useMedico, type DatosMedico } from '../context/MedicoContext'
 import { Breadcrumb } from '../components/Breadcrumb'
-import { Upload, Trash2, CheckCircle } from 'lucide-react'
+import { Upload, Trash2, CheckCircle, Printer, RefreshCw } from 'lucide-react'
 import {
   LABEL_TAMANO, LABEL_TERMICA,
   type TamanoDocumento, type TamanoTermica,
 } from '../utils/impresion'
+import { apiFetch } from '../api/client'
 
 const TAMANOS_DOC: TamanoDocumento[] = ['A4', 'Carta', 'MediaCarta', 'A5']
 const TAMANOS_TERMICA: TamanoTermica[] = ['Termica80', 'Termica58']
@@ -17,6 +19,21 @@ export default function Configuracion() {
   const [guardado, setGuardado] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const inputFirma = useRef<HTMLInputElement>(null)
+
+  // Impresora térmica
+  const [impresoraSeleccionada, setImpresoraSeleccionada] = useState('')
+  const [impresoraGuardada, setImpresoraGuardada] = useState(false)
+  const { data: impresoras = [], isLoading: cargandoImpresoras, refetch: recargarImpresoras } =
+    useQuery<string[]>({
+      queryKey: ['impresoras'],
+      queryFn: () => apiFetch('/sistema/impresoras'),
+      staleTime: 60_000,
+    })
+  const guardarImpresora = useMutation({
+    mutationFn: (nombre: string) =>
+      apiFetch('/sistema/impresoras/termica', { method: 'POST', body: JSON.stringify({ nombre }) }),
+    onSuccess: () => { setImpresoraGuardada(true); setTimeout(() => setImpresoraGuardada(false), 3000) },
+  })
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }))
@@ -248,6 +265,46 @@ export default function Configuracion() {
                   <option key={t} value={t}>{LABEL_TERMICA[t]}</option>
                 ))}
               </select>
+            </div>
+
+            <div className="col-span-2 border-t pt-4" style={{ borderColor: 'var(--hce-border)' }}>
+              <label className="label-hce flex items-center gap-1.5">
+                <Printer size={14} /> Impresora térmica del sistema
+              </label>
+              <div className="flex gap-2 mt-1">
+                <select
+                  className="input-hce flex-1"
+                  value={impresoraSeleccionada}
+                  onChange={e => setImpresoraSeleccionada(e.target.value)}
+                  disabled={cargandoImpresoras}
+                >
+                  <option value="">
+                    {cargandoImpresoras ? 'Detectando impresoras…' : '— Seleccionar impresora —'}
+                  </option>
+                  {impresoras.map(imp => (
+                    <option key={imp} value={imp}>{imp}</option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={() => recargarImpresoras()}
+                  className="btn-secondary px-3"
+                  title="Recargar lista de impresoras"
+                >
+                  <RefreshCw size={14} />
+                </button>
+                <button
+                  type="button"
+                  disabled={!impresoraSeleccionada || guardarImpresora.isPending}
+                  onClick={() => guardarImpresora.mutate(impresoraSeleccionada)}
+                  className="btn-primary"
+                >
+                  {guardarImpresora.isPending ? 'Guardando…' : impresoraGuardada ? '✓ Guardado' : 'Guardar'}
+                </button>
+              </div>
+              <p className="text-xs mt-1.5" style={{ color: 'var(--hce-text-muted)' }}>
+                Selecciona la impresora térmica instalada en este equipo. Se guarda de inmediato sin necesidad de reiniciar.
+              </p>
             </div>
 
             <div>
