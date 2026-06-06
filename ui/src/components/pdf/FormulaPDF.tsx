@@ -62,8 +62,7 @@ export default function FormulaPDF({
       fontSize: 12, fontFamily: 'Helvetica-Bold',
       color: colorPrimario, marginBottom: 2,
     },
-    headerNombre: { fontSize: 10, fontFamily: 'Helvetica-Bold', marginBottom: 2 },
-    headerSub: { fontSize: 8, color: '#64748b', marginBottom: 1 },
+    headerSub: { fontSize: 8, color: '#374151', marginBottom: 1 },
 
     dividerAccent: { borderBottomWidth: 2, borderBottomColor: colorPrimario, marginBottom: 12 },
     divider: { borderBottomWidth: 0.5, borderBottomColor: '#e2e8f0', marginVertical: 10 },
@@ -81,15 +80,16 @@ export default function FormulaPDF({
 
     // ── Secciones ─────────────────────────────────────────────────────────────
     colLabel: {
-      fontSize: 7, fontFamily: 'Helvetica-Bold', color: '#94a3b8',
+      fontSize: 7, fontFamily: 'Helvetica-Bold', color: '#6b7280',
       textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4,
     },
     colNombre: { fontSize: 10, fontFamily: 'Helvetica-Bold', marginBottom: 2 },
-    colSub: { fontSize: 8, color: '#64748b', marginBottom: 1 },
+    colSub: { fontSize: 8.5, color: '#1e293b', marginBottom: 1 },
+    colDoc: { fontSize: 9, fontFamily: 'Helvetica-Bold', color: '#1e293b', marginBottom: 1 },
 
     // ── Diagnóstico ───────────────────────────────────────────────────────────
     diagRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 12 },
-    diagLabel: { fontSize: 7, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: 0.5 },
+    diagLabel: { fontSize: 7, color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5 },
     diagChip: {
       flexDirection: 'row', alignItems: 'center',
       backgroundColor: '#f1f5f9', paddingHorizontal: 6,
@@ -99,7 +99,7 @@ export default function FormulaPDF({
 
     // ── Medicamentos ──────────────────────────────────────────────────────────
     seccionTitulo: {
-      fontSize: 7, fontFamily: 'Helvetica-Bold', color: '#94a3b8',
+      fontSize: 7, fontFamily: 'Helvetica-Bold', color: '#6b7280',
       textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8,
     },
     rp: {
@@ -123,14 +123,14 @@ export default function FormulaPDF({
       borderBottomColor: '#0f172a', marginBottom: 4,
     },
     firmaNombre: { fontSize: 9, fontFamily: 'Helvetica-Bold', textAlign: 'center' },
-    firmaTP: { fontSize: 7, color: '#64748b', textAlign: 'center' },
+    firmaTP: { fontSize: 7, color: '#374151', textAlign: 'center' },
 
     // ── Footer legal ──────────────────────────────────────────────────────────
     footerLegal: {
       marginTop: 16, paddingTop: 8,
       borderTopWidth: 0.5, borderTopColor: '#e2e8f0',
     },
-    footerTexto: { fontSize: 7, color: '#94a3b8', marginBottom: 1 },
+    footerTexto: { fontSize: 7, color: '#6b7280', marginBottom: 1 },
   })
 
   return (
@@ -146,15 +146,9 @@ export default function FormulaPDF({
           </View>
           <View style={s.headerInfo}>
             <Text style={s.headerConsultorio}>{medico.nombreConsultorio || 'Consultorio Médico'}</Text>
-            <Text style={s.headerNombre}>{medico.nombre || 'Nombre del médico'}</Text>
             {medico.especialidad ? <Text style={s.headerSub}>{medico.especialidad}</Text> : null}
             {medico.tarjetaProfesional ? <Text style={s.headerSub}>TP {medico.tarjetaProfesional}</Text> : null}
-            {(medico.ciudad || medico.direccion) ? (
-              <Text style={s.headerSub}>
-                {[medico.ciudad, medico.direccion].filter(Boolean).join(' · ')}
-              </Text>
-            ) : null}
-            {medico.telefono ? <Text style={s.headerSub}>{medico.telefono}</Text> : null}
+            {medico.universidad ? <Text style={s.headerSub}>{medico.universidad}</Text> : null}
             {medico.nit ? <Text style={s.headerSub}>NIT {medico.nit}</Text> : null}
           </View>
         </View>
@@ -173,7 +167,7 @@ export default function FormulaPDF({
         <View style={{ marginBottom: 12 }}>
           <Text style={s.colLabel}>Paciente</Text>
           <Text style={s.colNombre}>{paciente.nombre}</Text>
-          <Text style={s.colSub}>{paciente.tipoDocumento} {paciente.documento}</Text>
+          <Text style={s.colDoc}>{paciente.tipoDocumento} {paciente.documento}</Text>
           {paciente.fechaNacimiento
             ? <Text style={s.colSub}>Nacimiento: {paciente.fechaNacimiento}</Text>
             : null}
@@ -209,8 +203,15 @@ export default function FormulaPDF({
           </View>
         ))}
 
-        {/* Footer legal */}
+        {/* Footer: contacto + legal */}
         <View style={s.footerLegal}>
+          {[medico.ciudad, medico.direccion, medico.telefono, medico.correoElectronico]
+            .filter(Boolean).length > 0 && (
+            <Text style={s.footerTexto}>
+              {[medico.ciudad, medico.direccion, medico.telefono, medico.correoElectronico]
+                .filter(Boolean).join(' · ')}
+            </Text>
+          )}
           <Text style={s.footerTexto}>
             Prescripción médica · válida según Res. 1995/1999 y Res. 1552/2013
           </Text>

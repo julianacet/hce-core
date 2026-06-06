@@ -112,6 +112,13 @@ export default function Configuracion() {
               className="input-hce" />
           </div>
 
+          <div>
+            <label className="label-hce">Universidad</label>
+            <input name="universidad" value={form.universidad} onChange={handleChange}
+              placeholder="Universidad Nacional de Colombia"
+              className="input-hce" />
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="label-hce">Dirección</label>

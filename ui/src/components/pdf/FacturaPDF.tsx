@@ -64,8 +64,7 @@ export default function FacturaPDF({
       fontSize: 12, fontFamily: 'Helvetica-Bold',
       color: colorPrimario, marginBottom: 2,
     },
-    headerNombre: { fontSize: 10, fontFamily: 'Helvetica-Bold', marginBottom: 2 },
-    headerSub: { fontSize: 8, color: '#64748b', marginBottom: 1 },
+    headerSub: { fontSize: 8, color: '#374151', marginBottom: 1 },
     estadoBadge: {
       paddingHorizontal: 8, paddingVertical: 3,
       borderRadius: 4,
@@ -100,9 +99,9 @@ export default function FacturaPDF({
       fontSize: 11, fontFamily: 'Helvetica-Bold',
       letterSpacing: 1, color: '#0f172a',
     },
-    subtituloDoc: { fontSize: 8, color: '#64748b', marginBottom: 10 },
+    subtituloDoc: { fontSize: 8, color: '#4b5563', marginBottom: 10 },
     refLabel: {
-      fontSize: 7, color: '#94a3b8',
+      fontSize: 7, color: '#6b7280',
       textTransform: 'uppercase', letterSpacing: 0.5, textAlign: 'right',
     },
     refValor: { fontSize: 7, color: '#475569', textAlign: 'right' },
@@ -111,7 +110,7 @@ export default function FacturaPDF({
     metaRow: { flexDirection: 'row', gap: 24, marginBottom: 12 },
     metaCelda: { flex: 1 },
     metaLabel: {
-      fontSize: 7, color: '#94a3b8',
+      fontSize: 7, color: '#6b7280',
       textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2,
     },
     metaValor: { fontSize: 9, fontFamily: 'Helvetica-Bold' },
@@ -120,16 +119,17 @@ export default function FacturaPDF({
     dualCol: { flexDirection: 'row', gap: 16, marginBottom: 12 },
     col: { flex: 1 },
     colLabel: {
-      fontSize: 7, fontFamily: 'Helvetica-Bold', color: '#94a3b8',
+      fontSize: 7, fontFamily: 'Helvetica-Bold', color: '#6b7280',
       textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4,
     },
     colNombre: { fontSize: 10, fontFamily: 'Helvetica-Bold', marginBottom: 2 },
-    colSub: { fontSize: 8, color: '#64748b', marginBottom: 1 },
+    colSub: { fontSize: 8.5, color: '#374151', marginBottom: 1 },
+    colDoc: { fontSize: 9, fontFamily: 'Helvetica-Bold', color: '#1e293b', marginBottom: 1 },
 
     // ── Diagnóstico ───────────────────────────────────────────────────────────
     diagRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 12 },
     diagLabel: {
-      fontSize: 7, color: '#94a3b8',
+      fontSize: 7, color: '#6b7280',
       textTransform: 'uppercase', letterSpacing: 0.5,
     },
     diagChip: {
@@ -141,7 +141,7 @@ export default function FacturaPDF({
 
     // ── Tabla ────────────────────────────────────────────────────────────────
     seccionTitulo: {
-      fontSize: 7, fontFamily: 'Helvetica-Bold', color: '#94a3b8',
+      fontSize: 7, fontFamily: 'Helvetica-Bold', color: '#6b7280',
       textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6,
     },
     tablaHeader: {
@@ -159,15 +159,15 @@ export default function FacturaPDF({
     colCups: { width: 56, fontSize: 8, fontFamily: 'Helvetica-Bold', color: colorPrimario },
     colDesc: { flex: 1, fontSize: 8 },
     colNum:  { width: 44, fontSize: 8, textAlign: 'right' },
-    thCups:  { width: 56, fontSize: 7, fontFamily: 'Helvetica-Bold', color: '#94a3b8' },
-    thDesc:  { flex: 1,  fontSize: 7, fontFamily: 'Helvetica-Bold', color: '#94a3b8' },
-    thNum:   { width: 44, fontSize: 7, fontFamily: 'Helvetica-Bold', color: '#94a3b8', textAlign: 'right' },
+    thCups:  { width: 56, fontSize: 7, fontFamily: 'Helvetica-Bold', color: '#6b7280' },
+    thDesc:  { flex: 1,  fontSize: 7, fontFamily: 'Helvetica-Bold', color: '#6b7280' },
+    thNum:   { width: 44, fontSize: 7, fontFamily: 'Helvetica-Bold', color: '#6b7280', textAlign: 'right' },
 
     // ── Totales ───────────────────────────────────────────────────────────────
     totalesBloque: { alignItems: 'flex-end', marginTop: 10, marginBottom: 16 },
     totalFila: { flexDirection: 'row', justifyContent: 'flex-end', gap: 24, marginBottom: 3 },
-    totalLabel: { fontSize: 8, color: '#64748b', width: 160, textAlign: 'right' },
-    totalValor: { fontSize: 8, color: '#64748b', width: 80, textAlign: 'right' },
+    totalLabel: { fontSize: 8, color: '#374151', width: 160, textAlign: 'right' },
+    totalValor: { fontSize: 8, color: '#374151', width: 80, textAlign: 'right' },
     totalDivider: {
       width: 264, borderBottomWidth: 0.5,
       borderBottomColor: '#e2e8f0', marginBottom: 6,
@@ -186,7 +186,7 @@ export default function FacturaPDF({
       marginTop: 16, paddingTop: 8,
       borderTopWidth: 0.5, borderTopColor: '#e2e8f0',
     },
-    footerTexto: { fontSize: 7, color: '#94a3b8', marginBottom: 1 },
+    footerTexto: { fontSize: 7, color: '#6b7280', marginBottom: 1 },
 
     // ── Firma ─────────────────────────────────────────────────────────────────
     pie: { marginTop: 24, flexDirection: 'row', justifyContent: 'flex-end' },
@@ -197,7 +197,7 @@ export default function FacturaPDF({
       borderBottomColor: '#0f172a', marginBottom: 4,
     },
     firmaNombre: { fontSize: 9, fontFamily: 'Helvetica-Bold', textAlign: 'center' },
-    firmaTP: { fontSize: 7, color: '#64748b', textAlign: 'center' },
+    firmaTP: { fontSize: 7, color: '#374151', textAlign: 'center' },
   })
 
   return (
@@ -213,19 +213,10 @@ export default function FacturaPDF({
           </View>
           <View style={s.headerInfo}>
             <Text style={s.headerConsultorio}>{medico.nombreConsultorio || 'Consultorio Médico'}</Text>
-            <Text style={s.headerNombre}>{medico.nombre || 'Nombre del médico'}</Text>
             {medico.especialidad ? <Text style={s.headerSub}>{medico.especialidad}</Text> : null}
+            {medico.tarjetaProfesional ? <Text style={s.headerSub}>TP {medico.tarjetaProfesional}</Text> : null}
+            {medico.universidad ? <Text style={s.headerSub}>{medico.universidad}</Text> : null}
             {medico.nit ? <Text style={s.headerSub}>NIT {medico.nit}</Text> : null}
-            {(medico.ciudad || medico.direccion) ? (
-              <Text style={s.headerSub}>
-                {[medico.ciudad, medico.direccion].filter(Boolean).join(' · ')}
-              </Text>
-            ) : null}
-            {(medico.telefono || medico.correoElectronico) ? (
-              <Text style={s.headerSub}>
-                {[medico.telefono, medico.correoElectronico].filter(Boolean).join(' · ')}
-              </Text>
-            ) : null}
           </View>
           <View style={s.estadoBadge}>
             <Text style={s.estadoTexto}>{pagada ? 'PAGADA' : 'ANULADA'}</Text>
@@ -266,12 +257,12 @@ export default function FacturaPDF({
             <Text style={s.colLabel}>Adquiriente / Paciente</Text>
             <Text style={s.colNombre}>{pacienteNombre}</Text>
             {paciente?.tipo_documento && paciente?.numero_documento ? (
-              <Text style={s.colSub}>
+              <Text style={s.colDoc}>
                 {paciente.tipo_documento} {paciente.numero_documento}
                 {paciente.edad ? ` · ${paciente.edad} años` : ''}
               </Text>
             ) : (
-              <Text style={s.colSub}>{factura.paciente_documento}</Text>
+              <Text style={s.colDoc}>{factura.paciente_documento}</Text>
             )}
             {paciente?.direccion ? <Text style={s.colSub}>{paciente.direccion}</Text> : null}
             {paciente?.telefono ? <Text style={s.colSub}>{paciente.telefono}</Text> : null}
@@ -331,8 +322,14 @@ export default function FacturaPDF({
           </View>
         </View>
 
-        {/* Footer legal */}
+        {/* Footer: contacto + legal */}
         <View style={s.footerLegal}>
+          {[medico.ciudad, medico.direccion, medico.telefono, medico.correoElectronico]
+            .filter(Boolean).length > 0 && (
+            <Text style={s.footerTexto}>
+              {[medico.ciudad, medico.direccion, medico.telefono, medico.correoElectronico].filter(Boolean).join(' · ')}
+            </Text>
+          )}
           <Text style={s.footerTexto}>
             Servicio de salud excluido de IVA · Art. 476 num. 1 del Estatuto Tributario
           </Text>

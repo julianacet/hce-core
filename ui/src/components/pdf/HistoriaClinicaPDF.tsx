@@ -138,8 +138,7 @@ export default function HistoriaClinicaPDF({
     },
     headerInfo: { flex: 1 },
     headerConsultorio: { fontSize: 12, fontFamily: 'Helvetica-Bold', color: PRIMARY, marginBottom: 2 },
-    headerNombre: { fontSize: 10, fontFamily: 'Helvetica-Bold', marginBottom: 2 },
-    headerSub: { fontSize: 8, color: '#64748b', marginBottom: 1 },
+    headerSub: { fontSize: 8, color: '#374151', marginBottom: 1 },
 
     dividerAccent: { borderBottomWidth: 2, borderBottomColor: PRIMARY, marginBottom: 12 },
     divider: { borderBottomWidth: 0.5, borderBottomColor: '#e2e8f0', marginVertical: 10 },
@@ -147,20 +146,21 @@ export default function HistoriaClinicaPDF({
     // ── Título ────────────────────────────────────────────────────────────────
     titleRow: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 2 },
     titulo: { fontSize: 11, fontFamily: 'Helvetica-Bold', letterSpacing: 1, color: '#0f172a' },
-    refLabel: { fontSize: 7, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: 0.5, textAlign: 'right' },
+    refLabel: { fontSize: 7, color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5, textAlign: 'right' },
     refValor: { fontSize: 8, color: '#475569', textAlign: 'right' },
-    subtituloDoc: { fontSize: 8, color: '#64748b', marginBottom: 10 },
+    subtituloDoc: { fontSize: 8, color: '#4b5563', marginBottom: 10 },
 
     // ── Dos columnas (paciente / médico) ──────────────────────────────────────
     dualCol: { flexDirection: 'row', gap: 16, marginBottom: 4 },
     col: { flex: 1 },
-    colLabel: { fontSize: 7, fontFamily: 'Helvetica-Bold', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 },
+    colLabel: { fontSize: 7, fontFamily: 'Helvetica-Bold', color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 },
     colNombre: { fontSize: 10, fontFamily: 'Helvetica-Bold', marginBottom: 2 },
-    colSub: { fontSize: 8, color: '#64748b', marginBottom: 1 },
+    colSub: { fontSize: 8, color: '#374151', marginBottom: 1 },
+    colDoc: { fontSize: 9, fontFamily: 'Helvetica-Bold', color: '#1e293b', marginBottom: 1 },
     colSubDark: { fontSize: 8, color: '#334155', marginBottom: 1 },
 
     // ── Sección genérica ──────────────────────────────────────────────────────
-    seccionTitulo: { fontSize: 7, fontFamily: 'Helvetica-Bold', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 },
+    seccionTitulo: { fontSize: 7, fontFamily: 'Helvetica-Bold', color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 },
     bodyText: { fontSize: 8.5, color: '#0f172a', lineHeight: 1.5 },
 
     // ── Antecedentes ──────────────────────────────────────────────────────────
@@ -168,15 +168,15 @@ export default function HistoriaClinicaPDF({
     antCat: { fontSize: 7.5, fontFamily: 'Helvetica-Bold', color: '#475569', width: 112, paddingTop: 1 },
     antBullets: { flex: 1 },
     antLine: { flexDirection: 'row', marginBottom: 1.5 },
-    antDot: { fontSize: 8, color: '#94a3b8', marginRight: 4 },
+    antDot: { fontSize: 8, color: '#6b7280', marginRight: 4 },
     antText: { fontSize: 8, color: '#0f172a', flex: 1, lineHeight: 1.4, flexShrink: 1 },
 
     // ── Encuentro meta ────────────────────────────────────────────────────────
     encMetaRow: { flexDirection: 'row', gap: 24, marginBottom: 10 },
     encMetaCelda: { flex: 1 },
-    encMetaLabel: { fontSize: 7, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 },
+    encMetaLabel: { fontSize: 7, color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 },
     encMetaValor: { fontSize: 9, fontFamily: 'Helvetica-Bold' },
-    encMetaSub: { fontSize: 8, color: '#64748b' },
+    encMetaSub: { fontSize: 8, color: '#374151' },
 
     // ── Signos vitales ────────────────────────────────────────────────────────
     svLinea: { fontSize: 8.5, color: '#0f172a', lineHeight: 1.6, marginBottom: 1 },
@@ -192,12 +192,12 @@ export default function HistoriaClinicaPDF({
       paddingVertical: 5, paddingHorizontal: 6,
       borderBottomWidth: 0.5, borderColor: '#f1f5f9',
     },
-    thItem:    { fontSize: 7, fontFamily: 'Helvetica-Bold', color: '#94a3b8', flex: 2 },
-    thEstado:  { fontSize: 7, fontFamily: 'Helvetica-Bold', color: '#94a3b8', width: 72 },
-    thDetalle: { fontSize: 7, fontFamily: 'Helvetica-Bold', color: '#94a3b8', flex: 3 },
+    thItem:    { fontSize: 7, fontFamily: 'Helvetica-Bold', color: '#6b7280', flex: 2 },
+    thEstado:  { fontSize: 7, fontFamily: 'Helvetica-Bold', color: '#6b7280', width: 72 },
+    thDetalle: { fontSize: 7, fontFamily: 'Helvetica-Bold', color: '#6b7280', flex: 3 },
     tdItem:    { fontSize: 8.5, color: '#0f172a', flex: 2, flexShrink: 1 },
     tdEstado:  { fontSize: 8, fontFamily: 'Helvetica-Bold', width: 72, flexShrink: 0 },
-    tdDetalle: { fontSize: 8, color: '#64748b', flex: 3, lineHeight: 1.4, flexShrink: 1 },
+    tdDetalle: { fontSize: 8, color: '#374151', flex: 3, lineHeight: 1.4, flexShrink: 1 },
 
     // ── Diagnósticos ──────────────────────────────────────────────────────────
     dxHeader: {
@@ -210,28 +210,28 @@ export default function HistoriaClinicaPDF({
       paddingVertical: 5, paddingHorizontal: 6,
       borderBottomWidth: 0.5, borderColor: '#f1f5f9',
     },
-    thDxTipo:  { fontSize: 7, fontFamily: 'Helvetica-Bold', color: '#94a3b8', width: 70 },
-    thDxCod:   { fontSize: 7, fontFamily: 'Helvetica-Bold', color: '#94a3b8', width: 48 },
-    thDxNom:   { fontSize: 7, fontFamily: 'Helvetica-Bold', color: '#94a3b8', flex: 1 },
-    thDxClin:  { fontSize: 7, fontFamily: 'Helvetica-Bold', color: '#94a3b8', width: 110, textAlign: 'right' },
+    thDxTipo:  { fontSize: 7, fontFamily: 'Helvetica-Bold', color: '#6b7280', width: 70 },
+    thDxCod:   { fontSize: 7, fontFamily: 'Helvetica-Bold', color: '#6b7280', width: 48 },
+    thDxNom:   { fontSize: 7, fontFamily: 'Helvetica-Bold', color: '#6b7280', flex: 1 },
+    thDxClin:  { fontSize: 7, fontFamily: 'Helvetica-Bold', color: '#6b7280', width: 110, textAlign: 'right' },
     tdDxTipo:  { width: 70, fontSize: 8, fontFamily: 'Helvetica-Bold', color: '#475569' },
     tdDxCod:   { width: 48, fontSize: 8, fontFamily: 'Helvetica-Bold', color: PRIMARY },
     tdDxNom:   { flex: 1, fontSize: 8.5, color: '#0f172a', lineHeight: 1.4, flexShrink: 1 },
-    tdDxClin:  { width: 110, fontSize: 8, color: '#64748b', textAlign: 'right', flexShrink: 0 },
+    tdDxClin:  { width: 110, fontSize: 8, color: '#374151', textAlign: 'right', flexShrink: 0 },
 
     // ── Medicamentos ──────────────────────────────────────────────────────────
     med: { marginBottom: 10, paddingLeft: 8, borderLeftWidth: 2, borderLeftColor: `${PRIMARY}40` },
     medNombre: { fontSize: 9, fontFamily: 'Helvetica-Bold', marginBottom: 1.5, flexShrink: 1 },
     medDetalle: { fontSize: 8, color: '#334155', marginBottom: 1, flexShrink: 1 },
-    medNota: { fontSize: 7.5, color: '#64748b', fontStyle: 'italic', flexShrink: 1 },
+    medNota: { fontSize: 7.5, color: '#374151', fontStyle: 'italic', flexShrink: 1 },
 
     // ── Órdenes de examen ─────────────────────────────────────────────────────
     ordenBloque: { marginBottom: 8, paddingLeft: 8, borderLeftWidth: 2, borderLeftColor: `${PRIMARY}40` },
-    ordenFecha: { fontSize: 7.5, color: '#64748b', marginBottom: 3 },
+    ordenFecha: { fontSize: 7.5, color: '#374151', marginBottom: 3 },
     ordenItem: { flexDirection: 'row', marginBottom: 2 },
     ordenCups: { fontSize: 8, fontFamily: 'Helvetica-Bold', color: PRIMARY, width: 54, flexShrink: 0 },
     ordenDesc: { fontSize: 8.5, color: '#0f172a', flex: 1, lineHeight: 1.4, flexShrink: 1 },
-    ordenInd: { fontSize: 7.5, color: '#64748b', fontStyle: 'italic', flexShrink: 1 },
+    ordenInd: { fontSize: 7.5, color: '#374151', fontStyle: 'italic', flexShrink: 1 },
     ordenGeneral: { fontSize: 7.5, color: '#475569', fontStyle: 'italic', marginTop: 3 },
 
     // ── Firma ─────────────────────────────────────────────────────────────────
@@ -240,7 +240,7 @@ export default function HistoriaClinicaPDF({
     firmaImagen: { width: 140, height: 56, objectFit: 'contain', marginBottom: 4 },
     firmaLinea: { width: 160, borderBottomWidth: 1, borderBottomColor: '#0f172a', marginBottom: 4 },
     firmaNombre: { fontSize: 9, fontFamily: 'Helvetica-Bold', textAlign: 'center' },
-    firmaTP: { fontSize: 7, color: '#64748b', textAlign: 'center' },
+    firmaTP: { fontSize: 7, color: '#374151', textAlign: 'center' },
 
     // ── Footer ────────────────────────────────────────────────────────────────
     footer: {
@@ -248,8 +248,8 @@ export default function HistoriaClinicaPDF({
       flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end',
       borderTopWidth: 0.5, borderTopColor: '#e2e8f0', paddingTop: 4,
     },
-    footerLegal: { fontSize: 6.5, color: '#94a3b8', flex: 1, lineHeight: 1.35 },
-    footerPag: { fontSize: 7, color: '#94a3b8', marginLeft: 8 },
+    footerLegal: { fontSize: 6.5, color: '#6b7280', flex: 1, lineHeight: 1.35 },
+    footerPag: { fontSize: 7, color: '#6b7280', marginLeft: 8 },
   })
 
   // ── Datos pre-computados ─────────────────────────────────────────────────
@@ -323,7 +323,8 @@ export default function HistoriaClinicaPDF({
         {/* Footer fijo con paginación */}
         <View fixed style={s.footer}>
           <Text style={s.footerLegal}>
-            {'Documento confidencial · Res. 1995/1999 y 2275/2023 Min. Salud · reproducción requiere autorización del paciente'}
+            {[medico.ciudad, medico.direccion, medico.telefono, medico.correoElectronico].filter(Boolean).join(' · ')}
+            {'\n'}{'Documento confidencial · Res. 1995/1999 y 2275/2023 Min. Salud · reproducción requiere autorización del paciente'}
           </Text>
           <Text style={s.footerPag}
             render={({ pageNumber, totalPages }) => `Pág. ${pageNumber} de ${totalPages}`}
@@ -339,16 +340,11 @@ export default function HistoriaClinicaPDF({
           </View>
           <View style={s.headerInfo}>
             <Text style={s.headerConsultorio}>{medico.nombreConsultorio || 'Consultorio Médico'}</Text>
-            {medico.nombre ? <Text style={s.headerNombre}>{medico.nombre}</Text> : null}
             {medico.especialidad ? <Text style={s.headerSub}>{medico.especialidad}</Text> : null}
+            {medico.tarjetaProfesional ? <Text style={s.headerSub}>TP {medico.tarjetaProfesional}</Text> : null}
+            {medico.universidad ? <Text style={s.headerSub}>{medico.universidad}</Text> : null}
             {medico.nit ? <Text style={s.headerSub}>NIT {medico.nit}</Text> : null}
             {medico.codPrestador ? <Text style={s.headerSub}>Habilitación {medico.codPrestador}</Text> : null}
-            {(medico.ciudad || medico.direccion)
-              ? <Text style={s.headerSub}>{[medico.ciudad, medico.direccion].filter(Boolean).join(' · ')}</Text>
-              : null}
-            {(medico.telefono || medico.correoElectronico)
-              ? <Text style={s.headerSub}>{[medico.telefono, medico.correoElectronico].filter(Boolean).join(' · ')}</Text>
-              : null}
           </View>
         </View>
 
@@ -373,7 +369,7 @@ export default function HistoriaClinicaPDF({
           <View style={s.col}>
             <Text style={s.colLabel}>Paciente</Text>
             <Text style={s.colNombre}>{nombrePaciente}</Text>
-            <Text style={s.colSub}>
+            <Text style={s.colDoc}>
               {paciente.tipo_documento} {paciente.numero_documento}
               {` · ${paciente.edad} años · ${paciente.genero_nombre}`}
             </Text>

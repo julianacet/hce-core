@@ -6,6 +6,7 @@ export type DatosMedico = {
   nombre: string
   especialidad: string
   tarjetaProfesional: string
+  universidad: string
   direccion: string
   telefono: string
   ciudad: string
@@ -22,6 +23,7 @@ const DEFAULTS: DatosMedico = {
   nombre: '',
   especialidad: '',
   tarjetaProfesional: '',
+  universidad: '',
   direccion: '',
   telefono: '',
   ciudad: '',

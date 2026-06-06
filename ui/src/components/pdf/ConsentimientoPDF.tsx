@@ -50,8 +50,7 @@ export default function ConsentimientoPDF({
       fontSize: 12, fontFamily: 'Helvetica-Bold',
       color: colorPrimario, marginBottom: 2,
     },
-    headerNombre: { fontSize: 10, fontFamily: 'Helvetica-Bold', marginBottom: 2 },
-    headerSub: { fontSize: 8, color: '#64748b', marginBottom: 1 },
+    headerSub: { fontSize: 8, color: '#374151', marginBottom: 1 },
 
     dividerAccent: { borderBottomWidth: 2, borderBottomColor: colorPrimario, marginBottom: 12 },
     divider: { borderBottomWidth: 0.5, borderBottomColor: '#e2e8f0', marginVertical: 10 },
@@ -65,19 +64,20 @@ export default function ConsentimientoPDF({
       fontSize: 11, fontFamily: 'Helvetica-Bold',
       letterSpacing: 1, color: '#0f172a',
     },
-    fecha: { fontSize: 8, color: '#64748b' },
+    fecha: { fontSize: 8, color: '#4b5563' },
 
     // ── Sección paciente ──────────────────────────────────────────────────────
     colLabel: {
-      fontSize: 7, fontFamily: 'Helvetica-Bold', color: '#94a3b8',
+      fontSize: 7, fontFamily: 'Helvetica-Bold', color: '#6b7280',
       textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4,
     },
     colNombre: { fontSize: 10, fontFamily: 'Helvetica-Bold', marginBottom: 2 },
-    colSub: { fontSize: 8, color: '#64748b', marginBottom: 1 },
+    colSub: { fontSize: 8.5, color: '#374151', marginBottom: 1 },
+    colDoc: { fontSize: 9, fontFamily: 'Helvetica-Bold', color: '#1e293b', marginBottom: 1 },
 
     // ── Contenido ─────────────────────────────────────────────────────────────
     seccionTitulo: {
-      fontSize: 7, fontFamily: 'Helvetica-Bold', color: '#94a3b8',
+      fontSize: 7, fontFamily: 'Helvetica-Bold', color: '#6b7280',
       textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8,
     },
     contenido: {
@@ -99,14 +99,14 @@ export default function ConsentimientoPDF({
     },
     firmaImagen: { width: 140, height: 56, objectFit: 'contain', marginBottom: 4 },
     firmaNombre: { fontSize: 9, fontFamily: 'Helvetica-Bold', textAlign: 'center' },
-    firmaLabel: { fontSize: 7, color: '#64748b', textAlign: 'center' },
+    firmaLabel: { fontSize: 7, color: '#374151', textAlign: 'center' },
 
     // ── Footer legal ──────────────────────────────────────────────────────────
     footerLegal: {
       marginTop: 16, paddingTop: 8,
       borderTopWidth: 0.5, borderTopColor: '#e2e8f0',
     },
-    footerTexto: { fontSize: 7, color: '#94a3b8', marginBottom: 1 },
+    footerTexto: { fontSize: 7, color: '#6b7280', marginBottom: 1 },
   })
 
   return (
@@ -122,15 +122,9 @@ export default function ConsentimientoPDF({
           </View>
           <View style={s.headerInfo}>
             <Text style={s.headerConsultorio}>{medico.nombreConsultorio || 'Consultorio Médico'}</Text>
-            <Text style={s.headerNombre}>{medico.nombre || 'Nombre del médico'}</Text>
             {medico.especialidad ? <Text style={s.headerSub}>{medico.especialidad}</Text> : null}
             {medico.tarjetaProfesional ? <Text style={s.headerSub}>TP {medico.tarjetaProfesional}</Text> : null}
-            {(medico.ciudad || medico.direccion) ? (
-              <Text style={s.headerSub}>
-                {[medico.ciudad, medico.direccion].filter(Boolean).join(' · ')}
-              </Text>
-            ) : null}
-            {medico.telefono ? <Text style={s.headerSub}>{medico.telefono}</Text> : null}
+            {medico.universidad ? <Text style={s.headerSub}>{medico.universidad}</Text> : null}
             {medico.nit ? <Text style={s.headerSub}>NIT {medico.nit}</Text> : null}
           </View>
         </View>
@@ -151,7 +145,7 @@ export default function ConsentimientoPDF({
         <View style={{ marginBottom: 12 }}>
           <Text style={s.colLabel}>Paciente</Text>
           <Text style={s.colNombre}>{pacienteNombre}</Text>
-          <Text style={s.colSub}>{tipoDocumento} {pacienteDocumento}</Text>
+          <Text style={s.colDoc}>{tipoDocumento} {pacienteDocumento}</Text>
         </View>
 
         <View style={s.divider} />
@@ -183,8 +177,14 @@ export default function ConsentimientoPDF({
           </View>
         </View>
 
-        {/* Footer legal */}
+        {/* Footer: contacto + legal */}
         <View style={s.footerLegal}>
+          {[medico.ciudad, medico.direccion, medico.telefono, medico.correoElectronico]
+            .filter(Boolean).length > 0 && (
+            <Text style={s.footerTexto}>
+              {[medico.ciudad, medico.direccion, medico.telefono, medico.correoElectronico].filter(Boolean).join(' · ')}
+            </Text>
+          )}
           <Text style={s.footerTexto}>
             Consentimiento informado · elaborado conforme a la Resolución 13437/1991 y Ley 23/1981
           </Text>
