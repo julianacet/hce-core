@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router'
 import { Breadcrumb } from '../components/Breadcrumb'
 import { UserRound, FileEdit } from 'lucide-react'
 import { type Paciente, usePaciente } from '../api/pacientes'
-import { useBorradorEncuentro, useEncuentro, useEliminarEncuentro, type EncuentroInput } from '../api/encuentros'
+import { useBorradorEncuentro, useEncuentro, useEliminarEncuentro, type EncuentroInput, type DiagnosticoItem, type ValoresClinicos } from '../api/encuentros'
 import { crearFormulas } from '../api/formulas'
 import { crearOrdenExamen } from '../api/ordenes_examen'
 import EncuentroForm, { type FormulaData, type OrdenData } from '../components/EncuentroForm'
@@ -48,9 +48,9 @@ export default function NuevaConsulta() {
     via_ingreso:        borradorCompleto.via_ingreso ?? '02',
     encuentro_padre_id: borradorCompleto.encuentro_padre_id ?? '',
     signos:    (borradorCompleto.signos_vitales as Record<string, string>) ?? {},
-    revision:  (borradorCompleto.revision_sistemas as Record<string, unknown>) ?? {},
-    examen:    (borradorCompleto.examen_fisico as Record<string, unknown>) ?? {},
-    diagnosticos: borradorCompleto.diagnosticos ?? [],
+    revision:  (borradorCompleto.revision_sistemas as ValoresClinicos) ?? {},
+    examen:    (borradorCompleto.examen_fisico as ValoresClinicos) ?? {},
+    diagnosticos: (borradorCompleto.diagnosticos ?? []) as DiagnosticoItem[],
   } : undefined
 
   function seleccionar(p: Paciente) {

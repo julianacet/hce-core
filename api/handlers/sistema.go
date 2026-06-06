@@ -47,17 +47,7 @@ func abrirPDF(w http.ResponseWriter, r *http.Request) {
 	}
 	tmp.Close()
 
-	var cmd *exec.Cmd
-	switch runtime.GOOS {
-	case "windows":
-		cmd = exec.Command("cmd", "/c", "start", "", filepath.ToSlash(tmpPath))
-	case "darwin":
-		cmd = exec.Command("open", tmpPath)
-	default:
-		cmd = exec.Command("xdg-open", tmpPath)
-	}
-
-	if err = cmd.Start(); err != nil {
+	if err = abrirArchivoSO(tmpPath); err != nil {
 		os.Remove(tmpPath)
 		responderError(w, http.StatusInternalServerError, "error al abrir visor de PDF")
 		return

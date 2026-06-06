@@ -29,7 +29,7 @@ export function NavigationGuard({ when, onSaveAndProceed }: Props) {
     if (!onSaveAndProceed) return
     setSaving(true)
     try {
-      await onSaveAndProceed()
+      await onSaveAndProceed?.()
       blocker.proceed()
     } catch {
       setSaving(false)
