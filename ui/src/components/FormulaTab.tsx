@@ -92,6 +92,10 @@ export default function FormulaTab({ medsPos, setMedsPos, medsNoPos, setMedsNoPo
   const fecha = new Date().toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' })
   const formulaValida = !!paciente && meds.some(m => m.nombre.trim())
 
+  const fechaImpresion = new Date().toLocaleDateString('es-CO', {
+    day: '2-digit', month: 'long', year: 'numeric',
+  })
+
   const docPDF = paciente ? (
     <FormulaPDF
       medico={medico}
@@ -100,6 +104,7 @@ export default function FormulaTab({ medsPos, setMedsPos, medsNoPos, setMedsNoPo
       medicamentos={meds}
       incluirFirma={!!medico.firmaBase64}
       fecha={fecha}
+      fechaImpresion={fechaImpresion}
       tipo={tab}
       colorPrimario={tema.colorPrimario}
       logoBase64={tema.logoBase64}

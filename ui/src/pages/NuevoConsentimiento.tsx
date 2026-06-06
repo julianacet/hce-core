@@ -89,6 +89,9 @@ export default function NuevoConsentimiento() {
           tipoDocumento={paciente.tipo_documento}
           contenidoRenderizado={contenido}
           fecha={formatFechaLarga(new Date())}
+          fechaImpresion={new Date().toLocaleDateString('es-CO', {
+            day: '2-digit', month: 'long', year: 'numeric',
+          })}
           tamano={tamano}
           colorPrimario={tema.colorPrimario}
           logoBase64={tema.logoBase64}

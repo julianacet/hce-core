@@ -112,7 +112,7 @@ export type HistoriaClinicaProps = {
 
 export default function HistoriaClinicaPDF({
   medico, paciente, encuentro, campos, antecedentes, formulas, ordenes = [],
-  fechaImpresion, tamano = 'A4', colorPrimario = '#1d4ed8', logoBase64 = null,
+  fechaImpresion, tamano = 'LETTER', colorPrimario = '#1d4ed8', logoBase64 = null,
 }: HistoriaClinicaProps) {
   const PRIMARY = colorPrimario
   const LOGO_W  = 60
@@ -129,6 +129,11 @@ export default function HistoriaClinicaPDF({
     },
 
     // ── Header ────────────────────────────────────────────────────────────────
+    marcaAgua: {
+      position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+      alignItems: 'center', justifyContent: 'center', opacity: 0.07,
+    },
+    marcaAguaImg: { width: 320, height: 320, objectFit: 'contain' },
     header: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 12 },
     logoBox: { width: LOGO_W, marginRight: 12 },
     logoImg: { width: LOGO_W, height: LOGO_W, objectFit: 'contain' },
@@ -321,6 +326,12 @@ export default function HistoriaClinicaPDF({
     <Document>
       <Page size={tamano as any} style={s.page}>
 
+        {logoBase64 && (
+          <View fixed style={s.marcaAgua}>
+            <Image src={logoBase64} style={s.marcaAguaImg} />
+          </View>
+        )}
+
         {/* Footer fijo con paginación */}
         <View fixed style={s.footer}>
           <Text style={s.footerLegal}>
@@ -393,7 +404,7 @@ export default function HistoriaClinicaPDF({
             <Text style={s.colLabel}>Profesional tratante</Text>
             <Text style={s.colNombre}>{medico.nombre || 'Médico tratante'}</Text>
             {medico.especialidad ? <Text style={s.colSub}>{medico.especialidad}</Text> : null}
-            {medico.tarjetaProfesional ? <Text style={s.colSub}>RM {medico.tarjetaProfesional}</Text> : null}
+            {medico.tarjetaProfesional ? <Text style={s.colSub}>TP {medico.tarjetaProfesional}</Text> : null}
             {paciente.nombre_responsable
               ? <>
                   <Text style={[s.colLabel, { marginTop: 10 }]}>Responsable</Text>
@@ -647,7 +658,7 @@ export default function HistoriaClinicaPDF({
             <View style={s.firmaLinea} />
             <Text style={s.firmaNombre}>{medico.nombre || 'Médico tratante'}</Text>
             {medico.especialidad ? <Text style={s.firmaTP}>{medico.especialidad}</Text> : null}
-            {medico.tarjetaProfesional ? <Text style={s.firmaTP}>RM {medico.tarjetaProfesional}</Text> : null}
+            {medico.tarjetaProfesional ? <Text style={s.firmaTP}>TP {medico.tarjetaProfesional}</Text> : null}
           </View>
         </View>
 

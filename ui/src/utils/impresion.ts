@@ -12,10 +12,10 @@ export type ConfigImpresion = {
 
 export const DEFAULTS_IMPRESION: ConfigImpresion = {
   factura: 'MediaCarta',
-  formula: 'A4',
-  consentimiento: 'A4',
-  historiaClinica: 'A4',
-  ordenExamen: 'A4',
+  formula: 'Carta',
+  consentimiento: 'Carta',
+  historiaClinica: 'Carta',
+  ordenExamen: 'Carta',
   termicaFactura: 'Termica80',
 }
 
@@ -44,10 +44,31 @@ export const LABEL_TERMICA: Record<TamanoTermica, string> = {
   Termica58: 'Térmica 58 mm',
 }
 
-// Abre el PDF con el visor del SO (usa diálogo de impresión nativo en Windows).
-// Reemplaza el patrón window.open → ventana.print() que falla en Webview2.
+// En Windows (Webview2): envía el PDF al backend para abrirlo con el visor del SO.
+// En Linux/macOS (navegador real): usa window.print() directamente, que sí funciona.
 export async function imprimirConVisorSO(blob: Blob): Promise<void> {
-  const { apiFetchBinary } = await import('../api/client')
-  const buffer = await blob.arrayBuffer()
-  await apiFetchBinary('/sistema/abrir-pdf', buffer)
+  const { apiFetch, apiFetchBinary } = await import('../api/client')
+
+  let esWindows = false
+  try {
+    const version = await apiFetch<{ plataforma?: string }>('/sistema/version')
+    esWindows = version.plataforma === 'windows'
+  } catch {
+    // Si no se puede consultar, asumir no-Windows y usar window.print()
+  }
+
+  if (esWindows) {
+    const buffer = await blob.arrayBuffer()
+    await apiFetchBinary('/sistema/abrir-pdf', buffer)
+  } else {
+    const url = URL.createObjectURL(blob)
+    const ventana = window.open(url)
+    if (ventana) {
+      ventana.addEventListener('load', () => {
+        ventana.focus()
+        ventana.print()
+        ventana.addEventListener('afterprint', () => URL.revokeObjectURL(url))
+      })
+    }
+  }
 }

@@ -70,13 +70,14 @@ type VersionInfo struct {
 	HayActualizacion bool   `json:"hay_actualizacion"`
 	UrlDescarga      string `json:"url_descarga,omitempty"`
 	Error            string `json:"error,omitempty"`
+	Plataforma       string `json:"plataforma"`
 }
 
 // GET /sistema/version
 func getVersion(w http.ResponseWriter, r *http.Request) {
 	actual := leerVersionLocal()
 
-	info := VersionInfo{Actual: actual}
+	info := VersionInfo{Actual: actual, Plataforma: runtime.GOOS}
 
 	gh, err := consultarGitHub()
 	if err != nil {

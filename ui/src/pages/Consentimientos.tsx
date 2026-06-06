@@ -71,6 +71,9 @@ export default function Consentimientos() {
         fecha={new Date(c.fecha_generacion).toLocaleDateString('es-CO', {
           day: '2-digit', month: 'long', year: 'numeric',
         })}
+        fechaImpresion={new Date().toLocaleDateString('es-CO', {
+          day: '2-digit', month: 'long', year: 'numeric',
+        })}
         tamano={tamano}
         colorPrimario={tema.colorPrimario}
         logoBase64={tema.logoBase64}

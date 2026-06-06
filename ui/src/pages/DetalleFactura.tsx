@@ -45,6 +45,10 @@ export default function DetalleFactura() {
 
   const tamano = TAMANO_PAGINA[medico.impresion.factura]
 
+  const fechaImpresionFactura = new Date().toLocaleDateString('es-CO', {
+    day: '2-digit', month: 'long', year: 'numeric',
+  })
+
   const docPDF = (
     <FacturaPDF
       medico={medico}
@@ -52,6 +56,7 @@ export default function DetalleFactura() {
       pacienteNombre={pacienteNombre}
       paciente={paciente}
       diagnostico=""
+      fechaImpresion={fechaImpresionFactura}
       colorPrimario={tema.colorPrimario}
       logoBase64={tema.logoBase64}
       tamano={tamano}

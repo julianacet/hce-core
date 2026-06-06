@@ -9,6 +9,7 @@ type Props = {
   items: OrdenExamenItem[]
   indicacionesGenerales: string | null
   fecha: string
+  fechaImpresion?: string
   tamano?: string | [number, number]
   colorPrimario?: string
   logoBase64?: string | null
@@ -16,8 +17,8 @@ type Props = {
 
 export default function OrdenExamenPDF({
   medico, paciente, diagnostico, items,
-  indicacionesGenerales, fecha,
-  tamano = 'A4', colorPrimario = '#1d4ed8', logoBase64 = null,
+  indicacionesGenerales, fecha, fechaImpresion,
+  tamano = 'LETTER', colorPrimario = '#1d4ed8', logoBase64 = null,
 }: Props) {
   const LOGO_W = 60
 
@@ -27,6 +28,11 @@ export default function OrdenExamenPDF({
       fontFamily: 'Helvetica', fontSize: 10,
       color: '#0f172a', backgroundColor: '#ffffff',
     },
+    marcaAgua: {
+      position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+      alignItems: 'center', justifyContent: 'center', opacity: 0.07,
+    },
+    marcaAguaImg: { width: 320, height: 320, objectFit: 'contain' },
     header: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 12 },
     logoBox: { width: LOGO_W, marginRight: 12 },
     logoImg: { width: LOGO_W, height: LOGO_W, objectFit: 'contain' },
@@ -85,6 +91,12 @@ export default function OrdenExamenPDF({
     <Document>
       <Page size={tamano as any} style={s.page}>
 
+        {logoBase64 && (
+          <View fixed style={s.marcaAgua}>
+            <Image src={logoBase64} style={s.marcaAguaImg} />
+          </View>
+        )}
+
         {/* Header */}
         <View style={s.header}>
           <View style={s.logoBox}>
@@ -95,6 +107,7 @@ export default function OrdenExamenPDF({
             {medico.especialidad ? <Text style={s.headerSub}>{medico.especialidad}</Text> : null}
             {medico.tarjetaProfesional ? <Text style={s.headerSub}>TP {medico.tarjetaProfesional}</Text> : null}
             {medico.universidad ? <Text style={s.headerSub}>{medico.universidad}</Text> : null}
+            {medico.nit ? <Text style={s.headerSub}>NIT {medico.nit}</Text> : null}
           </View>
         </View>
 
@@ -103,7 +116,10 @@ export default function OrdenExamenPDF({
         {/* Título */}
         <View style={s.titleRow}>
           <Text style={s.titulo}>ORDEN DE EXÁMENES MÉDICOS</Text>
-          <Text style={s.fecha}>{medico.ciudad || ''}{medico.ciudad ? ', ' : ''}{fecha}</Text>
+          <View style={{ alignItems: 'flex-end' }}>
+            <Text style={s.fecha}>Orden: {medico.ciudad ? `${medico.ciudad}, ` : ''}{fecha}</Text>
+            {fechaImpresion && <Text style={s.fecha}>Impresión: {fechaImpresion}</Text>}
+          </View>
         </View>
 
         <View style={s.divider} />

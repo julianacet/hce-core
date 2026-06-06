@@ -23,13 +23,14 @@ type Props = {
   pacienteNombre: string
   paciente?: PacienteInfo
   diagnostico: string
+  fechaImpresion?: string
   colorPrimario?: string
   logoBase64?: string | null
   tamano?: string | [number, number]
 }
 
 export default function FacturaPDF({
-  medico, factura, pacienteNombre, paciente, diagnostico,
+  medico, factura, pacienteNombre, paciente, diagnostico, fechaImpresion,
   colorPrimario = '#1d4ed8', logoBase64 = null,
   tamano = [396, 612],
 }: Props) {
@@ -79,6 +80,11 @@ export default function FacturaPDF({
     divider: { borderBottomWidth: 0.5, borderBottomColor: '#e2e8f0', marginVertical: 10 },
 
     // ── Marca de agua ────────────────────────────────────────────────────────
+    marcaAgua: {
+      position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+      alignItems: 'center', justifyContent: 'center', opacity: 0.07,
+    },
+    marcaAguaImg: { width: 320, height: 320, objectFit: 'contain' },
     watermark: {
       position: 'absolute',
       top: 0, left: 0, right: 0, bottom: 0,
@@ -204,6 +210,12 @@ export default function FacturaPDF({
     <Document>
       <Page size={tamano as any} style={s.page}>
 
+        {logoBase64 && (
+          <View fixed style={s.marcaAgua}>
+            <Image src={logoBase64} style={s.marcaAguaImg} />
+          </View>
+        )}
+
         {/* Header: logo + info consultorio + badge estado */}
         <View style={s.header}>
           <View style={s.logoBox}>
@@ -243,6 +255,12 @@ export default function FacturaPDF({
             <Text style={s.metaLabel}>Fecha de emisión</Text>
             <Text style={s.metaValor}>{fecha}</Text>
           </View>
+          {fechaImpresion && (
+            <View style={s.metaCelda}>
+              <Text style={s.metaLabel}>Fecha de impresión</Text>
+              <Text style={s.metaValor}>{fechaImpresion}</Text>
+            </View>
+          )}
           <View style={s.metaCelda}>
             <Text style={s.metaLabel}>Responsable de pago</Text>
             <Text style={s.metaValor}>Particular (paciente)</Text>

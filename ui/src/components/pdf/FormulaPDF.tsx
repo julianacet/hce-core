@@ -24,6 +24,7 @@ type Props = {
   medicamentos: Medicamento[]
   incluirFirma: boolean
   fecha: string
+  fechaImpresion?: string
   tipo?: 'pos' | 'no_pos'
   tamano?: string | [number, number]
   colorPrimario?: string
@@ -31,8 +32,8 @@ type Props = {
 }
 
 export default function FormulaPDF({
-  medico, paciente, diagnostico, medicamentos, incluirFirma, fecha,
-  tipo: _tipo, tamano = 'A4',
+  medico, paciente, diagnostico, medicamentos, incluirFirma, fecha, fechaImpresion,
+  tipo: _tipo, tamano = 'LETTER',
   colorPrimario = '#1d4ed8', logoBase64 = null,
 }: Props) {
   const tituloFormula = 'FÓRMULA MÉDICA'
@@ -47,6 +48,13 @@ export default function FormulaPDF({
       color: '#0f172a',
       backgroundColor: '#ffffff',
     },
+
+    // ── Marca de agua ────────────────────────────────────────────────────────
+    marcaAgua: {
+      position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+      alignItems: 'center', justifyContent: 'center', opacity: 0.07,
+    },
+    marcaAguaImg: { width: 320, height: 320, objectFit: 'contain' },
 
     // ── Header ────────────────────────────────────────────────────────────────
     header: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 12 },
@@ -137,6 +145,12 @@ export default function FormulaPDF({
     <Document>
       <Page size={tamano as any} style={s.page}>
 
+        {logoBase64 && (
+          <View fixed style={s.marcaAgua}>
+            <Image src={logoBase64} style={s.marcaAguaImg} />
+          </View>
+        )}
+
         {/* Header: logo + info consultorio */}
         <View style={s.header}>
           <View style={s.logoBox}>
@@ -158,7 +172,10 @@ export default function FormulaPDF({
         {/* Título + fecha */}
         <View style={s.titleRow}>
           <Text style={s.titulo}>{tituloFormula}</Text>
-          <Text style={s.fecha}>{medico.ciudad || ''}{medico.ciudad ? ', ' : ''}{fecha}</Text>
+          <View style={{ alignItems: 'flex-end' }}>
+            <Text style={s.fecha}>Prescripción: {medico.ciudad ? `${medico.ciudad}, ` : ''}{fecha}</Text>
+            {fechaImpresion && <Text style={s.fecha}>Impresión: {fechaImpresion}</Text>}
+          </View>
         </View>
 
         <View style={s.divider} />

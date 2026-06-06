@@ -42,6 +42,9 @@ function TabExamenesMedicos({
       const fechaOrden = new Date(orden.fecha_creacion).toLocaleDateString('es-CO', {
         day: '2-digit', month: 'long', year: 'numeric',
       })
+      const fechaImpresionOrden = new Date().toLocaleDateString('es-CO', {
+        day: '2-digit', month: 'long', year: 'numeric',
+      })
       const blob = await pdf(
         <OrdenExamenPDF
           medico={medico}
@@ -55,6 +58,7 @@ function TabExamenesMedicos({
           items={orden.items}
           indicacionesGenerales={orden.indicaciones_generales}
           fecha={fechaOrden}
+          fechaImpresion={fechaImpresionOrden}
           tamano={TAMANO_PAGINA[(medico.impresion?.ordenExamen ?? 'A4') as TamanoDocumento]}
           colorPrimario={tema.colorPrimario}
           logoBase64={tema.logoBase64}
@@ -219,6 +223,9 @@ export default function DetalleEncuentro() {
       const fechaFormula = new Date(formula.fecha_creacion).toLocaleDateString('es-CO', {
         day: '2-digit', month: 'long', year: 'numeric',
       })
+      const fechaImpresionFormula = new Date().toLocaleDateString('es-CO', {
+        day: '2-digit', month: 'long', year: 'numeric',
+      })
       const blob = await pdf(
         <FormulaPDF
           medico={medico}
@@ -232,6 +239,7 @@ export default function DetalleEncuentro() {
           medicamentos={meds}
           incluirFirma={!!medico.firmaBase64}
           fecha={fechaFormula}
+          fechaImpresion={fechaImpresionFormula}
           colorPrimario={tema.colorPrimario}
           logoBase64={tema.logoBase64}
         />

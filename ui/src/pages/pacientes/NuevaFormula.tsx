@@ -139,6 +139,10 @@ export default function NuevaFormula() {
   const fecha = new Date().toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' })
   const formulaValida = !!paciente && meds.every((m) => m.nombre)
 
+  const fechaImpresion = new Date().toLocaleDateString('es-CO', {
+    day: '2-digit', month: 'long', year: 'numeric',
+  })
+
   const docPDF = paciente ? (
     <FormulaPDF
       medico={medico}
@@ -147,6 +151,7 @@ export default function NuevaFormula() {
       medicamentos={meds}
       incluirFirma={incluirFirma}
       fecha={fecha}
+      fechaImpresion={fechaImpresion}
       tipo={tab}
       colorPrimario={tema.colorPrimario}
       logoBase64={tema.logoBase64}
