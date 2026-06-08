@@ -59,6 +59,7 @@ export default function DetalleFactura() {
       fechaImpresion={fechaImpresionFactura}
       colorPrimario={tema.colorPrimario}
       logoBase64={tema.logoBase64}
+      logoTextoBase64={medico.logoTextoBase64}
       tamano={tamano}
     />
   )

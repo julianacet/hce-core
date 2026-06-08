@@ -19,6 +19,7 @@ export default function Configuracion() {
   const [guardado, setGuardado] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const inputFirma = useRef<HTMLInputElement>(null)
+  const inputLogoTexto = useRef<HTMLInputElement>(null)
 
   // Impresora térmica
   const [impresoraSeleccionada, setImpresoraSeleccionada] = useState('')
@@ -50,6 +51,19 @@ export default function Configuracion() {
   function quitarFirma() {
     setForm((prev) => ({ ...prev, firmaBase64: null }))
     if (inputFirma.current) inputFirma.current.value = ''
+  }
+
+  function handleLogoTexto(e: React.ChangeEvent<HTMLInputElement>) {
+    const archivo = e.target.files?.[0]
+    if (!archivo) return
+    const reader = new FileReader()
+    reader.onload = (ev) => setForm((prev) => ({ ...prev, logoTextoBase64: ev.target?.result as string }))
+    reader.readAsDataURL(archivo)
+  }
+
+  function quitarLogoTexto() {
+    setForm((prev) => ({ ...prev, logoTextoBase64: null }))
+    if (inputLogoTexto.current) inputLogoTexto.current.value = ''
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -233,6 +247,40 @@ export default function Configuracion() {
                 PNG, JPG — fondo blanco o transparente
               </span>
               <input ref={inputFirma} type="file" accept="image/*" onChange={handleFirma} className="hidden" />
+            </label>
+          )}
+        </div>
+
+        {/* Logo tipográfico */}
+        <div className="card-hce p-5 space-y-4">
+          <div>
+            <h3 className="card-title">Logo tipográfico del encabezado</h3>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--hce-text-muted)' }}>
+              Imagen con el nombre del consultorio en tipografía personalizada. Reemplaza el texto del encabezado en los documentos generados. Si no se sube, se usa el nombre del consultorio en texto plano.
+            </p>
+          </div>
+
+          {form.logoTextoBase64 ? (
+            <div className="space-y-3">
+              <div className="rounded-lg p-4 flex items-center justify-center h-20"
+                style={{ backgroundColor: 'var(--hce-bg)', border: '1px solid var(--hce-border)' }}>
+                <img src={form.logoTextoBase64} alt="Logo tipográfico" className="max-h-12 object-contain" />
+              </div>
+              <button type="button" onClick={quitarLogoTexto}
+                className="flex items-center gap-2 text-sm text-red-500 hover:text-red-700 transition-colors">
+                <Trash2 size={14} /> Quitar logo tipográfico
+              </button>
+            </div>
+          ) : (
+            <label className="flex flex-col items-center justify-center rounded-lg p-8 cursor-pointer transition-colors border-2 border-dashed border-[var(--hce-border)] hover:border-[var(--hce-primary)]">
+              <Upload size={22} className="mb-2" style={{ color: 'var(--hce-text-muted)' }} />
+              <span className="text-sm" style={{ color: 'var(--hce-text-muted)' }}>
+                Haga clic para subir la imagen tipográfica
+              </span>
+              <span className="text-xs mt-1" style={{ color: 'var(--hce-text-muted)' }}>
+                PNG con fondo transparente — no SVG
+              </span>
+              <input ref={inputLogoTexto} type="file" accept="image/png,image/jpeg,image/webp" onChange={handleLogoTexto} className="hidden" />
             </label>
           )}
         </div>

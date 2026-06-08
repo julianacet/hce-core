@@ -15,6 +15,7 @@ export type DatosMedico = {
   nit: string
   codPrestador: string
   firmaBase64: string | null
+  logoTextoBase64: string | null
   primerControlGratis: boolean
   impresion: ConfigImpresion
 }
@@ -32,6 +33,7 @@ const DEFAULTS: DatosMedico = {
   codPrestador: '',
   correoElectronico: '',
   firmaBase64: null,
+  logoTextoBase64: null,
   primerControlGratis: true,
   impresion: DEFAULTS_IMPRESION,
 }

@@ -155,6 +155,7 @@ export default function NuevaFormula() {
       tipo={tab}
       colorPrimario={tema.colorPrimario}
       logoBase64={tema.logoBase64}
+      logoTextoBase64={medico.logoTextoBase64}
     />
   ) : null
 

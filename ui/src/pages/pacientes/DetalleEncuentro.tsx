@@ -62,6 +62,7 @@ function TabExamenesMedicos({
           tamano={TAMANO_PAGINA[(medico.impresion?.ordenExamen ?? 'A4') as TamanoDocumento]}
           colorPrimario={tema.colorPrimario}
           logoBase64={tema.logoBase64}
+          logoTextoBase64={medico.logoTextoBase64}
         />
       ).toBlob()
       await imprimirConVisorSO(blob)
@@ -188,6 +189,7 @@ export default function DetalleEncuentro() {
           tamano={TAMANO_PAGINA[(medico.impresion?.historiaClinica ?? 'A4') as TamanoDocumento]}
           colorPrimario={tema.colorPrimario}
           logoBase64={tema.logoBase64}
+          logoTextoBase64={medico.logoTextoBase64}
         />
       ).toBlob()
       const url = URL.createObjectURL(blob)
@@ -242,6 +244,7 @@ export default function DetalleEncuentro() {
           fechaImpresion={fechaImpresionFormula}
           colorPrimario={tema.colorPrimario}
           logoBase64={tema.logoBase64}
+          logoTextoBase64={medico.logoTextoBase64}
         />
       ).toBlob()
       await imprimirConVisorSO(blob)

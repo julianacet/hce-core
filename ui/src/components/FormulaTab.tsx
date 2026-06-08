@@ -108,6 +108,7 @@ export default function FormulaTab({ medsPos, setMedsPos, medsNoPos, setMedsNoPo
       tipo={tab}
       colorPrimario={tema.colorPrimario}
       logoBase64={tema.logoBase64}
+      logoTextoBase64={medico.logoTextoBase64}
     />
   ) : null
 

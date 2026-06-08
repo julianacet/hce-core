@@ -95,6 +95,7 @@ export default function NuevoConsentimiento() {
           tamano={tamano}
           colorPrimario={tema.colorPrimario}
           logoBase64={tema.logoBase64}
+          logoTextoBase64={medico.logoTextoBase64}
         />
       ).toBlob()
       await imprimirConVisorSO(blob)

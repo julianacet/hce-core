@@ -106,13 +106,14 @@ export type HistoriaClinicaProps = {
   tamano?: string | [number, number]
   colorPrimario?: string
   logoBase64?: string | null
+  logoTextoBase64?: string | null
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function HistoriaClinicaPDF({
   medico, paciente, encuentro, campos, antecedentes, formulas, ordenes = [],
-  fechaImpresion, tamano = 'LETTER', colorPrimario = '#1d4ed8', logoBase64 = null,
+  fechaImpresion, tamano = 'LETTER', colorPrimario = '#1d4ed8', logoBase64 = null, logoTextoBase64 = null,
 }: HistoriaClinicaProps) {
   const PRIMARY = colorPrimario
   const LOGO_W  = 60
@@ -351,7 +352,10 @@ export default function HistoriaClinicaPDF({
               : <View style={s.logoPlaceholder} />}
           </View>
           <View style={s.headerInfo}>
-            <Text style={s.headerConsultorio}>{medico.nombreConsultorio || 'Consultorio Médico'}</Text>
+            {logoTextoBase64
+              ? <Image src={logoTextoBase64} style={{ height: 28, maxWidth: 240, objectFit: 'contain', alignSelf: 'flex-start', marginBottom: 2 }} />
+              : <Text style={s.headerConsultorio}>{medico.nombreConsultorio || 'Consultorio Médico'}</Text>
+            }
             {medico.especialidad ? <Text style={s.headerSub}>{medico.especialidad}</Text> : null}
             {medico.tarjetaProfesional ? <Text style={s.headerSub}>TP {medico.tarjetaProfesional}</Text> : null}
             {medico.universidad ? <Text style={s.headerSub}>{medico.universidad}</Text> : null}
