@@ -183,7 +183,7 @@ export default function FacturaTermicaPDF({
         {/* Items */}
         {factura.items.map((item) => (
           <View key={item.id} style={s.itemRow}>
-            <Text style={s.itemCode}>{item.codigo_cups}</Text>
+            <Text style={s.itemCode}>{item.codigo_cups || '—'}</Text>
             <Text style={s.itemDesc}>
               {item.descripcion}
               {'\n'}

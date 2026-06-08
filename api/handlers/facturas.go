@@ -270,7 +270,14 @@ func (h *FacturaHandler) crear(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var subtotalCentavos int64
-	for _, item := range input.Items {
+	for i := range input.Items {
+		input.Items[i].Descripcion = strings.TrimSpace(input.Items[i].Descripcion)
+		input.Items[i].CodigoCups = strings.TrimSpace(input.Items[i].CodigoCups)
+		item := input.Items[i]
+		if item.Descripcion == "" {
+			responderError(w, http.StatusBadRequest, "cada item debe tener una descripción")
+			return
+		}
 		if item.Cantidad <= 0 || item.ValorUnitario < 0 {
 			responderError(w, http.StatusBadRequest, "cantidad y valor_unitario deben ser positivos")
 			return
@@ -302,7 +309,7 @@ func (h *FacturaHandler) crear(w http.ResponseWriter, r *http.Request) {
 			itemSubtotal := float64(int64(item.Cantidad)*int64(math.Round(item.ValorUnitario*100))) / 100
 			if _, err := tx.Exec(r.Context(), `
 				INSERT INTO factura_item (factura_id, codigo_cups, descripcion, valor_unitario, cantidad, subtotal, orden)
-				VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+				VALUES ($1, NULLIF($2, ''), $3, $4, $5, $6, $7)`,
 				rowID, item.CodigoCups, item.Descripcion, item.ValorUnitario, item.Cantidad, itemSubtotal, i+1,
 			); err != nil {
 				return err
@@ -362,7 +369,14 @@ func (h *FacturaHandler) actualizar(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var subtotalCentavos int64
-	for _, item := range input.Items {
+	for i := range input.Items {
+		input.Items[i].Descripcion = strings.TrimSpace(input.Items[i].Descripcion)
+		input.Items[i].CodigoCups = strings.TrimSpace(input.Items[i].CodigoCups)
+		item := input.Items[i]
+		if item.Descripcion == "" {
+			responderError(w, http.StatusBadRequest, "cada item debe tener una descripción")
+			return
+		}
 		if item.Cantidad <= 0 || item.ValorUnitario < 0 {
 			responderError(w, http.StatusBadRequest, "cantidad y valor_unitario deben ser positivos")
 			return
@@ -379,7 +393,7 @@ func (h *FacturaHandler) actualizar(w http.ResponseWriter, r *http.Request) {
 			itemSubtotal := float64(int64(item.Cantidad)*int64(math.Round(item.ValorUnitario*100))) / 100
 			if _, err := tx.Exec(r.Context(),
 				`INSERT INTO factura_item (factura_id, codigo_cups, descripcion, valor_unitario, cantidad, subtotal, orden)
-				 VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+				 VALUES ($1,NULLIF($2, ''),$3,$4,$5,$6,$7)`,
 				rowID, item.CodigoCups, item.Descripcion, item.ValorUnitario, item.Cantidad, itemSubtotal, i+1,
 			); err != nil {
 				return err
@@ -476,7 +490,7 @@ func (h *FacturaHandler) eliminar(w http.ResponseWriter, r *http.Request) {
 
 func obtenerItems(ctx context.Context, db *pgxpool.Pool, facturaRowID string) ([]models.FacturaItem, error) {
 	rows, err := db.Query(ctx, `
-		SELECT id, codigo_cups, descripcion, valor_unitario, cantidad, subtotal, orden
+		SELECT id, COALESCE(codigo_cups, ''), descripcion, valor_unitario, cantidad, subtotal, orden
 		FROM factura_item WHERE factura_id = $1 ORDER BY orden`,
 		facturaRowID,
 	)

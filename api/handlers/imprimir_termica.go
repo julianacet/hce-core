@@ -269,7 +269,10 @@ func escposFactura(f models.Factura, paciente, consultorio, medico, especialidad
 		w(wrap(ascii(item.Descripcion), width))
 		detalle := item.CodigoCups
 		if item.Cantidad > 1 {
-			detalle += fmt.Sprintf(" %d x %s", item.Cantidad, copStr(item.ValorUnitario))
+			if detalle != "" {
+				detalle += " "
+			}
+			detalle += fmt.Sprintf("%d x %s", item.Cantidad, copStr(item.ValorUnitario))
 		}
 		w(columnas("  "+detalle, copStr(item.Subtotal), width) + "\n")
 	}

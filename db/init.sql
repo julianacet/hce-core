@@ -259,7 +259,7 @@ CREATE TABLE factura_item (
     id         UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
     factura_id UUID          NOT NULL REFERENCES factura(id) ON DELETE RESTRICT,
 
-    codigo_cups    VARCHAR(6)     NOT NULL REFERENCES cups_codigo(codigo) ON UPDATE CASCADE,
+    codigo_cups    VARCHAR(6)     REFERENCES cups_codigo(codigo) ON UPDATE CASCADE, -- NULL = procedimiento interno sin CUPS
     descripcion    TEXT           NOT NULL,
     valor_unitario NUMERIC(15, 2) NOT NULL,
     cantidad       INTEGER        NOT NULL DEFAULT 1 CHECK (cantidad > 0),

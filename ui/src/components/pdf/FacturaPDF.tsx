@@ -319,7 +319,7 @@ export default function FacturaPDF({
         </View>
         {factura.items.map((item) => (
           <View key={item.id} style={s.tablaFila}>
-            <Text style={s.colCups}>{item.codigo_cups}</Text>
+            <Text style={s.colCups}>{item.codigo_cups || '—'}</Text>
             <Text style={s.colDesc}>{item.descripcion}</Text>
             <Text style={s.colNum}>{item.cantidad}</Text>
             <Text style={s.colNum}>{formatCOP(item.valor_unitario)}</Text>

@@ -35,6 +35,7 @@ export default function NuevaFactura() {
   )
 
   const total = items.reduce((acc, item) => acc + item.cantidad * item.valor_unitario, 0)
+  const hayDescripcionVacia = items.some((item) => !item.descripcion.trim())
 
   function seleccionarPaciente(p: Paciente) {
     setPaciente(p)
@@ -49,6 +50,16 @@ export default function NuevaFactura() {
       valor_unitario: mapaPrecios.get(cups.codigo) ?? 0,
     }])
     setBusquedaCups('')
+  }
+
+  function agregarManual() {
+    setItems((prev) => [...prev, {
+      _key: nextKey++,
+      codigo_cups: '',
+      descripcion: '',
+      cantidad: 1,
+      valor_unitario: 0,
+    }])
   }
 
   function actualizarItem(key: number, campo: keyof FacturaItemInput, valor: string | number) {
@@ -137,7 +148,18 @@ export default function NuevaFactura() {
         {paciente && (
           <>
             <div className="card-hce p-5 space-y-3">
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Agregar procedimiento CUPS</p>
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Agregar procedimiento CUPS</p>
+                <button
+                  type="button"
+                  onClick={agregarManual}
+                  className="flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded-md border transition-colors"
+                  style={{ borderColor: 'var(--hce-border)', color: 'var(--hce-primary)' }}
+                >
+                  <Plus size={13} />
+                  Procedimiento sin CUPS (interno)
+                </button>
+              </div>
               <div className="relative">
                 <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
@@ -189,7 +211,7 @@ export default function NuevaFactura() {
                     <tbody className="divide-y divide-slate-100">
                       {items.map((item) => (
                         <tr key={item._key}>
-                          <td className="px-4 py-3 font-mono text-xs" style={{ color: 'var(--hce-primary)' }}>{item.codigo_cups}</td>
+                          <td className="px-4 py-3 font-mono text-xs" style={{ color: item.codigo_cups ? 'var(--hce-primary)' : 'var(--hce-text-muted)' }}>{item.codigo_cups || '—'}</td>
                           <td className="px-4 py-3">
                             <input
                               type="text"
@@ -254,7 +276,7 @@ export default function NuevaFactura() {
                         className="input-hce w-40"
                       />
                     </div>
-                    <button type="submit" disabled={crear.isPending || total === 0 || !fechaFactura} className="btn-primary">
+                    <button type="submit" disabled={crear.isPending || total === 0 || !fechaFactura || hayDescripcionVacia} className="btn-primary">
                       {crear.isPending ? 'Guardando...' : 'Guardar factura'}
                     </button>
                   </div>

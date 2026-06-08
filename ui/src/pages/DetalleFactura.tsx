@@ -197,7 +197,7 @@ export default function DetalleFactura() {
             <tbody className="divide-y divide-slate-100">
               {factura.items.map((item) => (
                 <tr key={item.id}>
-                  <td className="px-4 py-3 font-mono text-xs" style={{ color: 'var(--hce-primary)' }}>{item.codigo_cups}</td>
+                  <td className="px-4 py-3 font-mono text-xs" style={{ color: 'var(--hce-primary)' }}>{item.codigo_cups || '—'}</td>
                   <td className="px-4 py-3 text-sm text-slate-700">{item.descripcion}</td>
                   <td className="px-4 py-3 text-right text-sm text-slate-600">{item.cantidad}</td>
                   <td className="px-4 py-3 text-right text-sm text-slate-600">{formatCOP(item.valor_unitario)}</td>
