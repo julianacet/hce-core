@@ -144,6 +144,7 @@ func main() {
 				r.Mount("/farmacia/dashboard", handlers.FarmaciaDashboardRouter(db))
 				r.Mount("/farmacia/pacientes", handlers.FarmaciaPacientesRouter(db))
 				r.Mount("/farmacia/medicamentos", handlers.FarmaciaMedicamentosRouter(db))
+				r.Mount("/farmacia/tarifas-medicamento", handlers.FarmaciaTarifasMedicamentoRouter(db))
 			})
 		})
 	})

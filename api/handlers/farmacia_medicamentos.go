@@ -32,8 +32,8 @@ func (h *farmaciaMedicamentosHandler) listar(w http.ResponseWriter, r *http.Requ
 	args := []any{}
 
 	if q != "" {
-		args = append(args, "%"+strings.ToLower(q)+"%")
-		query += fmt.Sprintf(` AND LOWER(nombre) LIKE $%d`, len(args))
+		args = append(args, prepBusquedaMed(q))
+		query += fmt.Sprintf(` AND unaccent(nombre) ILIKE unaccent($%d)`, len(args))
 	}
 	if tipo == "pos" || tipo == "no_pos" {
 		args = append(args, tipo)
