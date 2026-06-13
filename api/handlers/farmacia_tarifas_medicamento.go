@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
@@ -37,12 +38,28 @@ const selectMedConPrecio = `
 	       ON t.medicamento_id = m.id AND t.esta_activo = TRUE
 	WHERE m.esta_activo = TRUE`
 
-// GET /api/farmacia/tarifas-medicamento?q=texto&tipo=pos|no_pos
+const farmaciaMedLimit = 20
+
+// GET /api/farmacia/tarifas-medicamento?q=texto&tipo=pos|no_pos&page=
 func (h *farmaciaTarifasHandler) buscar(w http.ResponseWriter, r *http.Request) {
 	q := strings.TrimSpace(r.URL.Query().Get("q"))
 	tipo := r.URL.Query().Get("tipo")
 
-	query := selectMedConPrecio
+	page := 1
+	if p, err := strconv.Atoi(r.URL.Query().Get("page")); err == nil && p > 0 {
+		page = p
+	}
+	offset := (page - 1) * farmaciaMedLimit
+
+	query := `
+		SELECT COUNT(*) OVER() AS total,
+		       m.id, COALESCE(m.codigo,''), m.nombre,
+		       COALESCE(m.concentracion,''), COALESCE(m.forma_farmaceutica,''), m.tipo,
+		       t.id, t.precio, t.notas
+		FROM medicamento_predefinido m
+		LEFT JOIN farmacia.tarifa_medicamento t
+		       ON t.medicamento_id = m.id AND t.esta_activo = TRUE
+		WHERE m.esta_activo = TRUE`
 	args := []any{}
 	n := 1
 
@@ -59,9 +76,11 @@ func (h *farmaciaTarifasHandler) buscar(w http.ResponseWriter, r *http.Request) 
 	if tipo == "pos" || tipo == "no_pos" {
 		args = append(args, tipo)
 		query += fmt.Sprintf(` AND m.tipo = $%d`, n)
+		n++
 	}
 
-	query += ` ORDER BY m.nombre LIMIT 100`
+	args = append(args, farmaciaMedLimit, offset)
+	query += fmt.Sprintf(` ORDER BY m.nombre LIMIT $%d OFFSET $%d`, n, n+1)
 
 	rows, err := h.db.Query(r.Context(), query, args...)
 	if err != nil {
@@ -72,9 +91,11 @@ func (h *farmaciaTarifasHandler) buscar(w http.ResponseWriter, r *http.Request) 
 	defer rows.Close()
 
 	lista := []models.FarmaciaMedicamentoConPrecio{}
+	total := 0
 	for rows.Next() {
 		var m models.FarmaciaMedicamentoConPrecio
 		if err := rows.Scan(
+			&total,
 			&m.ID, &m.Codigo, &m.Nombre,
 			&m.Concentracion, &m.FormaFarmaceutica, &m.Tipo,
 			&m.TarifaID, &m.Precio, &m.TarifaNotas,
@@ -87,7 +108,7 @@ func (h *farmaciaTarifasHandler) buscar(w http.ResponseWriter, r *http.Request) 
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(lista)
+	json.NewEncoder(w).Encode(map[string]any{"medicamentos": lista, "total": total})
 }
 
 // POST /api/farmacia/tarifas-medicamento — solo admin

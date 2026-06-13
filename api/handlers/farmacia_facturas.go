@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -34,12 +35,20 @@ func FarmaciaFacturasRouter(db *pgxpool.Pool) http.Handler {
 	return r
 }
 
-// GET /api/farmacia/facturas?q=&estado=&desde=&hasta=
+const farmaciaFacturasLimit = 20
+
+// GET /api/farmacia/facturas?q=&estado=&desde=&hasta=&page=
 func (h *farmaciaFacturasHandler) listar(w http.ResponseWriter, r *http.Request) {
 	q := strings.TrimSpace(r.URL.Query().Get("q"))
 	estado := r.URL.Query().Get("estado")
 	desde := r.URL.Query().Get("desde")
 	hasta := r.URL.Query().Get("hasta")
+
+	page := 1
+	if p, err := strconv.Atoi(r.URL.Query().Get("page")); err == nil && p > 0 {
+		page = p
+	}
+	offset := (page - 1) * farmaciaFacturasLimit
 
 	where := []string{}
 	args := []any{}
@@ -75,6 +84,8 @@ func (h *farmaciaFacturasHandler) listar(w http.ResponseWriter, r *http.Request)
 		whereClause = "WHERE " + strings.Join(where, " AND ")
 	}
 
+	args = append(args, farmaciaFacturasLimit, offset)
+
 	type Resumen struct {
 		ID                string    `json:"id"`
 		Numero            string    `json:"numero"`
@@ -87,7 +98,8 @@ func (h *farmaciaFacturasHandler) listar(w http.ResponseWriter, r *http.Request)
 	}
 
 	rows, err := h.db.Query(r.Context(), fmt.Sprintf(`
-		SELECT f.id, f.numero, f.paciente_documento,
+		SELECT COUNT(*) OVER() AS total,
+		       f.id, f.numero, f.paciente_documento,
 		       COALESCE(CONCAT_WS(' ', p.nombre_primero, p.nombre_segundo, p.apellido_primero, p.apellido_segundo), f.paciente_documento),
 		       f.fecha, f.total, f.estado, f.creado_por
 		FROM farmacia.factura f
@@ -95,7 +107,7 @@ func (h *farmaciaFacturasHandler) listar(w http.ResponseWriter, r *http.Request)
 		  AND p.es_ultima_version = TRUE AND p.esta_activo = TRUE
 		%s
 		ORDER BY f.fecha DESC
-		LIMIT 200`, whereClause), args...)
+		LIMIT $%d OFFSET $%d`, whereClause, argN, argN+1), args...)
 	if err != nil {
 		log.Printf("farmacia listar facturas: %v", err)
 		responderError(w, http.StatusInternalServerError, "error al consultar facturas")
@@ -104,9 +116,10 @@ func (h *farmaciaFacturasHandler) listar(w http.ResponseWriter, r *http.Request)
 	defer rows.Close()
 
 	lista := []Resumen{}
+	total := 0
 	for rows.Next() {
 		var f Resumen
-		if err := rows.Scan(&f.ID, &f.Numero, &f.PacienteDocumento, &f.PacienteNombre,
+		if err := rows.Scan(&total, &f.ID, &f.Numero, &f.PacienteDocumento, &f.PacienteNombre,
 			&f.Fecha, &f.Total, &f.Estado, &f.CreadoPor); err != nil {
 			log.Printf("farmacia escanear factura: %v", err)
 			responderError(w, http.StatusInternalServerError, "error al leer factura")
@@ -115,7 +128,7 @@ func (h *farmaciaFacturasHandler) listar(w http.ResponseWriter, r *http.Request)
 		lista = append(lista, f)
 	}
 
-	responderJSON(w, http.StatusOK, lista)
+	responderJSON(w, http.StatusOK, map[string]any{"facturas": lista, "total": total})
 }
 
 // GET /api/farmacia/facturas/:id
