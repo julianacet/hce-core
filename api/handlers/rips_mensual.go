@@ -19,12 +19,24 @@ type RipsHandler struct {
 }
 
 // cupsPorFinalidad mapea finalidad_consulta → código CUPS de consulta por defecto.
-// Solo cubre consultas (finalidades 10, 11, 12). Procedimientos (otras finalidades)
-// requieren consultar factura_item — pendiente implementar (B4).
 var cupsPorFinalidad = map[string]string{
 	"10": "890101",
 	"11": "890201",
 	"12": "890301",
+}
+
+// conceptoRecaudo mapea tipo_usuario del paciente al código de concepto de recaudo
+// según Res. 2275/2023: 01 cuota moderadora (contributivo), 02 pago de recuperación
+// (subsidiado/vinculado), 04 no aplica (particular/otro).
+func conceptoRecaudo(tipoUsuario string) string {
+	switch tipoUsuario {
+	case "01":
+		return "01"
+	case "02", "03":
+		return "02"
+	default:
+		return "04"
+	}
 }
 
 func RipsMensualRouter(db *pgxpool.Pool) http.Handler {
@@ -116,23 +128,28 @@ func (h *RipsHandler) generarMensual(w http.ResponseWriter, r *http.Request) {
 		responderError(w, http.StatusBadRequest, "anio y mes inválidos")
 		return
 	}
-	// 1. Cargar todos los encuentros del período con datos del paciente
+	// 1. Cargar todos los encuentros del período con datos del paciente y diagnósticos
 	type encData struct {
-		EncuentroID               string
-		FechaAtencion             time.Time
-		CausaExterna              string
-		FinalidadConsulta         string
-		ViaIngreso                string
-		CodigoDiagnostico         string
-		TipoDiagnosticoPrincipal  string
-		TipoDoc                   string
-		NumDoc                    string
-		FechaNac                  string
-		Genero                    string
-		PaisOrigen                string
-		MunicipioRes              string
-		ZonaRes                   string
-		TipoUsuario               string
+		EncuentroID              string
+		FechaAtencion            time.Time
+		CausaExterna             string
+		FinalidadConsulta        string
+		ViaIngreso               string
+		CodigoDiagnostico        string
+		TipoDiagnosticoPrincipal string
+		TipoDoc                  string
+		NumDoc                   string
+		FechaNac                 string
+		Genero                   string
+		PaisOrigen               string
+		MunicipioRes             string
+		ZonaRes                  string
+		TipoUsuario              string
+		VrServicio               float64
+		DiagRel1                 *string
+		DiagRel2                 *string
+		DiagRel3                 *string
+		DiagExterno              *string
 	}
 
 	rows, err := h.db.Query(r.Context(), `
@@ -142,11 +159,35 @@ func (h *RipsHandler) generarMensual(w http.ResponseWriter, r *http.Request) {
 			ec.codigo_diagnostico_principal, ec.tipo_diagnostico_principal,
 			p.tipo_documento, p.numero_documento, p.fecha_nacimiento::text,
 			p.genero, p.codigo_pais_origen,
-			p.codigo_municipio_residencia, p.zona_residencia, p.tipo_usuario
+			p.codigo_municipio_residencia, p.zona_residencia, p.tipo_usuario,
+			COALESCE(f.total, 0) AS vr_servicio,
+			(SELECT ed.codigo FROM encuentro_diagnostico ed
+			 WHERE ed.encuentro_clinico_id = ec.id
+			   AND ed.tipo IN ('relacionado', 'secundario')
+			   AND ed.codigo IS NOT NULL
+			 ORDER BY ed.orden ASC LIMIT 1 OFFSET 0) AS diag_rel_1,
+			(SELECT ed.codigo FROM encuentro_diagnostico ed
+			 WHERE ed.encuentro_clinico_id = ec.id
+			   AND ed.tipo IN ('relacionado', 'secundario')
+			   AND ed.codigo IS NOT NULL
+			 ORDER BY ed.orden ASC LIMIT 1 OFFSET 1) AS diag_rel_2,
+			(SELECT ed.codigo FROM encuentro_diagnostico ed
+			 WHERE ed.encuentro_clinico_id = ec.id
+			   AND ed.tipo IN ('relacionado', 'secundario')
+			   AND ed.codigo IS NOT NULL
+			 ORDER BY ed.orden ASC LIMIT 1 OFFSET 2) AS diag_rel_3,
+			(SELECT ed.codigo FROM encuentro_diagnostico ed
+			 WHERE ed.encuentro_clinico_id = ec.id
+			   AND ed.codigo IS NOT NULL
+			   AND ed.codigo ~ '^[VWXYvwxy]'
+			 ORDER BY ed.orden ASC LIMIT 1) AS diag_externo
 		FROM encuentro_clinico ec
 		JOIN paciente p
 		  ON p.numero_documento = ec.paciente_documento
 		 AND p.es_ultima_version = TRUE AND p.esta_activo = TRUE
+		LEFT JOIN factura f
+		  ON f.encuentro_id = ec.id
+		 AND f.es_ultima_version = TRUE AND f.esta_activo = TRUE
 		WHERE ec.es_ultima_version = TRUE AND ec.esta_activo = TRUE
 		  AND ec.estado = 'finalizado'
 		  AND ec.codigo_diagnostico_principal IS NOT NULL
@@ -179,6 +220,9 @@ func (h *RipsHandler) generarMensual(w http.ResponseWriter, r *http.Request) {
 			&enc.TipoDoc, &enc.NumDoc, &enc.FechaNac,
 			&enc.Genero, &enc.PaisOrigen,
 			&enc.MunicipioRes, &enc.ZonaRes, &enc.TipoUsuario,
+			&enc.VrServicio,
+			&enc.DiagRel1, &enc.DiagRel2, &enc.DiagRel3,
+			&enc.DiagExterno,
 		); err != nil {
 			log.Printf("rips mensual scan enc: %v", err)
 			responderError(w, http.StatusInternalServerError, "error al leer encuentros")
@@ -215,21 +259,25 @@ func (h *RipsHandler) generarMensual(w http.ResponseWriter, r *http.Request) {
 				cups = "890101"
 			}
 			cntC++
+			var diagPrincipalE *string
+			if enc.CausaExterna != "13" {
+				diagPrincipalE = enc.DiagExterno
+			}
 			consultas = append(consultas, models.RipsConsulta{
 				CodPrestador:               input.CodPrestador,
 				FechaInicioAtencion:        fechaStr,
 				NumAutorizacion:            nil,
 				CodDiagnosticoPrincipal:    enc.CodigoDiagnostico,
-				CodDiagnosticoPrincipalE:   nil,
-				CodDiagnosticoRelacionado1: nil,
-				CodDiagnosticoRelacionado2: nil,
-				CodDiagnosticoRelacionado3: nil,
+				CodDiagnosticoPrincipalE:   diagPrincipalE,
+				CodDiagnosticoRelacionado1: enc.DiagRel1,
+				CodDiagnosticoRelacionado2: enc.DiagRel2,
+				CodDiagnosticoRelacionado3: enc.DiagRel3,
 				TipoDiagnosticoPrincipal:   enc.TipoDiagnosticoPrincipal,
 				FinalidadTecnologiaSalud:   enc.FinalidadConsulta,
 				CausaExternaMotivoAtencion: enc.CausaExterna,
 				CodConsulta:                cups,
-				VrServicio:                 0,
-				ConceptoRecaudo:            "04",
+				VrServicio:                 enc.VrServicio,
+				ConceptoRecaudo:            conceptoRecaudo(enc.TipoUsuario),
 				ValorPagoModerador:         0,
 				NumFEVPagoModerador:        nil,
 				Consecutivo:                cntC,

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
-import { useEncuentros, type DiagnosticoItem, type ValoresClinicos, type EncuentroInput, type Encuentro } from '../api/encuentros'
+import { ChevronLeft, ChevronRight, Info } from 'lucide-react'
+import { useEncuentros, useVinculacionPreviewEncuentro, type DiagnosticoItem, type ValoresClinicos, type EncuentroInput, type Encuentro } from '../api/encuentros'
 import { apiFetch } from '../api/client'
 import { useCamposClinicosActivos } from '../api/campos_clinicos'
 import DiagnosticoSearch from './DiagnosticoSearch'
@@ -93,6 +93,7 @@ export default function EncuentroForm({
 }: Props) {
   const { data: campos = [] } = useCamposClinicosActivos()
   const { data: encuentrosPrevios = [] } = useEncuentros(documento)
+  const { data: previewVinculacion } = useVinculacionPreviewEncuentro(documento)
 
   const [form, setForm] = useState<FormState>({ ...FORM_INICIAL, ...(borradorData ?? {}) })
   const [signos, setSignos] = useState<Record<string, string>>(borradorData?.signos ?? {})
@@ -447,6 +448,25 @@ export default function EncuentroForm({
       </div>
 
       {error && <p className="form-error">{error}</p>}
+
+      {previewVinculacion && (
+        <div
+          className="flex items-start gap-2.5 rounded-lg px-4 py-3 text-sm"
+          style={{ background: 'var(--hce-primary-soft)', borderLeft: '3px solid var(--hce-primary)' }}
+        >
+          <Info size={15} className="shrink-0 mt-0.5" style={{ color: 'var(--hce-primary)' }} />
+          <p style={{ color: 'var(--hce-text)' }}>
+            Al finalizar, esta consulta se vinculará automáticamente con la factura del{' '}
+            <strong>
+              {new Date(previewVinculacion.fecha_creacion).toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' })}
+            </strong>
+            {' · '}
+            <span style={{ color: 'var(--hce-text-muted)' }}>
+              {new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(previewVinculacion.total)}
+            </span>
+          </p>
+        </div>
+      )}
 
       <div className="flex justify-between items-center pb-8">
         <span className="text-xs" style={{ color: 'var(--hce-text-muted)' }}>

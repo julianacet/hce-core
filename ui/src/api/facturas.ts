@@ -116,3 +116,19 @@ export function useAnularFactura(facturaId: string) {
     onSuccess: () => qc.invalidateQueries({ queryKey: FACTURAS_KEY }),
   })
 }
+
+export type VinculacionPreviewFactura = {
+  encuentro_id: string
+  fecha_atencion: string
+  motivo_consulta: string
+  finalidad_nombre: string
+} | null
+
+export function useVinculacionPreviewFactura(pacienteDoc: string | null) {
+  return useQuery({
+    queryKey: ['vinculacion-preview-factura', pacienteDoc],
+    queryFn: () => apiFetch<VinculacionPreviewFactura>(`/facturas/vinculacion-preview?paciente=${pacienteDoc}`),
+    enabled: !!pacienteDoc,
+    staleTime: 15_000,
+  })
+}

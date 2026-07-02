@@ -1,10 +1,10 @@
 import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router'
-import { Search, Plus, Trash2, UserRound } from 'lucide-react'
+import { Search, Plus, Trash2, UserRound, Info } from 'lucide-react'
 import { Breadcrumb } from '../components/Breadcrumb'
 import { type Paciente } from '../api/pacientes'
 import { useCups, type CupsCodigo } from '../api/cups'
-import { useCrearFactura, type FacturaItemInput } from '../api/facturas'
+import { useCrearFactura, useVinculacionPreviewFactura, type FacturaItemInput } from '../api/facturas'
 import { useTarifas } from '../api/tarifas'
 import { nombreCompleto } from '../utils/paciente'
 import { BuscadorPaciente } from '../components/BuscadorPaciente'
@@ -28,6 +28,7 @@ export default function NuevaFactura() {
 
   const { data: resultadosCups = [], isFetching: cargandoCups } = useCups(busquedaCups)
   const { data: todasLasTarifas = [] } = useTarifas()
+  const { data: previewVinculacion } = useVinculacionPreviewFactura(paciente?.numero_documento ?? null)
 
   const mapaPrecios = useMemo(() =>
     new Map(todasLasTarifas.map(t => [t.codigo_cups, t.valor])),
@@ -142,6 +143,24 @@ export default function NuevaFactura() {
             selectedDocumento={null}
             onSelect={seleccionarPaciente}
           />
+        )}
+
+        {/* Info de vinculación automática con encuentro */}
+        {paciente && previewVinculacion && (
+          <div
+            className="flex items-start gap-2.5 rounded-lg px-4 py-3 text-sm"
+            style={{ background: 'var(--hce-primary-soft)', borderLeft: '3px solid var(--hce-primary)' }}
+          >
+            <Info size={15} className="shrink-0 mt-0.5" style={{ color: 'var(--hce-primary)' }} />
+            <p style={{ color: 'var(--hce-text)' }}>
+              Esta factura se vinculará automáticamente con la consulta del{' '}
+              <strong>{new Date(previewVinculacion.fecha_atencion).toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' })}</strong>
+              {' · '}<span style={{ color: 'var(--hce-text-muted)' }}>{previewVinculacion.finalidad_nombre}</span>
+              {previewVinculacion.motivo_consulta && (
+                <> — <span style={{ color: 'var(--hce-text-muted)' }}>{previewVinculacion.motivo_consulta}</span></>
+              )}
+            </p>
+          </div>
         )}
 
         {/* Buscador CUPS — solo si hay paciente */}

@@ -221,6 +221,21 @@ export function useEncuentrosPaginados(params: EncuentrosPaginadosParams) {
 
 type ExportFiltros = Pick<EncuentrosPaginadosParams, 'q' | 'desde' | 'hasta' | 'finalidad' | 'orden' | 'dir'>
 
+export type VinculacionPreviewEncuentro = {
+  factura_id: string
+  fecha_creacion: string
+  total: number
+} | null
+
+export function useVinculacionPreviewEncuentro(pacienteDoc: string) {
+  return useQuery({
+    queryKey: ['vinculacion-preview-encuentro', pacienteDoc],
+    queryFn: () => apiFetch<VinculacionPreviewEncuentro>(`/encuentros/vinculacion-preview?paciente=${pacienteDoc}`),
+    enabled: !!pacienteDoc,
+    staleTime: 15_000,
+  })
+}
+
 export function exportarEncuentros(filtros: ExportFiltros) {
   const p = new URLSearchParams({ export: '1' })
   if (filtros.q) p.set('q', filtros.q)

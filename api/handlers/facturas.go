@@ -29,6 +29,7 @@ func FacturasRouter(db *pgxpool.Pool) http.Handler {
 	r := chi.NewRouter()
 	r.Get("/", h.listar)
 	r.Post("/", h.crear)
+	r.Get("/vinculacion-preview", h.vinculacionPreview)
 	r.Route("/{facturaId}", func(r chi.Router) {
 		r.Get("/", h.obtener)
 		r.Put("/", h.actualizar)
@@ -37,6 +38,72 @@ func FacturasRouter(db *pgxpool.Pool) http.Handler {
 		r.Post("/imprimir-termica", ImprimirTermicaFactura(db))
 	})
 	return r
+}
+
+// GET /facturas/vinculacion-preview?paciente=<doc>
+// Devuelve el encuentro finalizado más antiguo sin factura del paciente que
+// sería vinculado al crear una factura. Devuelve null si no hay ninguno.
+func (h *FacturaHandler) vinculacionPreview(w http.ResponseWriter, r *http.Request) {
+	paciente := r.URL.Query().Get("paciente")
+	if paciente == "" {
+		responderError(w, http.StatusBadRequest, "paciente es obligatorio")
+		return
+	}
+
+	type resultado struct {
+		EncuentroID    string `json:"encuentro_id"`
+		FechaAtencion  string `json:"fecha_atencion"`
+		MotivoConsulta string `json:"motivo_consulta"`
+		FinalidadNombre string `json:"finalidad_nombre"`
+	}
+
+	var res resultado
+	err := h.db.QueryRow(r.Context(), `
+		SELECT
+			ec.encuentro_id,
+			ec.fecha_atencion::text,
+			ec.motivo_consulta,
+			CASE ec.finalidad_consulta
+				WHEN '10' THEN 'Consulta de primera vez'
+				WHEN '11' THEN 'Consulta de control o seguimiento'
+				WHEN '12' THEN 'Urgencias'
+				ELSE ec.finalidad_consulta
+			END
+		FROM encuentro_clinico ec
+		WHERE ec.paciente_documento = $1
+		  AND ec.es_ultima_version = TRUE AND ec.esta_activo = TRUE
+		  AND ec.estado = 'finalizado'
+		  AND NOT EXISTS (
+		      SELECT 1 FROM factura f
+		      WHERE f.encuentro_id = ec.id AND f.es_ultima_version = TRUE
+		  )
+		  AND NOT (
+		      ec.finalidad_consulta = '11'
+		      AND COALESCE(
+		          (SELECT (medico->>'primer_control_gratis')::boolean
+		           FROM configuracion_sistema WHERE id = 1),
+		          TRUE
+		      )
+		      AND NOT EXISTS (
+		          SELECT 1 FROM encuentro_clinico ec2
+		          WHERE ec2.encuentro_padre_id = ec.encuentro_padre_id
+		            AND ec2.finalidad_consulta = '11'
+		            AND ec2.es_ultima_version = TRUE AND ec2.esta_activo = TRUE
+		            AND ec2.id != ec.id
+		      )
+		  )
+		ORDER BY ec.fecha_atencion ASC
+		LIMIT 1`,
+		paciente,
+	).Scan(&res.EncuentroID, &res.FechaAtencion, &res.MotivoConsulta, &res.FinalidadNombre)
+
+	if err != nil {
+		// Sin resultados — devolver null explícito
+		responderJSON(w, http.StatusOK, nil)
+		return
+	}
+
+	responderJSON(w, http.StatusOK, res)
 }
 
 // GET /facturas?q=  (legacy — retorna array, límite 100)
@@ -321,6 +388,8 @@ func (h *FacturaHandler) crear(w http.ResponseWriter, r *http.Request) {
 		responderError(w, http.StatusInternalServerError, "error al crear factura")
 		return
 	}
+
+	vincularFacturaConEncuentro(r.Context(), h.db, input.PacienteDocumento, rowID)
 
 	var f models.Factura
 	h.db.QueryRow(r.Context(), `

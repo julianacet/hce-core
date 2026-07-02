@@ -365,6 +365,18 @@ func (h *EncuentroHandler) finalizar(w http.ResponseWriter, r *http.Request) {
 	}
 	diags, _ := cargarDiagnosticos(r.Context(), h.db, e.ID)
 	e.Diagnosticos = diags
+
+	// Vincular con factura pendiente si no es primer control gratuito
+	esControlGratuito := e.FinalidadConsulta == "11" &&
+		e.EncuentroPadreID != nil &&
+		func() bool {
+			pc := esPrimerControl(r.Context(), h.db, *e.EncuentroPadreID, e.EncuentroID)
+			return pc != nil && *pc
+		}()
+	if !esControlGratuito {
+		vincularEncuentroConFactura(r.Context(), h.db, documento, e.ID)
+	}
+
 	responderJSON(w, http.StatusOK, e)
 }
 
@@ -527,7 +539,44 @@ func EncuentrosGlobalRouter(db *pgxpool.Pool) http.Handler {
 	h := &EncuentroHandler{db: db}
 	r := chi.NewRouter()
 	r.Get("/", h.listarGlobal)
+	r.Get("/vinculacion-preview", h.vinculacionPreview)
 	return r
+}
+
+// GET /encuentros/vinculacion-preview?paciente=<doc>
+// Devuelve la factura más antigua sin encuentro del paciente que sería
+// vinculada al finalizar un encuentro. Devuelve null si no hay ninguna.
+func (h *EncuentroHandler) vinculacionPreview(w http.ResponseWriter, r *http.Request) {
+	paciente := r.URL.Query().Get("paciente")
+	if paciente == "" {
+		responderError(w, http.StatusBadRequest, "paciente es obligatorio")
+		return
+	}
+
+	type resultado struct {
+		FacturaID     string  `json:"factura_id"`
+		FechaCreacion string  `json:"fecha_creacion"`
+		Total         float64 `json:"total"`
+	}
+
+	var res resultado
+	err := h.db.QueryRow(r.Context(), `
+		SELECT f.factura_id, f.fecha_creacion::text, f.total
+		FROM factura f
+		WHERE f.paciente_documento = $1
+		  AND f.es_ultima_version = TRUE AND f.esta_activo = TRUE
+		  AND f.encuentro_id IS NULL
+		ORDER BY f.fecha_creacion ASC
+		LIMIT 1`,
+		paciente,
+	).Scan(&res.FacturaID, &res.FechaCreacion, &res.Total)
+
+	if err != nil {
+		responderJSON(w, http.StatusOK, nil)
+		return
+	}
+
+	responderJSON(w, http.StatusOK, res)
 }
 
 type EncuentroResumen struct {
