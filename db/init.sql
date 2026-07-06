@@ -244,6 +244,8 @@ CREATE TABLE factura (
     cuv  TEXT,
     cufe TEXT,
 
+    encuentro_id   UUID REFERENCES encuentro_clinico(id),
+
     fecha_emision  TIMESTAMPTZ,   -- fecha en que se emitió al paciente; NULL hasta que se emita
     fecha_creacion TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     creado_por     TEXT        NOT NULL
@@ -251,8 +253,9 @@ CREATE TABLE factura (
 
 CREATE INDEX idx_factura_ultima
     ON factura(factura_id) WHERE es_ultima_version = TRUE;
-CREATE INDEX idx_factura_paciente ON factura(paciente_documento);
-CREATE INDEX idx_factura_estado   ON factura(estado);
+CREATE INDEX idx_factura_paciente   ON factura(paciente_documento);
+CREATE INDEX idx_factura_estado     ON factura(estado);
+CREATE INDEX idx_factura_encuentro  ON factura(encuentro_id) WHERE encuentro_id IS NOT NULL;
 
 -- Items de la factura: ligados a la versión exacta
 CREATE TABLE factura_item (
