@@ -7,7 +7,7 @@ const colorAccion: Record<string, string> = {
   DELETE: 'bg-red-100 text-red-700',
 }
 
-const LIMIT = 50
+const LIMIT = 10
 
 export function AuditoriaAdmin() {
   const [offset, setOffset] = useState(0)

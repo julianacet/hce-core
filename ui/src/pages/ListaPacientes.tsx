@@ -23,7 +23,7 @@ const TIPOS_USUARIO = [
   { value: '06', label: 'No asegurado' },
 ]
 
-const LIMIT = 25
+const LIMIT = 10
 
 type Orden = 'nombre' | 'edad' | 'tipoUsuario' | 'ultima_atencion' | 'fecha'
 type Dir = 'asc' | 'desc'

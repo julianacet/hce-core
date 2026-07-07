@@ -111,7 +111,7 @@ export function useConsentimientosGenerados(filtros: ConsentimientosFiltros = {}
   const params = new URLSearchParams()
   if (filtros.q) params.set('q', filtros.q)
   params.set('page', String(filtros.page ?? 1))
-  params.set('limit', String(filtros.limit ?? 20))
+  params.set('limit', String(filtros.limit ?? 10))
   if (filtros.orden) params.set('orden', filtros.orden)
   if (filtros.dir) params.set('dir', filtros.dir)
   return useQuery<{ consentimientos: ConsentimientoGenerado[]; total: number }>({

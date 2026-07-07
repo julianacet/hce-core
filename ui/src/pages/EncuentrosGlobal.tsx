@@ -13,7 +13,7 @@ import { PaginationFooter } from '../components/PaginationFooter'
 import { TableEmptyState } from '../components/TableEmptyState'
 import { ExportButtons } from '../components/ExportButtons'
 
-const LIMIT = 30
+const LIMIT = 10
 
 type OrdenEncuentro = 'fecha' | 'paciente' | 'finalidad' | 'diagnostico' | 'estado'
 

@@ -33,23 +33,32 @@ export function useMedicamentosPredefinidos(tipo: 'pos' | 'no_pos', q: string) {
   })
 }
 
-export function useMedicamentosAdmin(tipo: 'pos' | 'no_pos' | '', q: string) {
+export function useMedicamentosAdmin(tipo: 'pos' | 'no_pos' | '', q: string, page: number, limit: number) {
   return useQuery({
-    queryKey: [...MEDICAMENTOS_KEY, 'admin', tipo, q],
+    queryKey: [...MEDICAMENTOS_KEY, 'admin', tipo, q, page, limit],
     queryFn: () => {
-      const params = new URLSearchParams({ todos: '1' })
+      const params = new URLSearchParams({ todos: '1', page: String(page), limit: String(limit) })
       if (tipo) params.set('tipo', tipo)
       if (q) params.set('q', q)
-      return apiFetch<MedicamentoPredefinido[]>(`/medicamentos-predefinidos?${params}`)
+      return apiFetch<{ medicamentos: MedicamentoPredefinido[]; total: number }>(
+        `/medicamentos-predefinidos?${params}`
+      )
     },
   })
 }
 
+type MedicamentosAdminPage = { medicamentos: MedicamentoPredefinido[]; total: number }
+
 function patchMeds(
   qc: ReturnType<typeof useQueryClient>,
   updater: (old: MedicamentoPredefinido[]) => MedicamentoPredefinido[],
+  totalDelta = 0,
 ) {
-  qc.setQueriesData<MedicamentoPredefinido[]>({ queryKey: MEDICAMENTOS_KEY }, (old) => (old ? updater(old) : old))
+  qc.setQueriesData<MedicamentoPredefinido[] | MedicamentosAdminPage>({ queryKey: MEDICAMENTOS_KEY }, (old) => {
+    if (!old) return old
+    if (Array.isArray(old)) return updater(old)
+    return { medicamentos: updater(old.medicamentos), total: old.total + totalDelta }
+  })
 }
 
 export function useCrearMedicamento() {
@@ -83,6 +92,6 @@ export function useEliminarMedicamento() {
   const qc = useQueryClient()
   return useMutation<void, Error, string>({
     mutationFn: (id) => apiFetch(`/medicamentos-predefinidos/${id}`, { method: 'DELETE' }),
-    onSuccess: (_, id) => patchMeds(qc, (old) => old.filter((m) => m.id !== id)),
+    onSuccess: (_, id) => patchMeds(qc, (old) => old.filter((m) => m.id !== id), -1),
   })
 }

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
@@ -48,6 +49,11 @@ func MedicamentosPredefinidosRouter(db *pgxpool.Pool) http.Handler {
 type medicamentosHandler struct{ db *pgxpool.Pool }
 
 func (h *medicamentosHandler) listar(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Query().Get("page") != "" {
+		h.listarPaginado(w, r)
+		return
+	}
+
 	tipo := strings.TrimSpace(r.URL.Query().Get("tipo"))
 	q := strings.TrimSpace(r.URL.Query().Get("q"))
 	soloActivos := r.URL.Query().Get("todos") != "1"
@@ -92,6 +98,70 @@ func (h *medicamentosHandler) listar(w http.ResponseWriter, r *http.Request) {
 	}
 
 	responderJSON(w, http.StatusOK, result)
+}
+
+// GET /medicamentos-predefinidos?page=1&limit=25&tipo=&q=&todos=1  (paginado, retorna {medicamentos, total})
+func (h *medicamentosHandler) listarPaginado(w http.ResponseWriter, r *http.Request) {
+	tipo := strings.TrimSpace(r.URL.Query().Get("tipo"))
+	q := strings.TrimSpace(r.URL.Query().Get("q"))
+	soloActivos := r.URL.Query().Get("todos") != "1"
+
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	if page < 1 {
+		page = 1
+	}
+	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
+	if limit < 1 || limit > 100 {
+		limit = 25
+	}
+	offset := (page - 1) * limit
+
+	var args argList
+	where := "WHERE 1=1"
+
+	if soloActivos {
+		where += ` AND esta_activo = TRUE`
+	}
+	if tipo == "pos" || tipo == "no_pos" {
+		where += ` AND tipo = ` + args.Add(tipo)
+	}
+	if q != "" {
+		where += ` AND unaccent(nombre) ILIKE unaccent(` + args.Add("%"+q+"%") + `)`
+	}
+
+	var total int
+	if err := h.db.QueryRow(r.Context(),
+		`SELECT COUNT(*) FROM medicamento_predefinido `+where, args.Slice()...,
+	).Scan(&total); err != nil {
+		responderError(w, http.StatusInternalServerError, "error al contar medicamentos")
+		return
+	}
+
+	selectSQL := `SELECT ` + colsMed + ` FROM medicamento_predefinido ` + where + ` ORDER BY nombre`
+	selectSQL += ` LIMIT ` + args.Add(limit) + ` OFFSET ` + args.Add(offset)
+
+	rows, err := h.db.Query(r.Context(), selectSQL, args.Slice()...)
+	if err != nil {
+		responderError(w, http.StatusInternalServerError, "error al consultar medicamentos")
+		return
+	}
+	defer rows.Close()
+
+	medicamentos := make([]MedicamentoPredefinido, 0)
+	for rows.Next() {
+		var m MedicamentoPredefinido
+		if err := rows.Scan(&m.ID, &m.Codigo, &m.Nombre, &m.Concentracion, &m.FormaFarmaceutica, &m.Tipo, &m.EstaActivo); err != nil {
+			responderError(w, http.StatusInternalServerError, "error al leer medicamento")
+			return
+		}
+		medicamentos = append(medicamentos, m)
+	}
+	if rows.Err() != nil {
+		responderError(w, http.StatusInternalServerError, "error al iterar medicamentos")
+		return
+	}
+
+	responderJSON(w, http.StatusOK, map[string]any{"medicamentos": medicamentos, "total": total})
 }
 
 func (h *medicamentosHandler) crear(w http.ResponseWriter, r *http.Request) {

@@ -198,7 +198,7 @@ function FilaLog({ log }: { log: LogAuditoria }) {
 
 // ── Página principal ──────────────────────────────────────────────────────────
 
-const LIMIT = 50
+const LIMIT = 10
 
 export default function Historial() {
   const [offset, setOffset] = useState(0)

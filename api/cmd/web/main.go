@@ -121,7 +121,7 @@ func openWebview(url, title string) {
 	defer w.Destroy()
 	w.SetTitle(title)
 	w.SetSize(1280, 800, webview.HintNone)
-	w.Navigate(url)
+	w.Navigate(fmt.Sprintf("%s?_t=%d", url, time.Now().UnixMilli()))
 	w.Run()
 }
 

@@ -13,6 +13,7 @@ const TAMANOS_TERMICA: TamanoTermica[] = ['Termica80', 'Termica58']
 import { RowMenu } from '../../components/RowMenu'
 import { NavigationGuard } from '../../components/NavigationGuard'
 import { useConfirmar } from '../../components/ModalConfirmar'
+import { PaginationFooter } from '../../components/PaginationFooter'
 import {
   usePlantillas,
   useCrearPlantilla,
@@ -1318,10 +1319,16 @@ function MedRow({ med, onEditar }: { med: MedicamentoPredefinido; onEditar: () =
   )
 }
 
+const MEDS_LIMIT = 10
+
 function MedicamentosAdmin({ onAbierto }: { onAbierto?: (v: boolean) => void }) {
   const [q, setQ] = useState('')
   const [tipoFiltro, setTipoFiltro] = useState<'pos' | 'no_pos' | ''>('')
-  const { data: meds = [], isFetching } = useMedicamentosAdmin(tipoFiltro, q)
+  const [page, setPage] = useState(1)
+  const { data, isLoading, isFetching } = useMedicamentosAdmin(tipoFiltro, q, page, MEDS_LIMIT)
+  const meds = data?.medicamentos ?? []
+  const total = data?.total ?? 0
+  const totalPages = Math.max(1, Math.ceil(total / MEDS_LIMIT))
   const crear = useCrearMedicamento()
   const [editando, setEditando] = useState<MedicamentoPredefinido | null>(null)
   const actualizar = useActualizarMedicamento(editando?.id ?? '')
@@ -1367,7 +1374,7 @@ function MedicamentosAdmin({ onAbierto }: { onAbierto?: (v: boolean) => void }) 
     <div className="space-y-4">
       <div className="flex items-start justify-between gap-4">
         <p className="text-sm" style={{ color: 'var(--hce-text-muted)' }}>
-          Catálogo de medicamentos disponibles para formular. Muestra hasta 80 resultados; use el buscador para encontrar uno específico.
+          Catálogo de medicamentos disponibles para formular.
         </p>
         <button onClick={abrirNuevo} className="btn-primary shrink-0">
           <Plus className="w-4 h-4" /> Nuevo
@@ -1380,12 +1387,12 @@ function MedicamentosAdmin({ onAbierto }: { onAbierto?: (v: boolean) => void }) 
           className="input-hce flex-1"
           placeholder="Buscar por nombre..."
           value={q}
-          onChange={(e) => setQ(e.target.value)}
+          onChange={(e) => { setQ(e.target.value); setPage(1) }}
         />
         <select
           className="input-hce w-36"
           value={tipoFiltro}
-          onChange={(e) => setTipoFiltro(e.target.value as 'pos' | 'no_pos' | '')}
+          onChange={(e) => { setTipoFiltro(e.target.value as 'pos' | 'no_pos' | ''); setPage(1) }}
         >
           <option value="">Todos</option>
           <option value="pos">POS</option>
@@ -1445,18 +1452,30 @@ function MedicamentosAdmin({ onAbierto }: { onAbierto?: (v: boolean) => void }) 
       )}
 
       {/* Lista */}
-      <div className="card-hce divide-y" style={{ borderColor: 'var(--hce-border)' }}>
-        {isFetching && meds.length === 0 && (
-          <p className="text-sm text-center py-6" style={{ color: 'var(--hce-text-muted)' }}>Cargando...</p>
-        )}
-        {!isFetching && meds.length === 0 && (
-          <p className="text-sm text-center py-6" style={{ color: 'var(--hce-text-muted)' }}>
-            No se encontraron medicamentos.
-          </p>
-        )}
-        {meds.map((m) => (
-          <MedRow key={m.id} med={m} onEditar={() => abrirEditar(m)} />
-        ))}
+      <div className="card-hce">
+        <div className="divide-y" style={{ borderColor: 'var(--hce-border)' }}>
+          {isLoading && (
+            <p className="text-sm text-center py-6" style={{ color: 'var(--hce-text-muted)' }}>Cargando...</p>
+          )}
+          {!isLoading && meds.length === 0 && (
+            <p className="text-sm text-center py-6" style={{ color: 'var(--hce-text-muted)' }}>
+              No se encontraron medicamentos.
+            </p>
+          )}
+          {meds.map((m) => (
+            <MedRow key={m.id} med={m} onEditar={() => abrirEditar(m)} />
+          ))}
+        </div>
+        <PaginationFooter
+          page={page}
+          totalPages={totalPages}
+          total={total}
+          limit={MEDS_LIMIT}
+          isLoading={isLoading}
+          isFetching={isFetching}
+          onPageChange={setPage}
+          entityLabel="medicamentos"
+        />
       </div>
     </div>
   )

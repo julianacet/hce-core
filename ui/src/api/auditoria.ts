@@ -13,7 +13,7 @@ export type LogAuditoria = {
   fecha_cambio: string
 }
 
-export function useAuditoria(limit = 50, offset = 0) {
+export function useAuditoria(limit = 10, offset = 0) {
   return useQuery({
     queryKey: ['auditoria', limit, offset],
     queryFn: () => apiFetch<LogAuditoria[]>(`/auditoria?limit=${limit}&offset=${offset}`),

@@ -60,7 +60,7 @@ export type FacturasFiltros = {
 export function useFacturasPaginadas(filtros: FacturasFiltros) {
   const params = new URLSearchParams()
   params.set('page', String(filtros.page ?? 1))
-  params.set('limit', String(filtros.limit ?? 25))
+  params.set('limit', String(filtros.limit ?? 10))
   if (filtros.q) params.set('q', filtros.q)
   if (filtros.estado) params.set('estado', filtros.estado)
   if (filtros.desde) params.set('desde', filtros.desde)

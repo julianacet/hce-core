@@ -214,13 +214,23 @@ func dirExists(path string) bool {
 }
 
 // spaHandler sirve archivos estáticos y cae en index.html para rutas de React Router.
+// Los assets de Vite llevan hash de contenido en el nombre → inmutables (1 año).
+// Todo lo demás (index.html) se sirve sin caché para que WebView2 siempre
+// cargue la versión más reciente al abrir la app.
 func spaHandler(rootDir string) http.HandlerFunc {
+	fs := http.FileServer(http.Dir(rootDir))
 	return func(w http.ResponseWriter, r *http.Request) {
 		path := filepath.Join(rootDir, filepath.Clean("/"+r.URL.Path))
 		if info, err := os.Stat(path); err == nil && !info.IsDir() {
-			http.FileServer(http.Dir(rootDir)).ServeHTTP(w, r)
+			if strings.HasPrefix(r.URL.Path, "/assets/") {
+				w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+			} else {
+				w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
+			}
+			fs.ServeHTTP(w, r)
 			return
 		}
+		w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
 		http.ServeFile(w, r, filepath.Join(rootDir, "index.html"))
 	}
 }
