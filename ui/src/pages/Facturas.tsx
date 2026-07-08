@@ -11,7 +11,7 @@ import { PaginationFooter } from '../components/PaginationFooter'
 import { TableEmptyState } from '../components/TableEmptyState'
 import { ExportButtons } from '../components/ExportButtons'
 
-const LIMIT = 25
+const LIMIT = 10
 
 type OrdenFactura = 'fecha' | 'paciente' | 'total'
 

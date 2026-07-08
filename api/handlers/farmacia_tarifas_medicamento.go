@@ -38,7 +38,7 @@ const selectMedConPrecio = `
 	       ON t.medicamento_id = m.id AND t.esta_activo = TRUE
 	WHERE m.esta_activo = TRUE`
 
-const farmaciaMedLimit = 20
+const farmaciaMedLimit = 10
 
 // GET /api/farmacia/tarifas-medicamento?q=texto&tipo=pos|no_pos&page=
 func (h *farmaciaTarifasHandler) buscar(w http.ResponseWriter, r *http.Request) {

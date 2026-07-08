@@ -26,7 +26,7 @@ function formatFecha(iso: string): string {
 
 // ── Página principal ──────────────────────────────────────────────────────────
 
-const LIMIT = 20
+const LIMIT = 10
 type OrdenCol = 'paciente' | 'plantilla' | 'fecha' | 'estado'
 
 export default function Consentimientos() {
