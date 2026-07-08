@@ -35,7 +35,7 @@ func FarmaciaFacturasRouter(db *pgxpool.Pool) http.Handler {
 	return r
 }
 
-const farmaciaFacturasLimit = 20
+const farmaciaFacturasLimit = 10
 
 // GET /api/farmacia/facturas?q=&estado=&desde=&hasta=&page=
 func (h *farmaciaFacturasHandler) listar(w http.ResponseWriter, r *http.Request) {

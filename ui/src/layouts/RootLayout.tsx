@@ -52,7 +52,7 @@ export default function RootLayout() {
     {
       label: 'Gestión del consultorio',
       items: [
-        { to: '/inventario', label: 'Inventario', icon: Package, roles: ['medico', 'recepcionista'] },
+        { to: '/inventario', label: 'Inventario Insumos', icon: Package, roles: ['medico', 'recepcionista'] },
         { to: '/proveedores', label: 'Proveedores', icon: Building2, roles: ['medico'] },
         { to: '/eventos-adversos', label: 'Eventos adversos', icon: AlertTriangle, roles: ['medico'] },
         { to: '/encuestas', label: 'Encuestas', icon: Star, roles: ['medico', 'recepcionista'] },

@@ -316,7 +316,7 @@ export default function Inventario() {
 
   return (
     <div className="page-hce space-y-6">
-      <Breadcrumb items={[{ label: 'Inicio', to: '/' }, { label: 'Inventario' }]} />
+      <Breadcrumb items={[{ label: 'Inicio', to: '/' }, { label: 'Inventario Insumos' }]} />
       <div className="page-header">
         <div>
           <h2 className="page-title">Inventario de insumos</h2>
