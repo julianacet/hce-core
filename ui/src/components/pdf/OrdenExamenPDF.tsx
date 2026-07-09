@@ -1,12 +1,20 @@
 import { Document, Page, View, Text, Image, StyleSheet } from '@react-pdf/renderer'
 import type { DatosMedico } from '../../context/MedicoContext'
-import type { OrdenExamenItem } from '../../api/ordenes_examen'
+
+// Forma mínima requerida para imprimir — acepta tanto ítems ya guardados
+// (OrdenExamenItem) como ítems todavía en edición, sin id de orden real.
+type ItemImprimible = {
+  id: string | number
+  codigo_cups: string | null
+  descripcion: string
+  indicaciones: string | null
+}
 
 type Props = {
   medico: DatosMedico
   paciente: { nombre: string; documento: string; tipoDocumento: string; fechaNacimiento: string }
   diagnostico: string
-  items: OrdenExamenItem[]
+  items: ItemImprimible[]
   indicacionesGenerales: string | null
   fecha: string
   fechaImpresion?: string

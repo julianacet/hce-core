@@ -1,6 +1,11 @@
 import { useState } from 'react'
-import { Plus, Trash2, Search } from 'lucide-react'
+import { Plus, Trash2, Search, Printer, Download } from 'lucide-react'
+import { pdf } from '@react-pdf/renderer'
+import { imprimirConVisorSO } from '../utils/impresion'
 import { useExamenesPredefinidos, CATEGORIAS_EXAMEN, type ExamenPredefinido } from '../api/examenes_predefinidos'
+import OrdenExamenPDF from './pdf/OrdenExamenPDF'
+import { useMedico } from '../context/MedicoContext'
+import { useTema } from '../context/TemaContext'
 
 export type ItemOrden = {
   _key: number
@@ -88,14 +93,75 @@ function BuscadorExamen({ onAgregar }: { onAgregar: (e: ExamenPredefinido) => vo
   )
 }
 
+type PacienteInfo = {
+  nombre: string
+  documento: string
+  tipoDocumento: string
+  fechaNacimiento: string
+}
+
 type Props = {
   items: ItemOrden[]
   setItems: React.Dispatch<React.SetStateAction<ItemOrden[]>>
   indicaciones: string
   setIndicaciones: React.Dispatch<React.SetStateAction<string>>
+  paciente?: PacienteInfo | null
+  diagnostico?: string
 }
 
-export default function ExamenesTab({ items, setItems, indicaciones, setIndicaciones }: Props) {
+export default function ExamenesTab({
+  items, setItems, indicaciones, setIndicaciones,
+  paciente = null, diagnostico = '',
+}: Props) {
+  const { medico } = useMedico()
+  const { tema } = useTema()
+  const [imprimiendo, setImprimiendo] = useState(false)
+  const [descargando, setDescargando] = useState(false)
+
+  const fecha = new Date().toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' })
+  const ordenValida = !!paciente && items.some(i => i.descripcion.trim())
+
+  const docPDF = paciente ? (
+    <OrdenExamenPDF
+      medico={medico}
+      paciente={paciente}
+      diagnostico={diagnostico}
+      items={items.map(i => ({
+        id: i._key, codigo_cups: i.codigo_cups,
+        descripcion: i.descripcion, indicaciones: i.indicaciones,
+      }))}
+      indicacionesGenerales={indicaciones || null}
+      fecha={fecha}
+      fechaImpresion={fecha}
+      colorPrimario={tema.colorPrimario}
+      logoBase64={tema.logoBase64}
+      logoTextoBase64={medico.logoTextoBase64}
+    />
+  ) : null
+
+  async function imprimir() {
+    if (!docPDF || !ordenValida) return
+    setImprimiendo(true)
+    try {
+      const blob = await pdf(docPDF).toBlob()
+      await imprimirConVisorSO(blob)
+    } finally { setImprimiendo(false) }
+  }
+
+  async function descargar() {
+    if (!docPDF || !paciente || !ordenValida) return
+    setDescargando(true)
+    try {
+      const blob = await pdf(docPDF).toBlob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `orden_examenes_${paciente.documento}_${Date.now()}.pdf`
+      a.click()
+      URL.revokeObjectURL(url)
+    } finally { setDescargando(false) }
+  }
+
   function agregar(e: ExamenPredefinido) {
     setItems(prev => [...prev, {
       _key: _nextKey++,
@@ -175,6 +241,25 @@ export default function ExamenesTab({ items, setItems, indicaciones, setIndicaci
           onChange={e => setIndicaciones(e.target.value)}
         />
       </div>
+
+      {/* Acciones PDF */}
+      {ordenValida && (
+        <div className="flex gap-2 pt-2 border-t border-slate-100">
+          <button type="button" onClick={imprimir} disabled={imprimiendo}
+            className="btn-secondary text-sm disabled:opacity-50 flex items-center gap-1.5">
+            <Printer size={14} />
+            {imprimiendo ? 'Preparando…' : 'Imprimir orden'}
+          </button>
+          <button type="button" onClick={descargar} disabled={descargando}
+            className="btn-secondary text-sm disabled:opacity-50 flex items-center gap-1.5">
+            <Download size={14} />
+            {descargando ? 'Generando…' : 'Descargar PDF'}
+          </button>
+          <p className="text-xs text-slate-400 self-center ml-1">
+            La orden se guardará en BD al finalizar la consulta.
+          </p>
+        </div>
+      )}
     </div>
   )
 }

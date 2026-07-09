@@ -421,6 +421,8 @@ export default function EncuentroForm({
             setItems={setOrdenItems}
             indicaciones={ordenIndicaciones}
             setIndicaciones={setOrdenIndicaciones}
+            paciente={paciente ?? null}
+            diagnostico={diagnosticos.find(d => d.tipo === 'principal')?.codigo ?? ''}
           />
         )}
 
