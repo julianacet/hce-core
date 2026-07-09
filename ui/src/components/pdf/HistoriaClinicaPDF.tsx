@@ -122,6 +122,10 @@ export default function HistoriaClinicaPDF({
     page: {
       paddingHorizontal: 48,
       paddingVertical: 36,
+      // Reserva espacio para el footer fijo (ver estilo `footer`). El footer ya solo
+      // lleva el aviso legal fijo (no datos variables del médico), así que su alto
+      // máximo es acotado incluso en el formato más angosto soportado (MediaCarta,
+      // 396pt de ancho) — 36pt cubre ~3-4 líneas envueltas con margen de sobra.
       paddingBottom: 52,
       fontFamily: 'Helvetica',
       fontSize: 9,
@@ -251,7 +255,7 @@ export default function HistoriaClinicaPDF({
 
     // ── Footer ────────────────────────────────────────────────────────────────
     footer: {
-      position: 'absolute', bottom: 20, left: 48, right: 48,
+      position: 'absolute', bottom: 16, left: 48, right: 48,
       flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end',
       borderTopWidth: 0.5, borderTopColor: '#e2e8f0', paddingTop: 4,
     },
@@ -265,6 +269,10 @@ export default function HistoriaClinicaPDF({
     paciente.nombre_primero, paciente.nombre_segundo,
     paciente.apellido_primero, paciente.apellido_segundo,
   ].filter(Boolean).join(' ')
+
+  const contactoConsultorio = [
+    medico.ciudad, medico.direccion, medico.telefono, medico.correoElectronico,
+  ].filter(Boolean).join(' · ')
 
   const camposSignos   = campos.filter(c => c.seccion === 'signos_vitales')
   const camposRevision = campos.filter(c => c.seccion === 'revision_sistemas')
@@ -333,11 +341,12 @@ export default function HistoriaClinicaPDF({
           </View>
         )}
 
-        {/* Footer fijo con paginación */}
+        {/* Footer fijo con paginación — solo texto legal fijo y acotado; los datos
+            de contacto del médico (largo variable) van en el encabezado, no aquí,
+            para no arriesgar overlap con el paddingBottom reservado de la página */}
         <View fixed style={s.footer}>
           <Text style={s.footerLegal}>
-            {[medico.ciudad, medico.direccion, medico.telefono, medico.correoElectronico].filter(Boolean).join(' · ')}
-            {'\n'}{'Documento confidencial · Res. 1995/1999 y 2275/2023 Min. Salud · reproducción requiere autorización del paciente'}
+            Documento confidencial · Res. 1995/1999 y 2275/2023 Min. Salud · reproducción requiere autorización del paciente
           </Text>
           <Text style={s.footerPag}
             render={({ pageNumber, totalPages }) => `Pág. ${pageNumber} de ${totalPages}`}
@@ -361,6 +370,7 @@ export default function HistoriaClinicaPDF({
             {medico.universidad ? <Text style={s.headerSub}>{medico.universidad}</Text> : null}
             {medico.nit ? <Text style={s.headerSub}>NIT {medico.nit}</Text> : null}
             {medico.codPrestador ? <Text style={s.headerSub}>Habilitación {medico.codPrestador}</Text> : null}
+            {contactoConsultorio ? <Text style={s.headerSub}>{contactoConsultorio}</Text> : null}
           </View>
         </View>
 

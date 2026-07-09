@@ -67,6 +67,9 @@ export default function FacturaPDF({
       color: colorPrimario, marginBottom: 2,
     },
     headerSub: { fontSize: 8, color: '#374151', marginBottom: 1 },
+    // Fijo en la esquina superior (no dentro de `header`, que solo se dibuja en la
+    // página 1) para que el estado se vea en todas las páginas de facturas largas.
+    estadoBadgeFixed: { position: 'absolute', top: 36, right: 48 },
     estadoBadge: {
       paddingHorizontal: 8, paddingVertical: 3,
       borderRadius: 4,
@@ -217,7 +220,14 @@ export default function FacturaPDF({
           </View>
         )}
 
-        {/* Header: logo + info consultorio + badge estado */}
+        {/* Badge de estado, fijo: se repite en todas las páginas */}
+        <View fixed style={s.estadoBadgeFixed}>
+          <View style={s.estadoBadge}>
+            <Text style={s.estadoTexto}>{pagada ? 'PAGADA' : 'ANULADA'}</Text>
+          </View>
+        </View>
+
+        {/* Header: logo + info consultorio */}
         <View style={s.header}>
           <View style={s.logoBox}>
             {logoBase64
@@ -233,9 +243,6 @@ export default function FacturaPDF({
             {medico.tarjetaProfesional ? <Text style={s.headerSub}>TP {medico.tarjetaProfesional}</Text> : null}
             {medico.universidad ? <Text style={s.headerSub}>{medico.universidad}</Text> : null}
             {medico.nit ? <Text style={s.headerSub}>NIT {medico.nit}</Text> : null}
-          </View>
-          <View style={s.estadoBadge}>
-            <Text style={s.estadoTexto}>{pagada ? 'PAGADA' : 'ANULADA'}</Text>
           </View>
         </View>
 
@@ -373,9 +380,9 @@ export default function FacturaPDF({
           </View>
         </View>
 
-        {/* Marca de agua — último hijo para quedar encima de todo */}
+        {/* Marca de agua, fija: se repite en todas las páginas de la factura */}
         {!pagada && (
-          <View style={s.watermark}>
+          <View fixed style={s.watermark}>
             <Text style={s.watermarkText}>ANULADA</Text>
           </View>
         )}

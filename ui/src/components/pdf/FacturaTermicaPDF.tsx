@@ -244,9 +244,9 @@ export default function FacturaTermicaPDF({
           <Text style={s.corteText}>✂  CORTAR AQUÍ</Text>
         </View>
 
-        {/* Marca de agua anulada — último hijo */}
+        {/* Marca de agua anulada, fija: se repite en todas las páginas */}
         {anulada && (
-          <View style={s.watermark}>
+          <View fixed style={s.watermark}>
             <Text style={s.watermarkText}>ANULADA</Text>
           </View>
         )}
