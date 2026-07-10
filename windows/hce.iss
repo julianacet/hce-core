@@ -83,7 +83,11 @@ Name: "{group}\Iniciar HCE Consultorio";       Filename: "{app}\hce-web.exe";   
 Name: "{group}\Detener HCE Consultorio";       Filename: "{app}\detener.bat";    WorkingDir: "{app}"
 Name: "{group}\Migrar datos desde Simedic";    Filename: "{app}\migrar.bat";     WorkingDir: "{app}"
 Name: "{group}\Desinstalar HCE Consultorio";   Filename: "{uninstallexe}"
-Name: "{commondesktop}\HCE Consultorio";       Filename: "{app}\hce-web.exe";    WorkingDir: "{app}"; IconFilename: "{app}\hce.ico"; Tasks: desktopicon
+; Solo se crea en la primera instalación (config.bat aún no existe). Si se
+; recreara en cada actualización, un usuario que renombró el acceso directo
+; terminaría con dos íconos: el suyo renombrado + uno nuevo con el nombre
+; por defecto reapareciendo tras cada "Actualizar".
+Name: "{commondesktop}\HCE Consultorio";       Filename: "{app}\hce-web.exe";    WorkingDir: "{app}"; IconFilename: "{app}\hce.ico"; Tasks: desktopicon; Check: not FileExists(ExpandConstant('{app}\config.bat'))
 
 [Tasks]
 Name: "desktopicon"; Description: "Crear acceso directo en el escritorio"; GroupDescription: "Iconos adicionales:"
