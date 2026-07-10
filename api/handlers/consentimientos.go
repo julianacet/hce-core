@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -18,15 +19,28 @@ type ConsentimientoHandler struct {
 	db *pgxpool.Pool
 }
 
-// PlantillasRouter — montado en /consentimientos/plantillas
+var reEtiquetaHTML = regexp.MustCompile(`<[^>]*>`)
+
+// El editor de plantillas guarda el contenido como HTML; un documento "vacío"
+// para Tiptap luce como "<p></p>", que TrimSpace por sí solo no detecta.
+func htmlEstaVacio(contenido string) bool {
+	return strings.TrimSpace(reEtiquetaHTML.ReplaceAllString(contenido, "")) == ""
+}
+
+// PlantillasRouter — montado en /consentimientos/plantillas.
+// Listar queda disponible para cualquier usuario autenticado (se necesita para
+// generar consentimientos); crear/editar/activar/eliminar requiere admin o médico.
 func PlantillasRouter(db *pgxpool.Pool) http.Handler {
 	h := &ConsentimientoHandler{db: db}
 	r := chi.NewRouter()
 	r.Get("/", h.listarPlantillas)
-	r.Post("/", h.crearPlantilla)
-	r.Put("/{plantillaId}", h.actualizarPlantilla)
-	r.Patch("/{plantillaId}/toggle", h.togglePlantilla)
-	r.Delete("/{plantillaId}", h.eliminarPlantilla)
+	r.Group(func(r chi.Router) {
+		r.Use(appmiddleware.RequiereRol("medico"))
+		r.Post("/", h.crearPlantilla)
+		r.Put("/{plantillaId}", h.actualizarPlantilla)
+		r.Patch("/{plantillaId}/toggle", h.togglePlantilla)
+		r.Delete("/{plantillaId}", h.eliminarPlantilla)
+	})
 	return r
 }
 
@@ -40,22 +54,12 @@ func ConsentimientoGeneradoRouter(db *pgxpool.Pool) http.Handler {
 	return r
 }
 
-// ConsentimientoEncuentroRouter — montado bajo /{encuentroId}/consentimiento
-func ConsentimientoEncuentroRouter(db *pgxpool.Pool) http.Handler {
-	h := &ConsentimientoHandler{db: db}
-	r := chi.NewRouter()
-	r.Get("/", h.obtenerConsentimiento)
-	r.Post("/", h.registrarConsentimiento)
-	return r
-}
-
 const scanConsentimiento = `
-	SELECT cg.id, cg.encuentro_id, cg.plantilla_id, pc.nombre,
+	SELECT cg.id, cg.encuentro_id, cg.plantilla_id, cg.plantilla_nombre,
 	       cg.paciente_documento, cg.paciente_nombre, cg.tipo_documento,
 	       cg.contenido_renderizado, cg.firmado, cg.fecha_firma, cg.firmado_por,
 	       cg.fecha_generacion, cg.creado_por
-	FROM consentimiento_generado cg
-	LEFT JOIN plantilla_consentimiento pc ON pc.id = cg.plantilla_id`
+	FROM consentimiento_generado cg`
 
 func scanearConsentimiento(row interface {
 	Scan(...any) error
@@ -104,7 +108,7 @@ func (h *ConsentimientoHandler) crearPlantilla(w http.ResponseWriter, r *http.Re
 		responderError(w, http.StatusBadRequest, "body inválido")
 		return
 	}
-	if strings.TrimSpace(input.Nombre) == "" || strings.TrimSpace(input.Contenido) == "" {
+	if strings.TrimSpace(input.Nombre) == "" || htmlEstaVacio(input.Contenido) {
 		responderError(w, http.StatusBadRequest, "nombre y contenido son obligatorios")
 		return
 	}
@@ -131,6 +135,10 @@ func (h *ConsentimientoHandler) actualizarPlantilla(w http.ResponseWriter, r *ht
 	var input models.PlantillaInput
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		responderError(w, http.StatusBadRequest, "body inválido")
+		return
+	}
+	if strings.TrimSpace(input.Nombre) == "" || htmlEstaVacio(input.Contenido) {
+		responderError(w, http.StatusBadRequest, "nombre y contenido son obligatorios")
 		return
 	}
 
@@ -166,11 +174,6 @@ func (h *ConsentimientoHandler) togglePlantilla(w http.ResponseWriter, r *http.R
 
 // DELETE /consentimientos/plantillas/:plantillaId
 func (h *ConsentimientoHandler) eliminarPlantilla(w http.ResponseWriter, r *http.Request) {
-	u := appmiddleware.UsuarioDesdeContexto(r.Context())
-	if u.Rol != "admin" && u.Rol != "medico" {
-		responderError(w, http.StatusForbidden, "solo el administrador puede eliminar plantillas")
-		return
-	}
 	plantillaID := chi.URLParam(r, "plantillaId")
 	tag, err := h.db.Exec(r.Context(),
 		`DELETE FROM plantilla_consentimiento WHERE id=$1`, plantillaID)
@@ -211,7 +214,7 @@ func (h *ConsentimientoHandler) listarConsentimientos(w http.ResponseWriter, r *
 	case "paciente":
 		orderBy = "cg.paciente_nombre " + dirParam
 	case "plantilla":
-		orderBy = "pc.nombre " + dirParam + " NULLS LAST"
+		orderBy = "cg.plantilla_nombre " + dirParam + " NULLS LAST"
 	case "estado":
 		orderBy = "cg.firmado " + dirParam
 	default:
@@ -227,8 +230,7 @@ func (h *ConsentimientoHandler) listarConsentimientos(w http.ResponseWriter, r *
 
 	var total int
 	if err := h.db.QueryRow(r.Context(),
-		`SELECT COUNT(*) FROM consentimiento_generado cg
-		 LEFT JOIN plantilla_consentimiento pc ON pc.id = cg.plantilla_id `+where,
+		`SELECT COUNT(*) FROM consentimiento_generado cg `+where,
 		args.Slice()...,
 	).Scan(&total); err != nil {
 		log.Printf("listar consentimientos count: %v", err)
@@ -271,27 +273,38 @@ func (h *ConsentimientoHandler) generarConsentimiento(w http.ResponseWriter, r *
 		responderError(w, http.StatusBadRequest, "body inválido")
 		return
 	}
-	if strings.TrimSpace(input.PacienteDocumento) == "" || strings.TrimSpace(input.ContenidoRenderizado) == "" {
+	if strings.TrimSpace(input.PacienteDocumento) == "" || htmlEstaVacio(input.ContenidoRenderizado) {
 		responderError(w, http.StatusBadRequest, "paciente_documento y contenido_renderizado son obligatorios")
 		return
 	}
 
 	u := appmiddleware.UsuarioDesdeContexto(r.Context())
 	var plantillaID *string
+	var plantillaNombre *string
 	if input.PlantillaID != "" {
 		plantillaID = &input.PlantillaID
+		var nombre string
+		if err := h.db.QueryRow(r.Context(),
+			`SELECT nombre FROM plantilla_consentimiento WHERE id = $1`, *plantillaID,
+		).Scan(&nombre); err != nil {
+			responderError(w, http.StatusNotFound, "plantilla no encontrada")
+			return
+		}
+		plantillaNombre = &nombre
 	}
 
+	// El nombre de la plantilla se congela aquí (igual que contenido_renderizado):
+	// si luego la plantilla se renombra o se borra, este consentimiento no cambia.
 	var c models.ConsentimientoGenerado
 	err := h.db.QueryRow(r.Context(), `
 		INSERT INTO consentimiento_generado
-		  (plantilla_id, paciente_documento, paciente_nombre, tipo_documento, contenido_renderizado, creado_por)
-		VALUES ($1, $2, $3, $4, $5, $6)
-		RETURNING id, encuentro_id, plantilla_id, NULL::text,
+		  (plantilla_id, plantilla_nombre, paciente_documento, paciente_nombre, tipo_documento, contenido_renderizado, creado_por)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		RETURNING id, encuentro_id, plantilla_id, plantilla_nombre,
 		          paciente_documento, paciente_nombre, tipo_documento,
 		          contenido_renderizado, firmado, fecha_firma, firmado_por,
 		          fecha_generacion, creado_por`,
-		plantillaID, input.PacienteDocumento, input.PacienteNombre,
+		plantillaID, plantillaNombre, input.PacienteDocumento, input.PacienteNombre,
 		input.TipoDocumento, input.ContenidoRenderizado, u.Nombre,
 	).Scan(
 		&c.ID, &c.EncuentroID, &c.PlantillaID, &c.PlantillaNombre,
@@ -316,7 +329,7 @@ func (h *ConsentimientoHandler) firmarConsentimiento(w http.ResponseWriter, r *h
 		UPDATE consentimiento_generado
 		SET firmado = TRUE, fecha_firma = NOW(), firmado_por = $1
 		WHERE id = $2
-		RETURNING id, encuentro_id, plantilla_id, NULL::text,
+		RETURNING id, encuentro_id, plantilla_id, plantilla_nombre,
 		          paciente_documento, paciente_nombre, tipo_documento,
 		          contenido_renderizado, firmado, fecha_firma, firmado_por,
 		          fecha_generacion, creado_por`,
@@ -328,65 +341,4 @@ func (h *ConsentimientoHandler) firmarConsentimiento(w http.ResponseWriter, r *h
 		return
 	}
 	responderJSON(w, http.StatusOK, c)
-}
-
-// ── Por encuentro (legacy) ────────────────────────────────────────────────────
-
-// GET /pacientes/:doc/encuentros/:encId/consentimiento
-func (h *ConsentimientoHandler) obtenerConsentimiento(w http.ResponseWriter, r *http.Request) {
-	encuentroID := chi.URLParam(r, "encuentroId")
-
-	row := h.db.QueryRow(r.Context(),
-		scanConsentimiento+`
-		WHERE cg.encuentro_id = $1
-		ORDER BY cg.fecha_generacion DESC LIMIT 1`,
-		encuentroID,
-	)
-	c, err := scanearConsentimiento(row)
-	if err != nil {
-		responderError(w, http.StatusNotFound, "sin consentimiento generado")
-		return
-	}
-	responderJSON(w, http.StatusOK, c)
-}
-
-// POST /pacientes/:doc/encuentros/:encId/consentimiento
-func (h *ConsentimientoHandler) registrarConsentimiento(w http.ResponseWriter, r *http.Request) {
-	documento := chi.URLParam(r, "documento")
-	encuentroID := chi.URLParam(r, "encuentroId")
-
-	var input models.ConsentimientoInput
-	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		responderError(w, http.StatusBadRequest, "body inválido")
-		return
-	}
-
-	u := appmiddleware.UsuarioDesdeContexto(r.Context())
-	var plantillaID *string
-	if input.PlantillaID != "" {
-		plantillaID = &input.PlantillaID
-	}
-
-	var c models.ConsentimientoGenerado
-	err := h.db.QueryRow(r.Context(), `
-		INSERT INTO consentimiento_generado
-		  (encuentro_id, plantilla_id, paciente_documento, contenido_renderizado, creado_por)
-		VALUES ($1, $2, $3, $4, $5)
-		RETURNING id, encuentro_id, plantilla_id, NULL::text,
-		          paciente_documento, paciente_nombre, tipo_documento,
-		          contenido_renderizado, firmado, fecha_firma, firmado_por,
-		          fecha_generacion, creado_por`,
-		encuentroID, plantillaID, documento, input.ContenidoRenderizado, u.Nombre,
-	).Scan(
-		&c.ID, &c.EncuentroID, &c.PlantillaID, &c.PlantillaNombre,
-		&c.PacienteDocumento, &c.PacienteNombre, &c.TipoDocumento,
-		&c.ContenidoRenderizado, &c.Firmado, &c.FechaFirma, &c.FirmadoPor,
-		&c.FechaGeneracion, &c.CreadoPor,
-	)
-	if err != nil {
-		log.Printf("registrar consentimiento: %v", err)
-		responderError(w, http.StatusInternalServerError, "error al registrar consentimiento")
-		return
-	}
-	responderJSON(w, http.StatusCreated, c)
 }

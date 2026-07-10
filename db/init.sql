@@ -312,7 +312,8 @@ CREATE TABLE plantilla_consentimiento (
 CREATE TABLE consentimiento_generado (
     id                   UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
     encuentro_id         UUID,                              -- nullable: consentimientos standalone
-    plantilla_id         UUID        REFERENCES plantilla_consentimiento(id),
+    plantilla_id         UUID        REFERENCES plantilla_consentimiento(id) ON DELETE SET NULL,
+    plantilla_nombre     TEXT,                              -- congelado al generar; no depende de que la plantilla exista
     paciente_documento   VARCHAR(20) NOT NULL,
     paciente_nombre      TEXT        NOT NULL DEFAULT '',   -- desnormalizado para historial
     tipo_documento       TEXT        NOT NULL DEFAULT '',

@@ -1,5 +1,103 @@
+import type { ReactNode } from 'react'
 import { Document, Page, View, Text, Image, StyleSheet } from '@react-pdf/renderer'
 import type { DatosMedico } from '../../context/MedicoContext'
+import { asegurarHtml } from '../../utils/textoEnriquecido'
+
+// El editor de plantillas/consentimientos produce HTML (negrilla, cursiva,
+// subrayado, tachado, listas, sangría/cita, alineación). react-pdf no
+// interpreta HTML, así que acá se recorre el DOM (vía DOMParser, disponible
+// en el navegador donde siempre se genera el PDF) y se traduce a Views/Text.
+// El contenido legado en texto plano (sin tags) se convierte primero a HTML
+// equivalente con asegurarHtml(), así que ambos formatos caen en el mismo camino.
+
+type EstiloTexto = { negrilla?: boolean; cursiva?: boolean; subrayado?: boolean; tachado?: boolean }
+
+function estiloDeTexto(e: EstiloTexto) {
+  const estilo: Record<string, string> = {}
+  if (e.negrilla && e.cursiva) estilo.fontFamily = 'Helvetica-BoldOblique'
+  else if (e.negrilla) estilo.fontFamily = 'Helvetica-Bold'
+  else if (e.cursiva) estilo.fontFamily = 'Helvetica-Oblique'
+  const decoraciones = [e.subrayado && 'underline', e.tachado && 'line-through'].filter(Boolean)
+  if (decoraciones.length) estilo.textDecoration = decoraciones.join(' ')
+  return estilo
+}
+
+function nodosInline(nodo: Element, estilo: EstiloTexto, key: string): ReactNode[] {
+  const partes: ReactNode[] = []
+  nodo.childNodes.forEach((hijo, i) => {
+    const k = `${key}-${i}`
+    if (hijo.nodeType === Node.TEXT_NODE) {
+      const texto = hijo.textContent ?? ''
+      if (texto) partes.push(<Text key={k} style={estiloDeTexto(estilo)}>{texto}</Text>)
+      return
+    }
+    if (hijo.nodeType !== Node.ELEMENT_NODE) return
+    const el = hijo as HTMLElement
+    const tag = el.tagName.toLowerCase()
+    if (tag === 'br') { partes.push(<Text key={k}>{'\n'}</Text>); return }
+    partes.push(...nodosInline(el, {
+      negrilla: estilo.negrilla || tag === 'strong' || tag === 'b',
+      cursiva: estilo.cursiva || tag === 'em' || tag === 'i',
+      subrayado: estilo.subrayado || tag === 'u',
+      tachado: estilo.tachado || tag === 's' || tag === 'strike' || tag === 'del',
+    }, k))
+  })
+  return partes
+}
+
+function alineacionDe(el: HTMLElement): 'left' | 'center' | 'right' | 'justify' | undefined {
+  const align = el.style.textAlign
+  return align === 'center' || align === 'right' || align === 'justify' || align === 'left' ? align : undefined
+}
+
+function bloques(contenedor: Element, keyPrefix: string): ReactNode[] {
+  const partes: ReactNode[] = []
+  Array.from(contenedor.children).forEach((hijo, i) => {
+    const key = `${keyPrefix}-${i}`
+    const el = hijo as HTMLElement
+    const tag = el.tagName.toLowerCase()
+
+    if (tag === 'ul' || tag === 'ol') {
+      Array.from(el.children).forEach((li, j) => {
+        const liKey = `${key}-${j}`
+        const marcador = tag === 'ol' ? `${j + 1}.` : '•'
+        const primerParrafo = li.querySelector(':scope > p')
+        partes.push(
+          <View key={liKey} style={{ flexDirection: 'row', marginBottom: 3 }}>
+            <Text style={{ width: 16 }}>{marcador}</Text>
+            <Text style={{ flex: 1 }}>
+              {nodosInline((primerParrafo ?? li) as Element, {}, liKey)}
+            </Text>
+          </View>
+        )
+      })
+      return
+    }
+    if (tag === 'blockquote') {
+      partes.push(
+        <View key={key} style={{ paddingLeft: 12, borderLeftWidth: 2, borderLeftColor: '#cbd5e1', marginBottom: 6 }}>
+          {bloques(el, key)}
+        </View>
+      )
+      return
+    }
+    // Párrafo (o cualquier otra etiqueta de bloque no contemplada, como texto plano)
+    const align = alineacionDe(el)
+    partes.push(
+      <Text key={key} style={{ marginBottom: 6, ...(align ? { textAlign: align } : {}) }}>
+        {nodosInline(el, {}, key)}
+      </Text>
+    )
+  })
+  return partes
+}
+
+function renderizarContenido(contenidoRenderizado: string): ReactNode {
+  const html = asegurarHtml(contenidoRenderizado)
+  const doc = new DOMParser().parseFromString(`<div>${html}</div>`, 'text/html')
+  const raiz = doc.body.firstElementChild
+  return raiz ? bloques(raiz, 'c') : null
+}
 
 type Props = {
   medico: DatosMedico
@@ -169,7 +267,9 @@ export default function ConsentimientoPDF({
 
         {/* Contenido */}
         <Text style={s.seccionTitulo}>Declaración de consentimiento</Text>
-        <Text style={s.contenido}>{contenidoRenderizado}</Text>
+        <View style={s.contenido}>
+          {renderizarContenido(contenidoRenderizado)}
+        </View>
 
         {/* Firmas */}
         <View style={s.firmasBloque}>

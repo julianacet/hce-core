@@ -77,6 +77,8 @@ import {
   type ExamenPredefinidoInput,
 } from '../../api/examenes_predefinidos'
 import { Breadcrumb } from '../../components/Breadcrumb'
+import EditorConsentimiento, { type EditorConsentimientoHandle } from '../../components/EditorConsentimiento'
+import { asegurarHtml, htmlEstaVacio } from '../../utils/textoEnriquecido'
 
 const PALETAS = [
   {
@@ -300,13 +302,20 @@ function TipoRow({ tipo, onEditar }: { tipo: TipoEventoAdverso; onEditar: () => 
 }
 
 const VARIABLES_CONSENTIMIENTO = [
-  { clave: 'paciente_nombre',    etiqueta: 'Nombre del paciente' },
-  { clave: 'paciente_documento', etiqueta: 'Documento del paciente' },
-  { clave: 'tipo_documento',     etiqueta: 'Tipo de documento' },
-  { clave: 'medico_nombre',      etiqueta: 'Nombre del médico' },
-  { clave: 'consultorio',        etiqueta: 'Nombre del consultorio' },
-  { clave: 'ciudad',             etiqueta: 'Ciudad' },
-  { clave: 'fecha',              etiqueta: 'Fecha' },
+  { clave: 'paciente_nombre',       etiqueta: 'Nombre del paciente' },
+  { clave: 'paciente_documento',    etiqueta: 'Documento del paciente' },
+  { clave: 'tipo_documento',        etiqueta: 'Tipo de documento' },
+  { clave: 'paciente_edad',         etiqueta: 'Edad del paciente' },
+  { clave: 'paciente_genero',       etiqueta: 'Sexo del paciente' },
+  { clave: 'paciente_direccion',    etiqueta: 'Domicilio del paciente' },
+  { clave: 'paciente_telefono',     etiqueta: 'Teléfono del paciente' },
+  { clave: 'responsable_nombre',    etiqueta: 'Nombre del representante legal' },
+  { clave: 'responsable_parentesco', etiqueta: 'Relación del representante con el paciente' },
+  { clave: 'responsable_telefono',  etiqueta: 'Teléfono del representante legal' },
+  { clave: 'medico_nombre',         etiqueta: 'Nombre del médico' },
+  { clave: 'consultorio',           etiqueta: 'Nombre del consultorio' },
+  { clave: 'ciudad',                etiqueta: 'Ciudad' },
+  { clave: 'fecha',                 etiqueta: 'Fecha' },
 ]
 
 function PlantillasAdmin({ onAbierto }: { onAbierto?: (v: boolean) => void }) {
@@ -318,7 +327,7 @@ function PlantillasAdmin({ onAbierto }: { onAbierto?: (v: boolean) => void }) {
   const [nueva, setNueva] = useState(false)
   const [formP, setFormP] = useState({ nombre: '', contenido: '' })
   const actualizar = useActualizarPlantilla(editando?.id ?? '')
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const editorRef = useRef<EditorConsentimientoHandle>(null)
   const { confirmar, modal } = useConfirmar()
   const formAbierto = nueva || !!editando
   useEffect(() => { onAbierto?.(formAbierto) }, [formAbierto, onAbierto])
@@ -331,7 +340,7 @@ function PlantillasAdmin({ onAbierto }: { onAbierto?: (v: boolean) => void }) {
 
   function abrirEditar(p: PlantillaConsentimiento) {
     setNueva(false)
-    setFormP({ nombre: p.nombre, contenido: p.contenido })
+    setFormP({ nombre: p.nombre, contenido: asegurarHtml(p.contenido) })
     setEditando(p)
   }
 
@@ -342,26 +351,11 @@ function PlantillasAdmin({ onAbierto }: { onAbierto?: (v: boolean) => void }) {
   }
 
   function insertarVariable(clave: string) {
-    const ta = textareaRef.current
-    const token = `{{${clave}}}`
-    if (!ta) {
-      setFormP((f) => ({ ...f, contenido: f.contenido + token }))
-      return
-    }
-    const inicio = ta.selectionStart
-    const fin = ta.selectionEnd
-    const nuevo = formP.contenido.slice(0, inicio) + token + formP.contenido.slice(fin)
-    setFormP((f) => ({ ...f, contenido: nuevo }))
-    // Restaurar foco y posición del cursor tras el render
-    setTimeout(() => {
-      ta.focus()
-      ta.selectionStart = inicio + token.length
-      ta.selectionEnd = inicio + token.length
-    }, 0)
+    editorRef.current?.insertarEnCursor(`{{${clave}}}`)
   }
 
   async function guardarPlantilla() {
-    if (!formP.nombre.trim() || !formP.contenido.trim()) return
+    if (!formP.nombre.trim() || htmlEstaVacio(formP.contenido)) return
     if (editando) {
       await actualizar.mutateAsync(formP)
     } else {
@@ -390,7 +384,7 @@ function PlantillasAdmin({ onAbierto }: { onAbierto?: (v: boolean) => void }) {
               <p className={`text-sm font-medium ${p.esta_activo ? 'text-slate-700' : 'text-slate-400 line-through'}`}>
                 {p.nombre}
               </p>
-              <p className="text-xs text-slate-400 truncate mt-0.5">{p.contenido.slice(0, 80)}…</p>
+              <p className="text-xs text-slate-400 truncate mt-0.5">{p.contenido.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80)}…</p>
             </div>
             <RowMenu loading={desactivar.isPending || eliminar.isPending} items={[
               { label: 'Editar', icon: <Pencil size={14} />, onClick: () => abrirEditar(p) },
@@ -438,7 +432,7 @@ function PlantillasAdmin({ onAbierto }: { onAbierto?: (v: boolean) => void }) {
             </div>
 
             {/* Chips de variables */}
-            <div className="border border-slate-200 rounded-t-lg bg-slate-50 px-3 py-2.5">
+            <div className="border border-slate-200 rounded-lg bg-slate-50 px-3 py-2.5 mb-2">
               <p className="text-xs text-slate-500 mb-2">
                 Haga clic en un dato para insertarlo en el texto donde esté el cursor:
               </p>
@@ -457,12 +451,10 @@ function PlantillasAdmin({ onAbierto }: { onAbierto?: (v: boolean) => void }) {
               </div>
             </div>
 
-            <textarea
-              ref={textareaRef}
+            <EditorConsentimiento
+              ref={editorRef}
               value={formP.contenido}
-              onChange={(e) => setFormP((f) => ({ ...f, contenido: e.target.value }))}
-              rows={14}
-              className="input-hce rounded-t-none border-t-0 resize-y text-sm leading-relaxed"
+              onChange={(v) => setFormP((f) => ({ ...f, contenido: v }))}
               placeholder="Por medio del presente documento, yo…  (use los botones de arriba para insertar datos del paciente o del médico)"
             />
           </div>
@@ -470,7 +462,7 @@ function PlantillasAdmin({ onAbierto }: { onAbierto?: (v: boolean) => void }) {
           <div className="flex justify-end gap-2">
             <button onClick={cerrar} className="btn-secondary">Cancelar</button>
             <button onClick={guardarPlantilla} className="btn-primary"
-              disabled={crear.isPending || actualizar.isPending}>
+              disabled={crear.isPending || actualizar.isPending || !formP.nombre.trim() || htmlEstaVacio(formP.contenido)}>
               {crear.isPending || actualizar.isPending ? 'Guardando...' : 'Guardar'}
             </button>
           </div>

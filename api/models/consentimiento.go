@@ -16,11 +16,6 @@ type PlantillaInput struct {
 	Contenido string `json:"contenido"`
 }
 
-type ConsentimientoInput struct {
-	PlantillaID          string `json:"plantilla_id"`
-	ContenidoRenderizado string `json:"contenido_renderizado"`
-}
-
 // ConsentimientoStandaloneInput — para consentimientos independientes (no ligados a encuentro)
 type ConsentimientoStandaloneInput struct {
 	PlantillaID          string `json:"plantilla_id"`

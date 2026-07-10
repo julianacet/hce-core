@@ -244,6 +244,46 @@ textarea {
     cursor: not-allowed;
   }
   .input-hce::placeholder { color: var(--hce-text-muted); opacity: 0.6; }
+
+  .editor-consentimiento {
+    border: 1px solid var(--hce-border);
+    border-top: none;
+    border-bottom-left-radius: var(--hce-radius);
+    border-bottom-right-radius: var(--hce-radius);
+    background-color: var(--hce-card);
+    min-height: 260px;
+    max-height: 480px;
+    overflow-y: auto;
+    transition: box-shadow 0.15s;
+  }
+  .editor-consentimiento:focus-within {
+    box-shadow: 0 0 0 2px var(--hce-primary);
+    border-color: var(--hce-primary);
+  }
+  .editor-consentimiento .tiptap-content {
+    padding: 0.5rem 0.75rem;
+    font-size: var(--hce-font-sm);
+    color: var(--hce-text);
+    outline: none;
+  }
+  .editor-consentimiento .tiptap-content p { margin: 0 0 0.5em; }
+  .editor-consentimiento .tiptap-content ul,
+  .editor-consentimiento .tiptap-content ol { padding-left: 1.5em; margin: 0 0 0.5em; }
+  .editor-consentimiento .tiptap-content ul { list-style: disc; }
+  .editor-consentimiento .tiptap-content ol { list-style: decimal; }
+  .editor-consentimiento .tiptap-content blockquote {
+    border-left: 3px solid var(--hce-border);
+    margin: 0 0 0.5em;
+    padding-left: 1em;
+  }
+  .editor-consentimiento .tiptap-content p.is-editor-empty:first-child::before {
+    content: attr(data-placeholder);
+    color: var(--hce-text-muted);
+    opacity: 0.6;
+    float: left;
+    height: 0;
+    pointer-events: none;
+  }
 }
 
 .label-hce {

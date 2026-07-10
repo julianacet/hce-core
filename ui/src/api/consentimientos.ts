@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiFetch } from './client'
-import { PLANTILLAS_CONSENTIMIENTO_KEY, CONSENTIMIENTO_KEY, CONSENTIMIENTOS_GENERADOS_KEY } from './keys'
+import { PLANTILLAS_CONSENTIMIENTO_KEY, CONSENTIMIENTOS_GENERADOS_KEY } from './keys'
 
 export type PlantillaConsentimiento = {
   id: string
@@ -134,37 +134,5 @@ export function useFirmarConsentimiento() {
   return useMutation<ConsentimientoGenerado, Error, string>({
     mutationFn: (id) => apiFetch(`/consentimientos/generados/${id}/firmar`, { method: 'PATCH' }),
     onSuccess: () => qc.invalidateQueries({ queryKey: CONSENTIMIENTOS_GENERADOS_KEY }),
-  })
-}
-
-// ── Por encuentro ─────────────────────────────────────────────────────────────
-
-export function useConsentimientoEncuentro(pacienteId: string, encId: string, enabled = false) {
-  return useQuery<ConsentimientoGenerado | null>({
-    queryKey: [...CONSENTIMIENTO_KEY, encId],
-    queryFn: async () => {
-      try {
-        return await apiFetch<ConsentimientoGenerado>(
-          `/pacientes/${pacienteId}/encuentros/${encId}/consentimiento`
-        )
-      } catch (e) {
-        if ((e as Error).message === 'sin consentimiento generado') return null
-        throw e
-      }
-    },
-    enabled,
-    retry: false,
-  })
-}
-
-export function useRegistrarConsentimiento(pacienteId: string, encId: string) {
-  const qc = useQueryClient()
-  return useMutation<ConsentimientoGenerado, Error, { plantilla_id: string; contenido_renderizado: string }>({
-    mutationFn: (input) =>
-      apiFetch(`/pacientes/${pacienteId}/encuentros/${encId}/consentimiento`, {
-        method: 'POST',
-        body: JSON.stringify(input),
-      }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: [...CONSENTIMIENTO_KEY, encId] }),
   })
 }

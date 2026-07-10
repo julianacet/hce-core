@@ -28,7 +28,6 @@ export const CITAS_KEY = ['citas'] as const
 export const CITAS_MES_KEY = ['citas-mes'] as const
 
 export const PLANTILLAS_CONSENTIMIENTO_KEY = ['plantillas-consentimiento'] as const
-export const CONSENTIMIENTO_KEY = ['consentimiento'] as const
 export const CONSENTIMIENTOS_GENERADOS_KEY = ['consentimientos-generados'] as const
 
 export const CUPS_KEY = ['cups'] as const
