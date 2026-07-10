@@ -58,7 +58,7 @@ const scanConsentimiento = `
 	SELECT cg.id, cg.encuentro_id, cg.plantilla_id, cg.plantilla_nombre,
 	       cg.paciente_documento, cg.paciente_nombre, cg.tipo_documento,
 	       cg.contenido_renderizado, cg.firmado, cg.fecha_firma, cg.firmado_por,
-	       cg.fecha_generacion, cg.creado_por
+	       cg.firma_paciente_base64, cg.fecha_generacion, cg.creado_por
 	FROM consentimiento_generado cg`
 
 func scanearConsentimiento(row interface {
@@ -69,7 +69,7 @@ func scanearConsentimiento(row interface {
 		&c.ID, &c.EncuentroID, &c.PlantillaID, &c.PlantillaNombre,
 		&c.PacienteDocumento, &c.PacienteNombre, &c.TipoDocumento,
 		&c.ContenidoRenderizado, &c.Firmado, &c.FechaFirma, &c.FirmadoPor,
-		&c.FechaGeneracion, &c.CreadoPor,
+		&c.FirmaPacienteBase64, &c.FechaGeneracion, &c.CreadoPor,
 	)
 	return c, err
 }
@@ -303,14 +303,14 @@ func (h *ConsentimientoHandler) generarConsentimiento(w http.ResponseWriter, r *
 		RETURNING id, encuentro_id, plantilla_id, plantilla_nombre,
 		          paciente_documento, paciente_nombre, tipo_documento,
 		          contenido_renderizado, firmado, fecha_firma, firmado_por,
-		          fecha_generacion, creado_por`,
+		          firma_paciente_base64, fecha_generacion, creado_por`,
 		plantillaID, plantillaNombre, input.PacienteDocumento, input.PacienteNombre,
 		input.TipoDocumento, input.ContenidoRenderizado, u.Nombre,
 	).Scan(
 		&c.ID, &c.EncuentroID, &c.PlantillaID, &c.PlantillaNombre,
 		&c.PacienteDocumento, &c.PacienteNombre, &c.TipoDocumento,
 		&c.ContenidoRenderizado, &c.Firmado, &c.FechaFirma, &c.FirmadoPor,
-		&c.FechaGeneracion, &c.CreadoPor,
+		&c.FirmaPacienteBase64, &c.FechaGeneracion, &c.CreadoPor,
 	)
 	if err != nil {
 		log.Printf("generar consentimiento: %v", err)
@@ -325,15 +325,25 @@ func (h *ConsentimientoHandler) firmarConsentimiento(w http.ResponseWriter, r *h
 	id := chi.URLParam(r, "id")
 	u := appmiddleware.UsuarioDesdeContexto(r.Context())
 
+	var input models.FirmarConsentimientoInput
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		responderError(w, http.StatusBadRequest, "body inválido")
+		return
+	}
+	if strings.TrimSpace(input.FirmaBase64) == "" {
+		responderError(w, http.StatusBadRequest, "se requiere la firma capturada del paciente")
+		return
+	}
+
 	row := h.db.QueryRow(r.Context(), `
 		UPDATE consentimiento_generado
-		SET firmado = TRUE, fecha_firma = NOW(), firmado_por = $1
-		WHERE id = $2
+		SET firmado = TRUE, fecha_firma = NOW(), firmado_por = $1, firma_paciente_base64 = $2
+		WHERE id = $3
 		RETURNING id, encuentro_id, plantilla_id, plantilla_nombre,
 		          paciente_documento, paciente_nombre, tipo_documento,
 		          contenido_renderizado, firmado, fecha_firma, firmado_por,
-		          fecha_generacion, creado_por`,
-		u.Nombre, id,
+		          firma_paciente_base64, fecha_generacion, creado_por`,
+		u.Nombre, input.FirmaBase64, id,
 	)
 	c, err := scanearConsentimiento(row)
 	if err != nil {

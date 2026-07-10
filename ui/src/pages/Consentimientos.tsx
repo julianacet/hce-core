@@ -14,6 +14,7 @@ import { Breadcrumb } from '../components/Breadcrumb'
 import { TableEmptyState } from '../components/TableEmptyState'
 import { SortButton, type SortDir } from '../components/SortButton'
 import { PaginationFooter } from '../components/PaginationFooter'
+import ModalFirma from '../components/ModalFirma'
 import ConsentimientoPDF from '../components/pdf/ConsentimientoPDF'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -37,6 +38,7 @@ export default function Consentimientos() {
   const [page, setPage] = useState(1)
   const [orden, setOrden] = useState<OrdenCol>('fecha')
   const [dir, setDir] = useState<SortDir>('desc')
+  const [firmandoId, setFirmandoId] = useState<string | null>(null)
 
   const busquedaDebounced = useDebounced(busqueda, DEBOUNCE_FILTROS_MS)
 
@@ -78,9 +80,16 @@ export default function Consentimientos() {
         colorPrimario={tema.colorPrimario}
         logoBase64={tema.logoBase64}
         logoTextoBase64={medico.logoTextoBase64}
+        pacienteFirmaBase64={c.firma_paciente_base64}
       />
     ).toBlob()
     await imprimirConVisorSO(blob)
+  }
+
+  async function confirmarFirma(firmaBase64: string) {
+    if (!firmandoId) return
+    await firmar.mutateAsync({ id: firmandoId, firma_base64: firmaBase64 })
+    setFirmandoId(null)
   }
 
   return (
@@ -208,10 +217,9 @@ export default function Consentimientos() {
                       </button>
                       {!c.firmado && (
                         <button
-                          onClick={() => firmar.mutate(c.id)}
-                          disabled={firmar.isPending}
+                          onClick={() => setFirmandoId(c.id)}
                           className="btn-primary flex items-center gap-1 px-2.5 py-1 text-xs"
-                          title="Registrar como firmado"
+                          title="Firmar documento"
                         >
                           <CheckCircle2 size={12} />
                           Firmar
@@ -235,6 +243,14 @@ export default function Consentimientos() {
           entityLabel="consentimientos"
         />
       </div>
+
+      {firmandoId && (
+        <ModalFirma
+          onGuardar={confirmarFirma}
+          onCancelar={() => setFirmandoId(null)}
+          guardando={firmar.isPending}
+        />
+      )}
 
     </div>
   )

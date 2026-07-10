@@ -111,6 +111,7 @@ type Props = {
   colorPrimario?: string
   logoBase64?: string | null
   logoTextoBase64?: string | null
+  pacienteFirmaBase64?: string | null
 }
 
 export default function ConsentimientoPDF({
@@ -122,6 +123,7 @@ export default function ConsentimientoPDF({
   fecha, fechaImpresion,
   tamano = 'LETTER',
   colorPrimario = '#1d4ed8',
+  pacienteFirmaBase64 = null,
   logoBase64 = null, logoTextoBase64 = null,
 }: Props) {
   const LOGO_W = 60
@@ -274,7 +276,11 @@ export default function ConsentimientoPDF({
         {/* Firmas */}
         <View style={s.firmasBloque}>
           <View style={s.firmaItem}>
-            <View style={{ height: 56 }} />
+            {pacienteFirmaBase64 ? (
+              <Image src={pacienteFirmaBase64} style={s.firmaImagen} />
+            ) : (
+              <View style={{ height: 56 }} />
+            )}
             <View style={s.firmaLinea} />
             <Text style={s.firmaNombre}>{pacienteNombre}</Text>
             <Text style={s.firmaLabel}>{tipoDocumento} {pacienteDocumento}</Text>

@@ -28,6 +28,7 @@ export type ConsentimientoGenerado = {
   firmado: boolean
   fecha_firma: string | null
   firmado_por: string | null
+  firma_paciente_base64: string | null
   fecha_generacion: string
   creado_por: string
 }
@@ -131,8 +132,12 @@ export function useGenerarConsentimiento() {
 
 export function useFirmarConsentimiento() {
   const qc = useQueryClient()
-  return useMutation<ConsentimientoGenerado, Error, string>({
-    mutationFn: (id) => apiFetch(`/consentimientos/generados/${id}/firmar`, { method: 'PATCH' }),
+  return useMutation<ConsentimientoGenerado, Error, { id: string; firma_base64: string }>({
+    mutationFn: ({ id, firma_base64 }) =>
+      apiFetch(`/consentimientos/generados/${id}/firmar`, {
+        method: 'PATCH',
+        body: JSON.stringify({ firma_base64 }),
+      }),
     onSuccess: () => qc.invalidateQueries({ queryKey: CONSENTIMIENTOS_GENERADOS_KEY }),
   })
 }

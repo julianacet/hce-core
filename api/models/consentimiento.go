@@ -37,6 +37,13 @@ type ConsentimientoGenerado struct {
 	Firmado              bool       `json:"firmado"`
 	FechaFirma           *time.Time `json:"fecha_firma"`
 	FirmadoPor           *string    `json:"firmado_por"`
+	FirmaPacienteBase64  *string    `json:"firma_paciente_base64"`
 	FechaGeneracion      time.Time  `json:"fecha_generacion"`
 	CreadoPor            string     `json:"creado_por"`
+}
+
+// FirmarConsentimientoInput — imagen PNG (data-URL) capturada en la tableta
+// digitalizadora al momento de firmar.
+type FirmarConsentimientoInput struct {
+	FirmaBase64 string `json:"firma_base64"`
 }

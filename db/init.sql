@@ -321,6 +321,7 @@ CREATE TABLE consentimiento_generado (
     firmado              BOOLEAN     NOT NULL DEFAULT FALSE,
     fecha_firma          TIMESTAMPTZ,
     firmado_por          TEXT,
+    firma_paciente_base64 TEXT,                                -- PNG data-URL capturado en tableta digitalizadora
     fecha_generacion     TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     creado_por           TEXT        NOT NULL
 );
