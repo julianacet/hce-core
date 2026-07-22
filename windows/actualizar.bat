@@ -66,7 +66,7 @@ if not exist "%MIGRATION_DIR%\migrate_*.sql" (
 
 for %%f in ("%MIGRATION_DIR%\migrate_*.sql") do (
     echo       - %%~nxf
-    "%PGSQL%\bin\psql.exe" -U hce -p 5433 -d hce_provider -f "%%f" >>"%DIR%logs\migrations.log" 2>&1
+    "%PGSQL%\bin\psql.exe" -U postgres -p 5433 -d hce_provider -f "%%f" >>"%DIR%logs\migrations.log" 2>&1
     if errorlevel 1 (
         echo         [!] Error - ver logs\migrations.log
         set "ERRORES=1"
