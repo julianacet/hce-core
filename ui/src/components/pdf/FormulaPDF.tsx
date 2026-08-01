@@ -44,6 +44,9 @@ export default function FormulaPDF({
     page: {
       paddingHorizontal: 48,
       paddingVertical: 40,
+      // Reserva espacio para el footer fijo (ver estilo `footerLegal`), que se
+      // posiciona con position:absolute pegado al margen inferior en cada página.
+      paddingBottom: 52,
       fontFamily: 'Helvetica',
       fontSize: 10,
       color: '#0f172a',
@@ -135,11 +138,13 @@ export default function FormulaPDF({
     firmaTP: { fontSize: 7, color: '#374151', textAlign: 'center' },
 
     // ── Footer legal ──────────────────────────────────────────────────────────
+    // Fijo, pegado al margen inferior en cada página (ver `page.paddingBottom`).
     footerLegal: {
-      marginTop: 16, paddingTop: 8,
+      position: 'absolute', bottom: 16, left: 48, right: 48,
+      paddingTop: 8,
       borderTopWidth: 0.5, borderTopColor: '#e2e8f0',
     },
-    footerTexto: { fontSize: 7, color: '#6b7280', marginBottom: 1 },
+    footerTexto: { fontSize: 7, color: '#6b7280', marginBottom: 1, textAlign: 'left' },
   })
 
   return (
@@ -224,8 +229,8 @@ export default function FormulaPDF({
           </View>
         ))}
 
-        {/* Footer: contacto + legal */}
-        <View style={s.footerLegal}>
+        {/* Footer: contacto + legal — fijo, se repite en todas las páginas */}
+        <View fixed style={s.footerLegal}>
           {[medico.ciudad, medico.direccion, medico.telefono, medico.correoElectronico]
             .filter(Boolean).length > 0 && (
             <Text style={s.footerTexto}>
