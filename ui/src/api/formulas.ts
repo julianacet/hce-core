@@ -37,6 +37,7 @@ export type FormulaGuardada = {
   id: string
   formula_id: string
   numero_version: number
+  estado: 'borrador' | 'finalizado'
   tipo: string
   observaciones?: string
   fecha_creacion: string
@@ -44,55 +45,36 @@ export type FormulaGuardada = {
   medicamentos: MedicamentoGuardado[]
 }
 
-// UI shape of a medication as filled in the formula form (camelCase, matches Medicamento from FormulaPDF)
-type MedicamentoUI = {
-  nombre: string; concentracion: string; formaFarmaceutica: string
-  dosis: string; frecuencia: string; duracion: string; cantidad: string; indicaciones: string
-}
-
-export async function crearFormulas(
-  doc: string,
-  encId: string,
-  formulas: { pos: MedicamentoUI[]; no_pos: MedicamentoUI[] }
-): Promise<void> {
-  for (const tipo of ['pos', 'no_pos'] as const) {
-    const meds = formulas[tipo].filter(m => m.nombre.trim())
-    if (meds.length === 0) continue
-    await apiFetch(`/pacientes/${doc}/encuentros/${encId}/formulas`, {
-      method: 'POST',
-      body: JSON.stringify({
-        tipo,
-        medicamentos: meds.map(m => ({
-          nombre_medicamento: m.nombre,
-          concentracion: m.concentracion || undefined,
-          forma_farmaceutica: m.formaFarmaceutica || undefined,
-          dosis: m.dosis,
-          frecuencia: m.frecuencia,
-          duracion_tratamiento: m.duracion,
-          cantidad_dispensar: parseInt(m.cantidad) || undefined,
-          indicaciones: m.indicaciones || undefined,
-        })),
-      }),
-    })
-  }
-}
-
-export function useFormulas(docId: string, encId: string) {
+// Las fórmulas se guardan como borrador (autoguardado) mientras se diligencia
+// la consulta; ver EncuentroForm.tsx. `estado` filtra la consulta: por
+// defecto el backend solo devuelve 'finalizado' (historial); se pasa
+// 'borrador' explícitamente para retomar un borrador en curso.
+export function useFormulas(docId: string, encId: string, estado?: 'borrador' | 'finalizado') {
   return useQuery({
-    queryKey: [...FORMULAS_KEY, docId, encId],
-    queryFn: () => apiFetch<FormulaGuardada[]>(`/pacientes/${docId}/encuentros/${encId}/formulas`),
+    queryKey: [...FORMULAS_KEY, docId, encId, estado ?? 'finalizado'],
+    queryFn: () => apiFetch<FormulaGuardada[]>(
+      `/pacientes/${docId}/encuentros/${encId}/formulas${estado ? `?estado=${estado}` : ''}`
+    ),
     enabled: !!docId && !!encId,
   })
 }
 
+// Crea una fórmula y la finaliza de inmediato — usado por el flujo standalone
+// de "nueva fórmula" sobre un encuentro ya existente (NuevaFormula.tsx), que
+// no pasa por el ciclo de borrador de EncuentroForm.
 export function useCrearFormula(docId: string, encId: string) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (data: FormulaInput) =>
-      apiFetch<FormulaGuardada>(`/pacientes/${docId}/encuentros/${encId}/formulas`, {
+    mutationFn: async (data: FormulaInput) => {
+      const creada = await apiFetch<FormulaGuardada>(`/pacientes/${docId}/encuentros/${encId}/formulas`, {
         method: 'POST',
         body: JSON.stringify(data),
-      }),
+      })
+      return apiFetch<FormulaGuardada>(
+        `/pacientes/${docId}/encuentros/${encId}/formulas/${creada.formula_id}/finalizar`,
+        { method: 'PATCH' },
+      )
+    },
     onSuccess: () => qc.invalidateQueries({ queryKey: [...FORMULAS_KEY, docId, encId] }),
   })
 }

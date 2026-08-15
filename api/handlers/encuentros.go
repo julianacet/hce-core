@@ -387,14 +387,47 @@ func (h *EncuentroHandler) eliminar(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	encuentroID := chi.URLParam(r, "encuentroId")
-	tag, err := h.db.Exec(r.Context(),
-		`DELETE FROM encuentro_clinico WHERE encuentro_id=$1`, encuentroID)
+
+	var filasAfectadas int64
+	err := repository.ExecTx(r.Context(), h.db, func(tx pgx.Tx) error {
+		// Limpia borradores de fórmula/orden que quedarían huérfanos — nunca
+		// llegaron a finalizarse, así que no son historial clínico a preservar.
+		if _, err := tx.Exec(r.Context(), `
+			DELETE FROM formula_medicamento WHERE formula_id IN (
+				SELECT id FROM formula_medica WHERE encuentro_id = $1 AND estado = 'borrador'
+			)`, encuentroID); err != nil {
+			return err
+		}
+		if _, err := tx.Exec(r.Context(),
+			`DELETE FROM formula_medica WHERE encuentro_id = $1 AND estado = 'borrador'`, encuentroID,
+		); err != nil {
+			return err
+		}
+		if _, err := tx.Exec(r.Context(), `
+			DELETE FROM orden_examen_item WHERE orden_id IN (
+				SELECT id FROM orden_examen WHERE encuentro_id = $1 AND estado = 'borrador'
+			)`, encuentroID); err != nil {
+			return err
+		}
+		if _, err := tx.Exec(r.Context(),
+			`DELETE FROM orden_examen WHERE encuentro_id = $1 AND estado = 'borrador'`, encuentroID,
+		); err != nil {
+			return err
+		}
+
+		tag, err := tx.Exec(r.Context(), `DELETE FROM encuentro_clinico WHERE encuentro_id=$1`, encuentroID)
+		if err != nil {
+			return err
+		}
+		filasAfectadas = tag.RowsAffected()
+		return nil
+	})
 	if err != nil {
 		log.Printf("eliminar encuentro: %v", err)
 		responderError(w, http.StatusInternalServerError, "error al eliminar encuentro")
 		return
 	}
-	if tag.RowsAffected() == 0 {
+	if filasAfectadas == 0 {
 		responderError(w, http.StatusNotFound, "encuentro no encontrado")
 		return
 	}

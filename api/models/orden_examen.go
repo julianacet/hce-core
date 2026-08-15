@@ -14,6 +14,7 @@ type OrdenExamenItem struct {
 type OrdenExamen struct {
 	ID                    string           `json:"id"`
 	EncuentroID           string           `json:"encuentro_id"`
+	Estado                string           `json:"estado"` // borrador | finalizado
 	IndicacionesGenerales *string          `json:"indicaciones_generales"`
 	FechaCreacion         time.Time        `json:"fecha_creacion"`
 	CreadoPor             string           `json:"creado_por"`

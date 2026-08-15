@@ -4,11 +4,25 @@ import { Breadcrumb } from '../components/Breadcrumb'
 import { UserRound, FileEdit } from 'lucide-react'
 import { type Paciente, usePaciente } from '../api/pacientes'
 import { useBorradorEncuentro, useEncuentro, useEliminarEncuentro, type EncuentroInput, type DiagnosticoItem, type ValoresClinicos } from '../api/encuentros'
-import { crearFormulas } from '../api/formulas'
-import { crearOrdenExamen } from '../api/ordenes_examen'
-import EncuentroForm, { type FormulaData, type OrdenData } from '../components/EncuentroForm'
+import { useFormulas, type MedicamentoGuardado } from '../api/formulas'
+import { useOrdenesExamen } from '../api/ordenes_examen'
+import EncuentroForm from '../components/EncuentroForm'
+import type { Medicamento } from '../components/pdf/FormulaPDF'
 import { BuscadorPaciente } from '../components/BuscadorPaciente'
 import { nombreCompleto, fmtFechaNacimiento } from '../utils/paciente'
+
+function medicamentoDesdeAPI(m: MedicamentoGuardado): Medicamento {
+  return {
+    nombre: m.nombre_medicamento,
+    concentracion: m.concentracion ?? '',
+    formaFarmaceutica: m.forma_farmaceutica ?? '',
+    dosis: m.dosis,
+    frecuencia: m.frecuencia,
+    duracion: m.duracion_tratamiento,
+    cantidad: m.cantidad_dispensar != null ? String(m.cantidad_dispensar) : '',
+    indicaciones: m.indicaciones ?? '',
+  }
+}
 
 export default function NuevaConsulta() {
   const navigate = useNavigate()
@@ -39,6 +53,18 @@ export default function NuevaConsulta() {
     borradorExistente?.encuentro_id ?? '',
   )
 
+  // Fórmula y órdenes de examen también se autoguardan como borrador — se
+  // retoman igual que el resto del encuentro.
+  const { data: formulasBorrador = [] } = useFormulas(
+    paciente?.numero_documento ?? '', borradorExistente?.encuentro_id ?? '', 'borrador',
+  )
+  const { data: ordenesBorrador = [] } = useOrdenesExamen(
+    paciente?.numero_documento ?? '', borradorExistente?.encuentro_id ?? '', 'borrador',
+  )
+  const formulaPosBorrador = formulasBorrador.find(f => f.tipo === 'pos')
+  const formulaNoPosBorrador = formulasBorrador.find(f => f.tipo === 'no_pos')
+  const ordenBorrador = ordenesBorrador[0]
+
   const borradorData = borradorCompleto ? {
     motivo_consulta:    borradorCompleto.motivo_consulta ?? '',
     descripcion_ingreso: borradorCompleto.descripcion_ingreso ?? '',
@@ -51,6 +77,18 @@ export default function NuevaConsulta() {
     revision:  (borradorCompleto.revision_sistemas as ValoresClinicos) ?? {},
     examen:    (borradorCompleto.examen_fisico as ValoresClinicos) ?? {},
     diagnosticos: (borradorCompleto.diagnosticos ?? []) as DiagnosticoItem[],
+    formulaPosId: formulaPosBorrador?.formula_id,
+    medsPos: formulaPosBorrador?.medicamentos.map(medicamentoDesdeAPI),
+    formulaNoPosId: formulaNoPosBorrador?.formula_id,
+    medsNoPos: formulaNoPosBorrador?.medicamentos.map(medicamentoDesdeAPI),
+    ordenId: ordenBorrador?.id,
+    ordenItems: ordenBorrador?.items.map((i, idx) => ({
+      _key: 1_000_000 + idx,
+      codigo_cups: i.codigo_cups,
+      descripcion: i.descripcion,
+      indicaciones: i.indicaciones,
+    })),
+    ordenIndicaciones: ordenBorrador?.indicaciones_generales ?? '',
   } : undefined
 
   function seleccionar(p: Paciente) {
@@ -86,21 +124,10 @@ export default function NuevaConsulta() {
     setFormKey(k => k + 1)
   }
 
-  async function handleSubmit(_data: EncuentroInput, formulas: FormulaData, orden: OrdenData, encuentroId: string) {
-    const doc = paciente!.numero_documento
-    await crearFormulas(doc, encuentroId, formulas)
-    await crearOrdenExamen(doc, encuentroId, {
-      indicaciones_generales: orden.indicaciones_generales.trim() || null,
-      items: orden.items
-        .filter(i => i.descripcion.trim())
-        .map((i, idx) => ({
-          codigo_cups: i.codigo_cups,
-          descripcion: i.descripcion.trim(),
-          indicaciones: i.indicaciones?.trim() || null,
-          posicion: idx + 1,
-        })),
-    })
-    navigate(`/pacientes/${doc}/encuentros/${encuentroId}`)
+  async function handleSubmit(_data: EncuentroInput, encuentroId: string) {
+    // Fórmula y orden de examen ya se guardaron y finalizaron dentro de
+    // EncuentroForm (mismo autoguardado que el resto del encuentro).
+    navigate(`/pacientes/${paciente!.numero_documento}/encuentros/${encuentroId}`)
   }
 
   const selectedDocumento = paciente?.numero_documento ?? null
@@ -246,6 +273,7 @@ export default function NuevaConsulta() {
               </button>
               <button
                 onClick={async () => {
+                  if (!confirm('¿Eliminar este borrador? Esta acción no se puede deshacer.')) return
                   await eliminarBorrador.mutateAsync({
                     doc: borradorExistente.paciente_documento,
                     encuentroId: borradorExistente.encuentro_id,

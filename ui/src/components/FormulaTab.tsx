@@ -241,7 +241,7 @@ export default function FormulaTab({ medsPos, setMedsPos, medsNoPos, setMedsNoPo
             {descargando ? 'Generando…' : 'Descargar PDF'}
           </button>
           <p className="text-xs text-slate-400 self-center ml-1">
-            La fórmula se guardará en BD al finalizar la consulta.
+            Se guarda automáticamente como borrador mientras la diligencia.
           </p>
         </div>
       )}

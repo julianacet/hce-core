@@ -192,6 +192,8 @@ CREATE TABLE formula_medica (
     numero_version    INTEGER     NOT NULL DEFAULT 1,
     es_ultima_version BOOLEAN     NOT NULL DEFAULT TRUE,
     esta_activo       BOOLEAN     NOT NULL DEFAULT TRUE,
+    estado            VARCHAR(20) NOT NULL DEFAULT 'borrador'
+                      CHECK (estado IN ('borrador', 'finalizado')),
     encuentro_id      UUID        NOT NULL,
     tipo              VARCHAR(10) NOT NULL DEFAULT 'no_pos' CHECK (tipo IN ('pos', 'no_pos')),
     observaciones     TEXT,
@@ -1073,6 +1075,8 @@ CREATE INDEX IF NOT EXISTS idx_medicamento_nombre ON medicamento_predefinido
 CREATE TABLE IF NOT EXISTS orden_examen (
     id                      UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
     encuentro_id            UUID        NOT NULL,  -- ID lógico del encuentro (encuentro_clinico.encuentro_id)
+    estado                  VARCHAR(20) NOT NULL DEFAULT 'borrador'
+                            CHECK (estado IN ('borrador', 'finalizado')),
     indicaciones_generales  TEXT,
     fecha_creacion          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     creado_por              TEXT        NOT NULL

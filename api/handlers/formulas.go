@@ -3,12 +3,15 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	appmiddleware "hce/api/middleware"
@@ -27,22 +30,45 @@ func FormulasRouter(db *pgxpool.Pool) http.Handler {
 	r.Get("/", h.listar)
 	r.Post("/", h.crear)
 	r.Get("/{formulaId}", h.obtener)
+	r.Put("/{formulaId}", h.actualizar)
+	r.Patch("/{formulaId}/finalizar", h.finalizar)
 	r.Delete("/{formulaId}", h.eliminar)
 
 	return r
 }
 
-// GET /pacientes/{documento}/encuentros/{encuentroId}/formulas
+// formulaQuerier es satisfecho tanto por *pgxpool.Pool como por pgx.Tx.
+type formulaQuerier interface {
+	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
+	Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error)
+}
+
+const columnasFormula = `id, formula_id, numero_version, es_ultima_version, esta_activo, estado,
+	       encuentro_id, tipo, observaciones, fecha_creacion, creado_por`
+
+func escanearFormula(row scanner) (models.Formula, error) {
+	var f models.Formula
+	err := row.Scan(
+		&f.ID, &f.FormulaID, &f.NumeroVersion, &f.EsUltimaVersion, &f.EstaActivo, &f.Estado,
+		&f.EncuentroID, &f.Tipo, &f.Observaciones, &f.FechaCreacion, &f.CreadoPor,
+	)
+	return f, err
+}
+
+// GET /pacientes/{documento}/encuentros/{encuentroId}/formulas?estado=
 func (h *FormulaHandler) listar(w http.ResponseWriter, r *http.Request) {
 	encuentroID := chi.URLParam(r, "encuentroId")
+	estado := strings.TrimSpace(r.URL.Query().Get("estado"))
+	if estado == "" {
+		estado = "finalizado"
+	}
 
 	rows, err := h.db.Query(r.Context(), `
-		SELECT id, formula_id, numero_version, es_ultima_version, esta_activo,
-		       encuentro_id, tipo, observaciones, fecha_creacion, creado_por
+		SELECT `+columnasFormula+`
 		FROM formula_medica
-		WHERE encuentro_id = $1 AND es_ultima_version = TRUE AND esta_activo = TRUE
+		WHERE encuentro_id = $1 AND estado = $2 AND es_ultima_version = TRUE AND esta_activo = TRUE
 		ORDER BY fecha_creacion DESC`,
-		encuentroID,
+		encuentroID, estado,
 	)
 	if err != nil {
 		log.Printf("listar formulas: %v", err)
@@ -53,11 +79,8 @@ func (h *FormulaHandler) listar(w http.ResponseWriter, r *http.Request) {
 
 	formulas := make([]models.Formula, 0)
 	for rows.Next() {
-		var f models.Formula
-		if err := rows.Scan(
-			&f.ID, &f.FormulaID, &f.NumeroVersion, &f.EsUltimaVersion, &f.EstaActivo,
-			&f.EncuentroID, &f.Tipo, &f.Observaciones, &f.FechaCreacion, &f.CreadoPor,
-		); err != nil {
+		f, err := escanearFormula(rows)
+		if err != nil {
 			responderError(w, http.StatusInternalServerError, "error al leer fórmula")
 			return
 		}
@@ -78,18 +101,14 @@ func (h *FormulaHandler) obtener(w http.ResponseWriter, r *http.Request) {
 	formulaID := chi.URLParam(r, "formulaId")
 	encuentroID := chi.URLParam(r, "encuentroId")
 
-	var f models.Formula
-	err := h.db.QueryRow(r.Context(), `
-		SELECT id, formula_id, numero_version, es_ultima_version, esta_activo,
-		       encuentro_id, tipo, observaciones, fecha_creacion, creado_por
+	row := h.db.QueryRow(r.Context(), `
+		SELECT `+columnasFormula+`
 		FROM formula_medica
 		WHERE formula_id = $1 AND encuentro_id = $2
 		  AND es_ultima_version = TRUE AND esta_activo = TRUE`,
 		formulaID, encuentroID,
-	).Scan(
-		&f.ID, &f.FormulaID, &f.NumeroVersion, &f.EsUltimaVersion, &f.EstaActivo,
-		&f.EncuentroID, &f.Tipo, &f.Observaciones, &f.FechaCreacion, &f.CreadoPor,
 	)
+	f, err := escanearFormula(row)
 	if err != nil {
 		responderError(w, http.StatusNotFound, "fórmula no encontrada")
 		return
@@ -105,19 +124,13 @@ func (h *FormulaHandler) obtener(w http.ResponseWriter, r *http.Request) {
 	responderJSON(w, http.StatusOK, f)
 }
 
-// POST /pacientes/{documento}/encuentros/{encuentroId}/formulas
-// La fórmula se crea en una transacción atómica junto con sus medicamentos.
+// POST /pacientes/{documento}/encuentros/{encuentroId}/formulas  — crea borrador
 func (h *FormulaHandler) crear(w http.ResponseWriter, r *http.Request) {
 	encuentroID := chi.URLParam(r, "encuentroId")
 
 	var input models.FormulaInput
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		responderError(w, http.StatusBadRequest, "body inválido")
-		return
-	}
-
-	if len(input.Medicamentos) == 0 {
-		responderError(w, http.StatusBadRequest, "la fórmula debe tener al menos un medicamento")
 		return
 	}
 
@@ -136,66 +149,141 @@ func (h *FormulaHandler) crear(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Validar medicamentos antes de abrir la transacción
-	for _, m := range input.Medicamentos {
-		if m.NombreMedicamento == "" {
-			responderError(w, http.StatusBadRequest, "cada medicamento requiere nombre")
-			return
-		}
-	}
-
 	u := appmiddleware.UsuarioDesdeContexto(r.Context())
 	formulaID := uuid.New().String()
 	var f models.Formula
-	meds := make([]models.Medicamento, 0, len(input.Medicamentos))
 
 	if err := repository.ExecTx(r.Context(), h.db, func(tx pgx.Tx) error {
-		if err := tx.QueryRow(r.Context(), `
-			INSERT INTO formula_medica (
-				formula_id, numero_version, es_ultima_version, esta_activo,
-				encuentro_id, tipo, observaciones, creado_por
-			) VALUES ($1, 1, TRUE, TRUE, $2, $3, $4, $5)
-			RETURNING id, formula_id, numero_version, es_ultima_version, esta_activo,
-			          encuentro_id, tipo, observaciones, fecha_creacion, creado_por`,
-			formulaID, encuentroID, input.Tipo, input.Observaciones, u.Nombre,
-		).Scan(
-			&f.ID, &f.FormulaID, &f.NumeroVersion, &f.EsUltimaVersion, &f.EstaActivo,
-			&f.EncuentroID, &f.Tipo, &f.Observaciones, &f.FechaCreacion, &f.CreadoPor,
-		); err != nil {
-			return err
-		}
-		for i, m := range input.Medicamentos {
-			var med models.Medicamento
-			if err := tx.QueryRow(r.Context(), `
-				INSERT INTO formula_medicamento (
-					formula_id, nombre_medicamento, concentracion, forma_farmaceutica,
-					dosis, frecuencia, duracion_tratamiento, cantidad_dispensar,
-					indicaciones, orden
-				) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-				RETURNING id, formula_id, nombre_medicamento, concentracion, forma_farmaceutica,
-				          dosis, frecuencia, duracion_tratamiento, cantidad_dispensar,
-				          indicaciones, orden`,
-				f.ID, m.NombreMedicamento, m.Concentracion, m.FormaFarmaceutica,
-				m.Dosis, m.Frecuencia, m.DuracionTratamiento, m.CantidadDispensar,
-				m.Indicaciones, i+1,
-			).Scan(
-				&med.ID, &med.FormulaID, &med.NombreMedicamento, &med.Concentracion, &med.FormaFarmaceutica,
-				&med.Dosis, &med.Frecuencia, &med.DuracionTratamiento, &med.CantidadDispensar,
-				&med.Indicaciones, &med.Orden,
-			); err != nil {
-				return err
-			}
-			meds = append(meds, med)
-		}
-		return nil
+		var txErr error
+		f, txErr = insertarFormula(r.Context(), tx, formulaID, encuentroID, input, u.Nombre)
+		return txErr
 	}); err != nil {
 		log.Printf("crear formula: %v", err)
 		responderError(w, http.StatusInternalServerError, "error al crear fórmula")
 		return
 	}
 
-	f.Medicamentos = meds
 	responderJSON(w, http.StatusCreated, f)
+}
+
+// PUT /pacientes/{documento}/encuentros/{encuentroId}/formulas/{formulaId}  — actualiza borrador
+func (h *FormulaHandler) actualizar(w http.ResponseWriter, r *http.Request) {
+	encuentroID := chi.URLParam(r, "encuentroId")
+	formulaID := chi.URLParam(r, "formulaId")
+
+	var input models.FormulaInput
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		responderError(w, http.StatusBadRequest, "body inválido")
+		return
+	}
+	if input.Tipo != "pos" && input.Tipo != "no_pos" {
+		input.Tipo = "pos"
+	}
+
+	// Solo se puede editar si está en borrador
+	var rowID, estadoActual string
+	err := h.db.QueryRow(r.Context(),
+		`SELECT id, estado FROM formula_medica WHERE formula_id = $1 AND encuentro_id = $2 AND es_ultima_version = TRUE AND esta_activo = TRUE`,
+		formulaID, encuentroID,
+	).Scan(&rowID, &estadoActual)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			responderError(w, http.StatusNotFound, "fórmula no encontrada")
+		} else {
+			responderError(w, http.StatusInternalServerError, "error al verificar fórmula")
+		}
+		return
+	}
+	if estadoActual != "borrador" {
+		responderError(w, http.StatusConflict, "solo se pueden editar fórmulas en borrador")
+		return
+	}
+
+	var f models.Formula
+	if err := repository.ExecTx(r.Context(), h.db, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(r.Context(),
+			`UPDATE formula_medica SET tipo = $1, observaciones = $2 WHERE id = $3`,
+			input.Tipo, input.Observaciones, rowID,
+		); err != nil {
+			return err
+		}
+		if _, err := tx.Exec(r.Context(), `DELETE FROM formula_medicamento WHERE formula_id = $1`, rowID); err != nil {
+			return err
+		}
+		meds, err := insertarMedicamentos(r.Context(), tx, rowID, input.Medicamentos)
+		if err != nil {
+			return err
+		}
+		row := tx.QueryRow(r.Context(), `SELECT `+columnasFormula+` FROM formula_medica WHERE id = $1`, rowID)
+		f, err = escanearFormula(row)
+		if err != nil {
+			return err
+		}
+		f.Medicamentos = meds
+		return nil
+	}); err != nil {
+		log.Printf("actualizar borrador formula %s: %v", formulaID, err)
+		responderError(w, http.StatusInternalServerError, "error al actualizar borrador")
+		return
+	}
+
+	responderJSON(w, http.StatusOK, f)
+}
+
+// PATCH /pacientes/{documento}/encuentros/{encuentroId}/formulas/{formulaId}/finalizar
+func (h *FormulaHandler) finalizar(w http.ResponseWriter, r *http.Request) {
+	encuentroID := chi.URLParam(r, "encuentroId")
+	formulaID := chi.URLParam(r, "formulaId")
+
+	var rowID, estadoActual string
+	err := h.db.QueryRow(r.Context(),
+		`SELECT id, estado FROM formula_medica WHERE formula_id = $1 AND encuentro_id = $2 AND es_ultima_version = TRUE AND esta_activo = TRUE`,
+		formulaID, encuentroID,
+	).Scan(&rowID, &estadoActual)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			responderError(w, http.StatusNotFound, "fórmula no encontrada")
+		} else {
+			responderError(w, http.StatusInternalServerError, "error al verificar fórmula")
+		}
+		return
+	}
+	if estadoActual != "borrador" {
+		responderError(w, http.StatusConflict, "la fórmula ya está finalizada")
+		return
+	}
+
+	var tieneMedicamentos bool
+	h.db.QueryRow(r.Context(),
+		`SELECT EXISTS(SELECT 1 FROM formula_medicamento WHERE formula_id = $1)`, rowID,
+	).Scan(&tieneMedicamentos)
+	if !tieneMedicamentos {
+		responderError(w, http.StatusBadRequest, "la fórmula debe tener al menos un medicamento para finalizar")
+		return
+	}
+
+	if _, err := h.db.Exec(r.Context(),
+		`UPDATE formula_medica SET estado = 'finalizado' WHERE id = $1`, rowID,
+	); err != nil {
+		log.Printf("finalizar formula %s: %v", formulaID, err)
+		responderError(w, http.StatusInternalServerError, "error al finalizar fórmula")
+		return
+	}
+
+	row := h.db.QueryRow(r.Context(), `SELECT `+columnasFormula+` FROM formula_medica WHERE id = $1`, rowID)
+	f, err := escanearFormula(row)
+	if err != nil {
+		responderError(w, http.StatusInternalServerError, "error al leer fórmula")
+		return
+	}
+	meds, err := obtenerMedicamentos(r.Context(), h.db, f.ID)
+	if err != nil {
+		responderError(w, http.StatusInternalServerError, "error al leer medicamentos")
+		return
+	}
+	f.Medicamentos = meds
+
+	responderJSON(w, http.StatusOK, f)
 }
 
 // DELETE /pacientes/{documento}/encuentros/{encuentroId}/formulas/{formulaId}
@@ -221,6 +309,64 @@ func (h *FormulaHandler) eliminar(w http.ResponseWriter, r *http.Request) {
 }
 
 // ── helpers ──────────────────────────────────────────────────────────────────
+
+func insertarFormula(ctx context.Context, db formulaQuerier, formulaID, encuentroID string, input models.FormulaInput, creadoPor string) (models.Formula, error) {
+	row := db.QueryRow(ctx, `
+		INSERT INTO formula_medica (
+			formula_id, numero_version, es_ultima_version, esta_activo, estado,
+			encuentro_id, tipo, observaciones, creado_por
+		) VALUES ($1, 1, TRUE, TRUE, 'borrador', $2, $3, $4, $5)
+		RETURNING `+columnasFormula,
+		formulaID, encuentroID, input.Tipo, input.Observaciones, creadoPor,
+	)
+	f, err := escanearFormula(row)
+	if err != nil {
+		return models.Formula{}, err
+	}
+
+	meds, err := insertarMedicamentos(ctx, db, f.ID, input.Medicamentos)
+	if err != nil {
+		return models.Formula{}, err
+	}
+	f.Medicamentos = meds
+	return f, nil
+}
+
+// insertarMedicamentos descarta los medicamentos sin nombre (fila en blanco que el
+// usuario aún no diligencia) — igual que encuentro_diagnostico con diagnósticos vacíos.
+func insertarMedicamentos(ctx context.Context, db formulaQuerier, formulaRowID string, input []models.MedicamentoInput) ([]models.Medicamento, error) {
+	meds := make([]models.Medicamento, 0, len(input))
+	orden := 1
+	for _, m := range input {
+		if strings.TrimSpace(m.NombreMedicamento) == "" {
+			continue
+		}
+		var med models.Medicamento
+		err := db.QueryRow(ctx, `
+			INSERT INTO formula_medicamento (
+				formula_id, nombre_medicamento, concentracion, forma_farmaceutica,
+				dosis, frecuencia, duracion_tratamiento, cantidad_dispensar,
+				indicaciones, orden
+			) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+			RETURNING id, formula_id, nombre_medicamento, concentracion, forma_farmaceutica,
+			          dosis, frecuencia, duracion_tratamiento, cantidad_dispensar,
+			          indicaciones, orden`,
+			formulaRowID, strings.TrimSpace(m.NombreMedicamento), m.Concentracion, m.FormaFarmaceutica,
+			m.Dosis, m.Frecuencia, m.DuracionTratamiento, m.CantidadDispensar,
+			m.Indicaciones, orden,
+		).Scan(
+			&med.ID, &med.FormulaID, &med.NombreMedicamento, &med.Concentracion, &med.FormaFarmaceutica,
+			&med.Dosis, &med.Frecuencia, &med.DuracionTratamiento, &med.CantidadDispensar,
+			&med.Indicaciones, &med.Orden,
+		)
+		if err != nil {
+			return nil, err
+		}
+		meds = append(meds, med)
+		orden++
+	}
+	return meds, nil
+}
 
 func obtenerMedicamentos(ctx context.Context, db *pgxpool.Pool, formulaRowID string) ([]models.Medicamento, error) {
 	rows, err := db.Query(ctx, `

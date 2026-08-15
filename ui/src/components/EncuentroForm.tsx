@@ -2,6 +2,8 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { ChevronLeft, ChevronRight, Info } from 'lucide-react'
 import { useEncuentros, useVinculacionPreviewEncuentro, type DiagnosticoItem, type ValoresClinicos, type EncuentroInput, type Encuentro } from '../api/encuentros'
 import { apiFetch } from '../api/client'
+import type { FormulaGuardada } from '../api/formulas'
+import type { OrdenExamen } from '../api/ordenes_examen'
 import { useCamposClinicosActivos } from '../api/campos_clinicos'
 import DiagnosticoSearch from './DiagnosticoSearch'
 import { SignosVitalesForm, ExamenFisicoForm, RevisionSistemasForm } from './CampoClinicoForm'
@@ -28,16 +30,6 @@ type PacienteInfo = {
   fechaNacimiento: string
 }
 
-export type FormulaData = {
-  pos: Medicamento[]
-  no_pos: Medicamento[]
-}
-
-export type OrdenData = {
-  items: ItemOrden[]
-  indicaciones_generales: string
-}
-
 type Props = {
   documento: string
   genero?: string
@@ -48,8 +40,15 @@ type Props = {
     revision: ValoresClinicos
     examen: ValoresClinicos
     diagnosticos: DiagnosticoItem[]
+    formulaPosId: string
+    medsPos: Medicamento[]
+    formulaNoPosId: string
+    medsNoPos: Medicamento[]
+    ordenId: string
+    ordenItems: ItemOrden[]
+    ordenIndicaciones: string
   }>
-  onSubmit: (data: EncuentroInput, formulas: FormulaData, orden: OrdenData, encuentroId: string) => Promise<void>
+  onSubmit: (data: EncuentroInput, encuentroId: string) => Promise<void>
   isPending: boolean
   onCancelar?: () => void
   onBorradorCreado?: (id: string) => void
@@ -100,10 +99,14 @@ export default function EncuentroForm({
   const [revision, setRevision] = useState<ValoresClinicos>(borradorData?.revision ?? {})
   const [examen, setExamen] = useState<ValoresClinicos>(borradorData?.examen ?? {})
   const [diagnosticos, setDiagnosticos] = useState<DiagnosticoItem[]>(borradorData?.diagnosticos ?? [])
-  const [medsPos, setMedsPos] = useState<Medicamento[]>([{ ...medVacio }])
-  const [medsNoPos, setMedsNoPos] = useState<Medicamento[]>([{ ...medVacio }])
-  const [ordenItems, setOrdenItems] = useState<ItemOrden[]>([])
-  const [ordenIndicaciones, setOrdenIndicaciones] = useState<string>('')
+  const [medsPos, setMedsPos] = useState<Medicamento[]>(
+    borradorData?.medsPos?.length ? borradorData.medsPos : [{ ...medVacio }]
+  )
+  const [medsNoPos, setMedsNoPos] = useState<Medicamento[]>(
+    borradorData?.medsNoPos?.length ? borradorData.medsNoPos : [{ ...medVacio }]
+  )
+  const [ordenItems, setOrdenItems] = useState<ItemOrden[]>(borradorData?.ordenItems ?? [])
+  const [ordenIndicaciones, setOrdenIndicaciones] = useState<string>(borradorData?.ordenIndicaciones ?? '')
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<TabKey>('motivo')
   const [showConfirmModal, setShowConfirmModal] = useState(false)
@@ -127,6 +130,69 @@ export default function EncuentroForm({
     borradorIdRef.current = id
     setBorradorId(id)
   }
+
+  // IDs de los borradores de fórmula/orden — igual que borradorIdRef, en ref
+  // para no depender de closures potencialmente obsoletas dentro del debounce.
+  const formulaPosIdRef = useRef<string | undefined>(borradorData?.formulaPosId)
+  const formulaNoPosIdRef = useRef<string | undefined>(borradorData?.formulaNoPosId)
+  const ordenIdRef = useRef<string | undefined>(borradorData?.ordenId)
+
+  const guardarFormula = useCallback(async (tipo: 'pos' | 'no_pos', encuentroId: string, meds: Medicamento[]) => {
+    const idRef = tipo === 'pos' ? formulaPosIdRef : formulaNoPosIdRef
+    const body = JSON.stringify({
+      tipo,
+      medicamentos: meds.map(m => ({
+        nombre_medicamento: m.nombre,
+        concentracion: m.concentracion || undefined,
+        forma_farmaceutica: m.formaFarmaceutica || undefined,
+        dosis: m.dosis,
+        frecuencia: m.frecuencia,
+        duracion_tratamiento: m.duracion,
+        cantidad_dispensar: parseInt(m.cantidad) || undefined,
+        indicaciones: m.indicaciones || undefined,
+      })),
+    })
+    if (idRef.current) {
+      await apiFetch(`/pacientes/${documento}/encuentros/${encuentroId}/formulas/${idRef.current}`, {
+        method: 'PUT', body,
+      })
+    } else {
+      const nueva = await apiFetch<FormulaGuardada>(`/pacientes/${documento}/encuentros/${encuentroId}/formulas`, {
+        method: 'POST', body,
+      })
+      idRef.current = nueva.formula_id
+    }
+  }, [documento])
+
+  const guardarOrden = useCallback(async (encuentroId: string) => {
+    const body = JSON.stringify({
+      indicaciones_generales: ordenIndicaciones.trim() || null,
+      items: ordenItems.map(i => ({
+        codigo_cups: i.codigo_cups,
+        descripcion: i.descripcion,
+        indicaciones: i.indicaciones,
+      })),
+    })
+    if (ordenIdRef.current) {
+      await apiFetch(`/pacientes/${documento}/encuentros/${encuentroId}/ordenes/${ordenIdRef.current}`, {
+        method: 'PUT', body,
+      })
+    } else {
+      const nueva = await apiFetch<OrdenExamen>(`/pacientes/${documento}/encuentros/${encuentroId}/ordenes`, {
+        method: 'POST', body,
+      })
+      ordenIdRef.current = nueva.id
+    }
+  }, [documento, ordenItems, ordenIndicaciones])
+
+  // Guarda fórmula(s) y orden de examen como borrador — solo si tienen
+  // contenido real, para no crear filas vacías en BD (el usuario pudo abrir
+  // la pestaña sin llegar a diligenciar nada).
+  const guardarFormulaYOrden = useCallback(async (encuentroId: string) => {
+    if (medsPos.some(m => m.nombre.trim())) await guardarFormula('pos', encuentroId, medsPos)
+    if (medsNoPos.some(m => m.nombre.trim())) await guardarFormula('no_pos', encuentroId, medsNoPos)
+    if (ordenItems.some(i => i.descripcion.trim())) await guardarOrden(encuentroId)
+  }, [medsPos, medsNoPos, ordenItems, guardarFormula, guardarOrden])
 
   const buildInput = useCallback((): EncuentroInput => {
     const signosLimpios = Object.fromEntries(
@@ -156,7 +222,9 @@ export default function EncuentroForm({
     try {
       const input = buildInput()
       const idActual = borradorIdRef.current
+      let encuentroId: string
       if (idActual) {
+        encuentroId = idActual
         await apiFetch(`/pacientes/${documento}/encuentros/${idActual}`, {
           method: 'PUT', body: JSON.stringify(input),
         })
@@ -166,13 +234,15 @@ export default function EncuentroForm({
         })
         setBorradorIdSync(nuevo.encuentro_id)
         onBorradorCreado?.(nuevo.encuentro_id)
+        encuentroId = nuevo.encuentro_id
       }
+      await guardarFormulaYOrden(encuentroId)
     } catch {
       // silencioso — el usuario verá el error al intentar finalizar
     } finally {
       setGuardandoBorrador(false)
     }
-  }, [documento, buildInput, onBorradorCreado])
+  }, [documento, buildInput, onBorradorCreado, guardarFormulaYOrden])
 
   const camposSignos = campos.filter(c => c.seccion === 'signos_vitales')
   const camposRevision = campos.filter(c => c.seccion === 'revision_sistemas')
@@ -191,14 +261,18 @@ export default function EncuentroForm({
     Object.values(signos).some(v => v.trim()) ||
     Object.keys(revision).length > 0 ||
     Object.keys(examen).length > 0 ||
-    diagnosticos.length > 0
+    diagnosticos.length > 0 ||
+    medsPos.some(m => m.nombre.trim()) ||
+    medsNoPos.some(m => m.nombre.trim()) ||
+    ordenItems.some(i => i.descripcion.trim()) ||
+    ordenIndicaciones.trim()
   )
 
   const availableTabs: TabKey[] = [
     'motivo',
+    ...(camposRevision.length > 0 ? ['revision' as TabKey] : []),
     'antecedentes',
     ...(camposSignos.length > 0 ? ['signos' as TabKey] : []),
-    ...(camposRevision.length > 0 ? ['revision' as TabKey] : []),
     ...(camposExamen.length > 0 ? ['examen' as TabKey] : []),
     'analisis',
     'diagnosticos',
@@ -212,7 +286,7 @@ export default function EncuentroForm({
     if (debounceRef.current) clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(() => { guardarBorrador() }, 2500)
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
-  }, [form, signos, revision, examen, diagnosticos])  // eslint-disable-line react-hooks/exhaustive-deps
+  }, [form, signos, revision, examen, diagnosticos, medsPos, medsNoPos, ordenItems, ordenIndicaciones])  // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }))
@@ -236,13 +310,18 @@ export default function EncuentroForm({
           method: 'PUT', body: JSON.stringify(input),
         })
       }
+      await guardarFormulaYOrden(idParaFinalizar)
+      if (formulaPosIdRef.current && medsPos.some(m => m.nombre.trim())) {
+        await apiFetch(`/pacientes/${documento}/encuentros/${idParaFinalizar}/formulas/${formulaPosIdRef.current}/finalizar`, { method: 'PATCH' })
+      }
+      if (formulaNoPosIdRef.current && medsNoPos.some(m => m.nombre.trim())) {
+        await apiFetch(`/pacientes/${documento}/encuentros/${idParaFinalizar}/formulas/${formulaNoPosIdRef.current}/finalizar`, { method: 'PATCH' })
+      }
+      if (ordenIdRef.current && ordenItems.some(i => i.descripcion.trim())) {
+        await apiFetch(`/pacientes/${documento}/encuentros/${idParaFinalizar}/ordenes/${ordenIdRef.current}/finalizar`, { method: 'PATCH' })
+      }
       await apiFetch(`/pacientes/${documento}/encuentros/${idParaFinalizar}/finalizar`, { method: 'PATCH' })
-      await onSubmit(
-        input,
-        { pos: medsPos, no_pos: medsNoPos },
-        { items: ordenItems, indicaciones_generales: ordenIndicaciones },
-        idParaFinalizar,
-      )
+      await onSubmit(input, idParaFinalizar)
     } catch (err) {
       setSubmitting(false)
       setError((err as Error)?.message ?? 'Error al guardar la consulta.')

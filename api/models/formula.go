@@ -9,6 +9,7 @@ type Formula struct {
 	EsUltimaVersion  bool          `json:"es_ultima_version"`
 	EstaActivo       bool          `json:"esta_activo"`
 	EncuentroID      string        `json:"encuentro_id"`
+	Estado           string        `json:"estado"` // borrador | finalizado
 	Tipo             string        `json:"tipo"` // pos | no_pos
 	Observaciones    *string       `json:"observaciones"`
 	FechaCreacion    time.Time     `json:"fecha_creacion"`

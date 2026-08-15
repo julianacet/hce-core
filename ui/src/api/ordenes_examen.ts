@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { apiFetch } from './client'
 import { ORDENES_EXAMEN_KEY } from './keys'
 
@@ -14,6 +14,7 @@ export type OrdenExamenItem = {
 export type OrdenExamen = {
   id: string
   encuentro_id: string
+  estado: 'borrador' | 'finalizado'
   indicaciones_generales: string | null
   fecha_creacion: string
   creado_por: string
@@ -31,34 +32,16 @@ export type OrdenExamenInput = {
   items: OrdenExamenItemInput[]
 }
 
-export function useOrdenesExamen(docId: string, encId: string) {
+// Las órdenes se guardan como borrador (autoguardado) mientras se diligencia
+// la consulta; ver EncuentroForm.tsx. `estado` filtra la consulta: por
+// defecto el backend solo devuelve 'finalizado' (historial); se pasa
+// 'borrador' explícitamente para retomar un borrador en curso.
+export function useOrdenesExamen(docId: string, encId: string, estado?: 'borrador' | 'finalizado') {
   return useQuery<OrdenExamen[]>({
-    queryKey: [...ORDENES_EXAMEN_KEY, docId, encId],
-    queryFn: () => apiFetch(`/pacientes/${docId}/encuentros/${encId}/ordenes`),
+    queryKey: [...ORDENES_EXAMEN_KEY, docId, encId, estado ?? 'finalizado'],
+    queryFn: () => apiFetch(
+      `/pacientes/${docId}/encuentros/${encId}/ordenes${estado ? `?estado=${estado}` : ''}`
+    ),
     enabled: !!docId && !!encId,
-  })
-}
-
-export async function crearOrdenExamen(
-  doc: string,
-  encId: string,
-  input: OrdenExamenInput,
-): Promise<void> {
-  if (input.items.length === 0) return
-  await apiFetch(`/pacientes/${doc}/encuentros/${encId}/ordenes`, {
-    method: 'POST',
-    body: JSON.stringify(input),
-  })
-}
-
-export function useCrearOrdenExamen(docId: string, encId: string) {
-  const qc = useQueryClient()
-  return useMutation<OrdenExamen, Error, OrdenExamenInput>({
-    mutationFn: (input) =>
-      apiFetch(`/pacientes/${docId}/encuentros/${encId}/ordenes`, {
-        method: 'POST',
-        body: JSON.stringify(input),
-      }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: [...ORDENES_EXAMEN_KEY, docId, encId] }),
   })
 }
