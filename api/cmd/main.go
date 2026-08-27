@@ -58,6 +58,10 @@ func main() {
 	defer db.Close()
 	log.Println("Conectado a PostgreSQL")
 
+	if err := permisos.Init(db); err != nil {
+		log.Fatalf("permisos: %v", err)
+	}
+
 	r := chi.NewRouter()
 
 	r.Use(func(next http.Handler) http.Handler {
@@ -111,29 +115,29 @@ func main() {
 		r.Group(func(r chi.Router) {
 			r.Use(appmiddleware.RequiereAuth(jwtSecreto))
 
-			r.Mount("/encuentros", handlers.EncuentrosGlobalRouter(db))
-			r.Mount("/pacientes", handlers.PacientesRouter(db))
-			r.Mount("/facturas", handlers.FacturasRouter(db))
-			r.Mount("/campos-clinicos", handlers.CamposClinicosRouter(db))
+			r.With(appmiddleware.RequiereRol(permisos.Roles("nueva-consulta")...)).Mount("/encuentros", handlers.EncuentrosGlobalRouter(db))
+			r.With(appmiddleware.RequiereRol(permisos.Roles("pacientes")...)).Mount("/pacientes", handlers.PacientesRouter(db))
+			r.With(appmiddleware.RequiereRol(permisos.Roles("facturas")...)).Mount("/facturas", handlers.FacturasRouter(db))
+			r.With(appmiddleware.RequiereRol(permisos.Roles("admin.campos")...)).Mount("/campos-clinicos", handlers.CamposClinicosRouter(db))
 			r.With(appmiddleware.RequiereRol(permisos.Roles("historial")...)).Mount("/auditoria", handlers.AuditoriaRouter(db))
 			r.Mount("/cups", handlers.CupsRouter(db))
-			r.Mount("/rips", handlers.RipsMensualRouter(db))
+			r.With(appmiddleware.RequiereRol(permisos.Roles("rips-mensual")...)).Mount("/rips", handlers.RipsMensualRouter(db))
 			r.Mount("/consentimientos/plantillas", handlers.PlantillasRouter(db))
-			r.Mount("/consentimientos/generados", handlers.ConsentimientoGeneradoRouter(db))
-			r.With(appmiddleware.RequiereRol(permisos.Roles("admin")...)).Mount("/antecedentes/preguntas", handlers.PreguntasAntecedentesRouter(db))
-			r.Mount("/encuestas", handlers.EncuestasRouter(db))
+			r.With(appmiddleware.RequiereRol(permisos.Roles("consentimientos")...)).Mount("/consentimientos/generados", handlers.ConsentimientoGeneradoRouter(db))
+			r.With(appmiddleware.RequiereRol(permisos.Roles("admin.antecedentes")...)).Mount("/antecedentes/preguntas", handlers.PreguntasAntecedentesRouter(db))
+			r.With(appmiddleware.RequiereRol(permisos.Roles("encuestas")...)).Mount("/encuestas", handlers.EncuestasRouter(db))
 			r.Mount("/dashboard", handlers.DashboardRouter(db))
-			r.Mount("/insumos", handlers.InsumosRouter(db))
-			r.Mount("/tipos-evento-adverso", handlers.TiposEventoAdversoRouter(db))
-			r.Mount("/eventos-adversos", handlers.EventosAdversosRouter(db))
-			r.Mount("/proveedores", handlers.ProveedoresRouter(db))
-			r.Mount("/tarifas", handlers.TarifasRouter(db))
-			r.Mount("/examenes-predefinidos", handlers.ExamenesPredefinidosRouter(db))
-			r.Mount("/citas", handlers.CitasRouter(db))
-			r.Mount("/medicamentos-predefinidos", handlers.MedicamentosPredefinidosRouter(db))
-			r.With(appmiddleware.RequiereRol(permisos.Roles("admin")...)).Put("/configuracion/tema", handlers.PutConfiguracionTema(db))
-			r.With(appmiddleware.RequiereRol(permisos.Roles("admin")...)).Put("/configuracion/medico", handlers.PutConfiguracionMedico(db))
-			r.With(appmiddleware.RequiereRol(permisos.Roles("admin")...)).Mount("/sistema", handlers.SistemaRouter())
+			r.With(appmiddleware.RequiereRol(permisos.Roles("inventario")...)).Mount("/insumos", handlers.InsumosRouter(db))
+			r.With(appmiddleware.RequiereRol(permisos.Roles("admin.eventos")...)).Mount("/tipos-evento-adverso", handlers.TiposEventoAdversoRouter(db))
+			r.With(appmiddleware.RequiereRol(permisos.Roles("eventos-adversos")...)).Mount("/eventos-adversos", handlers.EventosAdversosRouter(db))
+			r.With(appmiddleware.RequiereRol(permisos.Roles("proveedores")...)).Mount("/proveedores", handlers.ProveedoresRouter(db))
+			r.With(appmiddleware.RequiereRol(permisos.Roles("tarifas")...)).Mount("/tarifas", handlers.TarifasRouter(db))
+			r.With(appmiddleware.RequiereRol(permisos.Roles("admin.examenes")...)).Mount("/examenes-predefinidos", handlers.ExamenesPredefinidosRouter(db))
+			r.With(appmiddleware.RequiereRol(permisos.Roles("agenda")...)).Mount("/citas", handlers.CitasRouter(db))
+			r.With(appmiddleware.RequiereRol(permisos.Roles("admin.medicamentos")...)).Mount("/medicamentos-predefinidos", handlers.MedicamentosPredefinidosRouter(db))
+			r.With(appmiddleware.RequiereRol(permisos.Roles("admin.apariencia")...)).Put("/configuracion/tema", handlers.PutConfiguracionTema(db))
+			r.With(appmiddleware.RequiereRol(permisos.Roles("admin.perfil")...)).Put("/configuracion/medico", handlers.PutConfiguracionMedico(db))
+			r.With(appmiddleware.RequiereRol(permisos.Roles("admin.sistema")...)).Mount("/sistema", handlers.SistemaRouter())
 
 			// Solo admin
 			r.With(appmiddleware.RequiereRol(permisos.Roles("admin.usuarios")...)).Mount("/usuarios", handlers.UsuariosRouter(db))

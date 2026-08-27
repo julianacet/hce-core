@@ -1127,6 +1127,45 @@ CREATE TABLE IF NOT EXISTS tarifa (
 
 CREATE INDEX IF NOT EXISTS idx_tarifa_cups ON tarifa(codigo_cups);
 
+-- ============================================================
+-- 27. Permisos por rol (recurso → roles que pueden acceder)
+-- Sembrada en api/permisos.Registro; el rol 'admin' nunca se lista aquí,
+-- el backend siempre lo trata como acceso total sin consultar esta tabla.
+-- ============================================================
+
+CREATE TABLE rol_permiso (
+    rol     VARCHAR(20) NOT NULL
+                        CHECK (rol IN ('medico', 'recepcionista', 'enfermeria', 'facturador', 'farmacia')),
+    recurso VARCHAR(50) NOT NULL,
+    PRIMARY KEY (rol, recurso)
+);
+
+INSERT INTO rol_permiso (rol, recurso) VALUES
+    ('medico', 'pacientes'), ('recepcionista', 'pacientes'), ('enfermeria', 'pacientes'),
+    ('medico', 'nueva-consulta'),
+    ('medico', 'agenda'), ('recepcionista', 'agenda'), ('enfermeria', 'agenda'),
+    ('medico', 'consentimientos'), ('recepcionista', 'consentimientos'),
+    ('medico', 'facturas'), ('recepcionista', 'facturas'), ('facturador', 'facturas'),
+    ('medico', 'rips-mensual'), ('facturador', 'rips-mensual'),
+    ('medico', 'tarifas'), ('facturador', 'tarifas'),
+    ('medico', 'inventario'), ('recepcionista', 'inventario'), ('enfermeria', 'inventario'),
+    ('medico', 'proveedores'),
+    ('medico', 'eventos-adversos'), ('enfermeria', 'eventos-adversos'),
+    ('medico', 'encuestas'), ('recepcionista', 'encuestas'),
+    ('farmacia', 'farmacia'), ('medico', 'farmacia'), ('recepcionista', 'farmacia'),
+    ('enfermeria', 'farmacia'), ('facturador', 'farmacia'),
+    ('medico', 'admin'),
+    ('medico', 'admin.perfil'),
+    ('medico', 'admin.apariencia'),
+    ('medico', 'admin.antecedentes'),
+    ('medico', 'admin.consentimientos'),
+    ('medico', 'admin.eventos'),
+    ('medico', 'admin.campos'),
+    ('medico', 'admin.medicamentos'),
+    ('medico', 'admin.examenes'),
+    ('medico', 'admin.sistema');
+-- admin.usuarios y historial no tienen filas: son exclusivos de admin.
+
 -- Triggers de auditoría para tablas definidas después de la sección de triggers principal
 CREATE TRIGGER trg_auditoria_cita
     AFTER INSERT OR UPDATE OR DELETE ON cita

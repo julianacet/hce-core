@@ -1747,18 +1747,18 @@ export default function PanelAdmin() {
       {/* Tabs */}
       <div className="flex gap-1 mb-6 border-b border-slate-200 flex-wrap">
         {([
-          { id: 'perfil',          label: 'Perfil médico' },
-          { id: 'impresion',       label: 'Impresión' },
-          { id: 'apariencia',      label: 'Apariencia' },
-          { id: 'consentimientos', label: 'Consentimientos' },
-          { id: 'antecedentes',    label: 'Antecedentes' },
-          { id: 'campos',          label: 'Campos clínicos' },
-          { id: 'usuarios',        label: 'Usuarios' },
-          { id: 'eventos',         label: 'Eventos adversos' },
-          { id: 'medicamentos',    label: 'Medicamentos' },
-          { id: 'examenes',        label: 'Exámenes' },
+          { id: 'perfil',          label: 'Perfil médico',    recurso: 'admin.perfil' },
+          { id: 'impresion',       label: 'Impresión',        recurso: 'admin.perfil' },
+          { id: 'apariencia',      label: 'Apariencia',       recurso: 'admin.apariencia' },
+          { id: 'consentimientos', label: 'Consentimientos',  recurso: 'admin.consentimientos' },
+          { id: 'antecedentes',    label: 'Antecedentes',     recurso: 'admin.antecedentes' },
+          { id: 'campos',          label: 'Campos clínicos',  recurso: 'admin.campos' },
+          { id: 'usuarios',        label: 'Usuarios',         recurso: 'admin.usuarios' },
+          { id: 'eventos',         label: 'Eventos adversos', recurso: 'admin.eventos' },
+          { id: 'medicamentos',    label: 'Medicamentos',     recurso: 'admin.medicamentos' },
+          { id: 'examenes',        label: 'Exámenes',         recurso: 'admin.examenes' },
         ] as const)
-          .filter(({ id }) => id !== 'usuarios' || puedeAcceder('admin.usuarios'))
+          .filter(({ recurso }) => puedeAcceder(recurso))
           .map(({ id, label }) => (
           <button
             key={id}
@@ -1770,7 +1770,7 @@ export default function PanelAdmin() {
         ))}
       </div>
 
-      {tab === 'perfil' && (
+      {tab === 'perfil' && puedeAcceder('admin.perfil') && (
         <form onSubmit={guardarPerfil} className="space-y-6">
           <div className="card-hce p-5 space-y-4">
             <h3 className="card-title">Datos del consultorio</h3>
@@ -1880,7 +1880,7 @@ export default function PanelAdmin() {
         </form>
       )}
 
-      {tab === 'impresion' && (
+      {tab === 'impresion' && puedeAcceder('admin.perfil') && (
         <form onSubmit={guardarPerfil} className="space-y-6">
           <div className="card-hce p-5 space-y-4">
             <h3 className="card-title">Tamaño de página por documento</h3>
@@ -1937,15 +1937,15 @@ export default function PanelAdmin() {
         </form>
       )}
 
-      {tab === 'consentimientos' && <PlantillasAdmin onAbierto={setFormularioAbierto} />}
+      {tab === 'consentimientos' && puedeAcceder('admin.consentimientos') && <PlantillasAdmin onAbierto={setFormularioAbierto} />}
       {tab === 'usuarios' && puedeAcceder('admin.usuarios') && <UsuariosAdmin onAbierto={setFormularioAbierto} />}
-      {tab === 'eventos' && <TiposEventoAdversoAdmin onAbierto={setFormularioAbierto} />}
-      {tab === 'antecedentes' && <AntecedentesAdmin onAbierto={setFormularioAbierto} />}
-      {tab === 'campos' && <CamposClinicosAdmin onAbierto={setFormularioAbierto} />}
-      {tab === 'medicamentos' && <MedicamentosAdmin onAbierto={setFormularioAbierto} />}
-      {tab === 'examenes'    && <ExamenesAdmin     onAbierto={setFormularioAbierto} />}
+      {tab === 'eventos' && puedeAcceder('admin.eventos') && <TiposEventoAdversoAdmin onAbierto={setFormularioAbierto} />}
+      {tab === 'antecedentes' && puedeAcceder('admin.antecedentes') && <AntecedentesAdmin onAbierto={setFormularioAbierto} />}
+      {tab === 'campos' && puedeAcceder('admin.campos') && <CamposClinicosAdmin onAbierto={setFormularioAbierto} />}
+      {tab === 'medicamentos' && puedeAcceder('admin.medicamentos') && <MedicamentosAdmin onAbierto={setFormularioAbierto} />}
+      {tab === 'examenes'    && puedeAcceder('admin.examenes') && <ExamenesAdmin     onAbierto={setFormularioAbierto} />}
 
-      {tab === 'apariencia' && <form onSubmit={guardar} className="space-y-6">
+      {tab === 'apariencia' && puedeAcceder('admin.apariencia') && <form onSubmit={guardar} className="space-y-6">
 
         {/* Identidad */}
         <div className="card-hce p-5 space-y-4">

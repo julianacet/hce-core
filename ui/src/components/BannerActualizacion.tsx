@@ -32,7 +32,7 @@ export default function BannerActualizacion() {
   })
 
   // Solo visible para quien puede usar /sistema (admin y medico), cuando hay actualización y no fue descartada
-  if (!puedeAcceder('admin')) return null
+  if (!puedeAcceder('admin.sistema')) return null
   if (!data?.hay_actualizacion) return null
   if (descartado) return null
 
