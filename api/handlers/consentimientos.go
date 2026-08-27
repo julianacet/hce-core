@@ -13,6 +13,7 @@ import (
 
 	appmiddleware "hce/api/middleware"
 	"hce/api/models"
+	"hce/api/permisos"
 )
 
 type ConsentimientoHandler struct {
@@ -35,7 +36,7 @@ func PlantillasRouter(db *pgxpool.Pool) http.Handler {
 	r := chi.NewRouter()
 	r.Get("/", h.listarPlantillas)
 	r.Group(func(r chi.Router) {
-		r.Use(appmiddleware.RequiereRol("medico"))
+		r.Use(appmiddleware.RequiereRol(permisos.Roles("admin")...))
 		r.Post("/", h.crearPlantilla)
 		r.Put("/{plantillaId}", h.actualizarPlantilla)
 		r.Patch("/{plantillaId}/toggle", h.togglePlantilla)

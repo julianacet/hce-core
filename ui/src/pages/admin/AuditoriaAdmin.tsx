@@ -1,3 +1,5 @@
+// CÓDIGO MUERTO: no está referenciado desde ninguna pestaña de PanelAdmin —
+// Historial.tsx ya cubre esta misma vista. Candidato a eliminar (revisado 2026-08-26).
 import { useState } from 'react'
 import { useAuditoria } from '../../api/auditoria'
 

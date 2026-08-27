@@ -1,3 +1,5 @@
+// CÓDIGO MUERTO: no está montado en ninguna ruta de router.tsx ni referenciado
+// desde FichaPaciente. Candidato a eliminar (revisado 2026-08-26).
 import { useParams } from 'react-router'
 import { Activity } from 'lucide-react'
 import { useAuditoriaPaciente } from '../../api/auditoria'

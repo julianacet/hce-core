@@ -11,6 +11,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	appmiddleware "hce/api/middleware"
+	"hce/api/permisos"
 )
 
 type AuthHandler struct {
@@ -78,9 +79,10 @@ func (h *AuthHandler) login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	responderJSON(w, http.StatusOK, map[string]any{
-		"token":  tokenStr,
-		"nombre": nombre,
-		"rol":    rol,
+		"token":    tokenStr,
+		"nombre":   nombre,
+		"rol":      rol,
+		"permisos": permisos.ParaRol(rol),
 	})
 }
 
@@ -97,9 +99,10 @@ func (h *AuthHandler) me(w http.ResponseWriter, r *http.Request) {
 		responderError(w, http.StatusUnauthorized, "no autorizado")
 		return
 	}
-	responderJSON(w, http.StatusOK, map[string]string{
-		"id":     u.ID,
-		"nombre": u.Nombre,
-		"rol":    u.Rol,
+	responderJSON(w, http.StatusOK, map[string]any{
+		"id":       u.ID,
+		"nombre":   u.Nombre,
+		"rol":      u.Rol,
+		"permisos": permisos.ParaRol(u.Rol),
 	})
 }

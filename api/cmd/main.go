@@ -22,6 +22,7 @@ import (
 
 	"hce/api/handlers"
 	appmiddleware "hce/api/middleware"
+	"hce/api/permisos"
 	"hce/api/repository"
 )
 
@@ -114,12 +115,12 @@ func main() {
 			r.Mount("/pacientes", handlers.PacientesRouter(db))
 			r.Mount("/facturas", handlers.FacturasRouter(db))
 			r.Mount("/campos-clinicos", handlers.CamposClinicosRouter(db))
-			r.Mount("/auditoria", handlers.AuditoriaRouter(db))
+			r.With(appmiddleware.RequiereRol(permisos.Roles("historial")...)).Mount("/auditoria", handlers.AuditoriaRouter(db))
 			r.Mount("/cups", handlers.CupsRouter(db))
 			r.Mount("/rips", handlers.RipsMensualRouter(db))
 			r.Mount("/consentimientos/plantillas", handlers.PlantillasRouter(db))
 			r.Mount("/consentimientos/generados", handlers.ConsentimientoGeneradoRouter(db))
-			r.With(appmiddleware.RequiereRol("medico")).Mount("/antecedentes/preguntas", handlers.PreguntasAntecedentesRouter(db))
+			r.With(appmiddleware.RequiereRol(permisos.Roles("admin")...)).Mount("/antecedentes/preguntas", handlers.PreguntasAntecedentesRouter(db))
 			r.Mount("/encuestas", handlers.EncuestasRouter(db))
 			r.Mount("/dashboard", handlers.DashboardRouter(db))
 			r.Mount("/insumos", handlers.InsumosRouter(db))
@@ -130,16 +131,16 @@ func main() {
 			r.Mount("/examenes-predefinidos", handlers.ExamenesPredefinidosRouter(db))
 			r.Mount("/citas", handlers.CitasRouter(db))
 			r.Mount("/medicamentos-predefinidos", handlers.MedicamentosPredefinidosRouter(db))
-			r.With(appmiddleware.RequiereRol("medico")).Put("/configuracion/tema", handlers.PutConfiguracionTema(db))
-			r.With(appmiddleware.RequiereRol("medico")).Put("/configuracion/medico", handlers.PutConfiguracionMedico(db))
-			r.With(appmiddleware.RequiereRol("medico")).Mount("/sistema", handlers.SistemaRouter())
+			r.With(appmiddleware.RequiereRol(permisos.Roles("admin")...)).Put("/configuracion/tema", handlers.PutConfiguracionTema(db))
+			r.With(appmiddleware.RequiereRol(permisos.Roles("admin")...)).Put("/configuracion/medico", handlers.PutConfiguracionMedico(db))
+			r.With(appmiddleware.RequiereRol(permisos.Roles("admin")...)).Mount("/sistema", handlers.SistemaRouter())
 
 			// Solo admin
-			r.With(appmiddleware.RequiereRol("admin")).Mount("/usuarios", handlers.UsuariosRouter(db))
+			r.With(appmiddleware.RequiereRol(permisos.Roles("admin.usuarios")...)).Mount("/usuarios", handlers.UsuariosRouter(db))
 
 			// ── Módulo farmacia — requiere rol "farmacia" (o admin) ───────────
 			r.Group(func(r chi.Router) {
-				r.Use(appmiddleware.RequiereRol("farmacia"))
+				r.Use(appmiddleware.RequiereRol(permisos.Roles("farmacia")...))
 				r.Mount("/farmacia/facturas", handlers.FarmaciaFacturasRouter(db))
 				r.Mount("/farmacia/dashboard", handlers.FarmaciaDashboardRouter(db))
 				r.Mount("/farmacia/pacientes", handlers.FarmaciaPacientesRouter(db))

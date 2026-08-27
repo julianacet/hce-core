@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { useAuth } from '../../context/AuthContext'
 import { useTabParam } from '../../hooks/useTabParam'
 import { useTema, DEFAULTS, type Tema } from '../../context/TemaContext'
 import { useMedico, type DatosMedico } from '../../context/MedicoContext'
@@ -1624,6 +1625,7 @@ function ExamenesAdmin({ onAbierto }: { onAbierto?: (v: boolean) => void }) {
 }
 
 export default function PanelAdmin() {
+  const { puedeAcceder } = useAuth()
   const { tema, guardarTema } = useTema()
   const { medico, guardar: guardarMedico } = useMedico()
   const [form, setForm] = useState<Tema>(tema)
@@ -1755,7 +1757,9 @@ export default function PanelAdmin() {
           { id: 'eventos',         label: 'Eventos adversos' },
           { id: 'medicamentos',    label: 'Medicamentos' },
           { id: 'examenes',        label: 'Exámenes' },
-        ] as const).map(({ id, label }) => (
+        ] as const)
+          .filter(({ id }) => id !== 'usuarios' || puedeAcceder('admin.usuarios'))
+          .map(({ id, label }) => (
           <button
             key={id}
             onClick={() => cambiarTab(id)}
@@ -1934,7 +1938,7 @@ export default function PanelAdmin() {
       )}
 
       {tab === 'consentimientos' && <PlantillasAdmin onAbierto={setFormularioAbierto} />}
-      {tab === 'usuarios' && <UsuariosAdmin onAbierto={setFormularioAbierto} />}
+      {tab === 'usuarios' && puedeAcceder('admin.usuarios') && <UsuariosAdmin onAbierto={setFormularioAbierto} />}
       {tab === 'eventos' && <TiposEventoAdversoAdmin onAbierto={setFormularioAbierto} />}
       {tab === 'antecedentes' && <AntecedentesAdmin onAbierto={setFormularioAbierto} />}
       {tab === 'campos' && <CamposClinicosAdmin onAbierto={setFormularioAbierto} />}

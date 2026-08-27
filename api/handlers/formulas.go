@@ -16,6 +16,7 @@ import (
 
 	appmiddleware "hce/api/middleware"
 	"hce/api/models"
+	"hce/api/permisos"
 	"hce/api/repository"
 )
 
@@ -27,12 +28,18 @@ func FormulasRouter(db *pgxpool.Pool) http.Handler {
 	h := &FormulaHandler{db: db}
 	r := chi.NewRouter()
 
+	// Listar/ver queda disponible para cualquiera con acceso a la ficha del
+	// paciente (recepcionista, enfermeria); emitir/editar fórmula es un acto
+	// exclusivo del médico tratante.
 	r.Get("/", h.listar)
-	r.Post("/", h.crear)
 	r.Get("/{formulaId}", h.obtener)
-	r.Put("/{formulaId}", h.actualizar)
-	r.Patch("/{formulaId}/finalizar", h.finalizar)
-	r.Delete("/{formulaId}", h.eliminar)
+	r.Group(func(r chi.Router) {
+		r.Use(appmiddleware.RequiereRol(permisos.Roles("nueva-consulta")...))
+		r.Post("/", h.crear)
+		r.Put("/{formulaId}", h.actualizar)
+		r.Patch("/{formulaId}/finalizar", h.finalizar)
+		r.Delete("/{formulaId}", h.eliminar)
+	})
 
 	return r
 }

@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router'
 import { Search, X, ClipboardList, FileEdit } from 'lucide-react'
 import { useEncuentros, useBorradorEncuentro, type FiltrosEncuentro, type Encuentro } from '../../api/encuentros'
 import { SortButton, type SortDir } from '../../components/SortButton'
+import { useAuth } from '../../context/AuthContext'
 
 type OrdenHistorial = 'fecha' | 'finalidad'
 
@@ -21,6 +22,7 @@ function formatFecha(iso: string) {
 export default function HistorialEncuentros() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const { puedeAcceder } = useAuth()
 
   const [form, setForm] = useState({ desde: '', hasta: '', diagnostico: '', finalidad: '' })
   const [filtros, setFiltros] = useState<FiltrosEncuentro>({})
@@ -138,7 +140,7 @@ export default function HistorialEncuentros() {
       </div>
 
       {/* Aviso borrador activo */}
-      {borrador && (
+      {borrador && puedeAcceder('nueva-consulta') && (
         <div
           className="card-hce px-5 py-3 flex items-center gap-3 text-sm border-l-4"
           style={{ borderLeftColor: 'var(--hce-warning, #f59e0b)', background: 'var(--hce-warning-soft, #fef9c3)' }}

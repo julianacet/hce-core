@@ -1,6 +1,6 @@
 import { Outlet, NavLink, useNavigate } from 'react-router'
 import { LayoutDashboard, UserSearch, Users, ShieldCheck, LogOut, FileCode2, Star, Package, AlertTriangle, Building2, CalendarDays, Receipt, Activity, BadgeDollarSign, FileCheck2 } from 'lucide-react'
-import { useAuth, type Rol } from '../context/AuthContext'
+import { useAuth } from '../context/AuthContext'
 import { useTema } from '../context/TemaContext'
 import BannerActualizacion from '../components/BannerActualizacion'
 
@@ -9,7 +9,7 @@ type NavItem = {
   label: string
   icon: React.ElementType
   end?: boolean
-  roles?: Rol[]
+  recurso?: string
 }
 
 type NavGroup = {
@@ -18,7 +18,7 @@ type NavGroup = {
 }
 
 export default function RootLayout() {
-  const { usuario, logout, tieneRol } = useAuth()
+  const { usuario, logout, puedeAcceder } = useAuth()
   const { tema } = useTema()
   const navigate = useNavigate()
 
@@ -35,34 +35,34 @@ export default function RootLayout() {
     {
       label: 'Atención al paciente',
       items: [
-        { to: '/nueva-consulta', label: 'Consultas', icon: UserSearch, roles: ['medico'] },
-        { to: '/pacientes', label: 'Pacientes', icon: Users, roles: ['medico', 'recepcionista', 'enfermeria'] },
-        { to: '/agenda', label: 'Agenda', icon: CalendarDays, roles: ['medico', 'recepcionista'] },
-        { to: '/consentimientos', label: 'Consentimientos', icon: FileCheck2, roles: ['medico'] },
+        { to: '/nueva-consulta', label: 'Consultas', icon: UserSearch, recurso: 'nueva-consulta' },
+        { to: '/pacientes', label: 'Pacientes', icon: Users, recurso: 'pacientes' },
+        { to: '/agenda', label: 'Agenda', icon: CalendarDays, recurso: 'agenda' },
+        { to: '/consentimientos', label: 'Consentimientos', icon: FileCheck2, recurso: 'consentimientos' },
       ],
     },
     {
       label: 'Facturación y reportes',
       items: [
-        { to: '/facturas', label: 'Facturación', icon: Receipt, roles: ['medico', 'recepcionista', 'facturador'] },
-        { to: '/rips-mensual', label: 'RIPS Mensual', icon: FileCode2, roles: ['medico', 'facturador'] },
-        { to: '/tarifas', label: 'Tarifas', icon: BadgeDollarSign, roles: ['medico', 'facturador'] },
+        { to: '/facturas', label: 'Facturación', icon: Receipt, recurso: 'facturas' },
+        { to: '/rips-mensual', label: 'RIPS Mensual', icon: FileCode2, recurso: 'rips-mensual' },
+        { to: '/tarifas', label: 'Tarifas', icon: BadgeDollarSign, recurso: 'tarifas' },
       ],
     },
     {
       label: 'Gestión del consultorio',
       items: [
-        { to: '/inventario', label: 'Inventario Insumos', icon: Package, roles: ['medico', 'recepcionista'] },
-        { to: '/proveedores', label: 'Proveedores', icon: Building2, roles: ['medico'] },
-        { to: '/eventos-adversos', label: 'Eventos adversos', icon: AlertTriangle, roles: ['medico'] },
-        { to: '/encuestas', label: 'Encuestas', icon: Star, roles: ['medico', 'recepcionista'] },
+        { to: '/inventario', label: 'Inventario Insumos', icon: Package, recurso: 'inventario' },
+        { to: '/proveedores', label: 'Proveedores', icon: Building2, recurso: 'proveedores' },
+        { to: '/eventos-adversos', label: 'Eventos adversos', icon: AlertTriangle, recurso: 'eventos-adversos' },
+        { to: '/encuestas', label: 'Encuestas', icon: Star, recurso: 'encuestas' },
       ],
     },
   ]
 
   function itemVisible(item: NavItem) {
-    if (!item.roles || item.roles.length === 0) return true
-    return tieneRol(...item.roles)
+    if (!item.recurso) return true
+    return puedeAcceder(item.recurso)
   }
 
   return (
@@ -116,41 +116,44 @@ export default function RootLayout() {
             )
           })}
 
-          {/* Solo admin */}
-          {tieneRol('admin') && (
+          {(puedeAcceder('admin') || puedeAcceder('historial')) && (
             <div className="mt-5">
               <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-white/40">
                 Sistema
               </p>
               <div className="pl-2 flex flex-col gap-0.5">
-                <NavLink
-                  to="/admin"
-                  className={({ isActive }) =>
-                    `flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors ${
-                      isActive ? 'text-white font-medium' : 'text-white/60 hover:bg-white/10 hover:text-white'
-                    }`
-                  }
-                  style={({ isActive }) =>
-                    isActive ? { backgroundColor: tema.colorPrimario } : {}
-                  }
-                >
-                  <ShieldCheck size={16} />
-                  Administración
-                </NavLink>
-                <NavLink
-                  to="/historial"
-                  className={({ isActive }) =>
-                    `flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors ${
-                      isActive ? 'text-white font-medium' : 'text-white/60 hover:bg-white/10 hover:text-white'
-                    }`
-                  }
-                  style={({ isActive }) =>
-                    isActive ? { backgroundColor: tema.colorPrimario } : {}
-                  }
-                >
-                  <Activity size={16} />
-                  Historial de actividad
-                </NavLink>
+                {puedeAcceder('admin') && (
+                  <NavLink
+                    to="/admin"
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors ${
+                        isActive ? 'text-white font-medium' : 'text-white/60 hover:bg-white/10 hover:text-white'
+                      }`
+                    }
+                    style={({ isActive }) =>
+                      isActive ? { backgroundColor: tema.colorPrimario } : {}
+                    }
+                  >
+                    <ShieldCheck size={16} />
+                    Administración
+                  </NavLink>
+                )}
+                {puedeAcceder('historial') && (
+                  <NavLink
+                    to="/historial"
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors ${
+                        isActive ? 'text-white font-medium' : 'text-white/60 hover:bg-white/10 hover:text-white'
+                      }`
+                    }
+                    style={({ isActive }) =>
+                      isActive ? { backgroundColor: tema.colorPrimario } : {}
+                    }
+                  >
+                    <Activity size={16} />
+                    Historial de actividad
+                  </NavLink>
+                )}
               </div>
             </div>
           )}

@@ -22,9 +22,9 @@ func FarmaciaTarifasMedicamentoRouter(db *pgxpool.Pool) http.Handler {
 	r := chi.NewRouter()
 
 	r.Get("/", h.buscar)
-	r.With(appmiddleware.RequiereRol("admin")).Post("/", h.crear)
-	r.With(appmiddleware.RequiereRol("admin")).Put("/{id}", h.actualizar)
-	r.With(appmiddleware.RequiereRol("admin")).Delete("/{id}", h.eliminar)
+	r.Post("/", h.crear)
+	r.Put("/{id}", h.actualizar)
+	r.Delete("/{id}", h.eliminar)
 
 	return r
 }

@@ -1,26 +1,28 @@
 import { createContext, useContext, useState, type ReactNode } from 'react'
 import { apiFetch } from '../api/client'
 
-export type Rol = 'admin' | 'medico' | 'recepcionista' | 'enfermeria' | 'facturador'
+export type Rol = 'admin' | 'medico' | 'recepcionista' | 'enfermeria' | 'facturador' | 'farmacia'
 
 export type Usuario = {
   id: string
   nombre: string
   usuario: string
   rol: Rol
+  permisos: string[]
 }
 
 type AuthContextType = {
   usuario: Usuario | null
   login: (usuario: string, password: string) => Promise<boolean>
   logout: () => void
-  tieneRol: (...roles: Rol[]) => boolean
+  puedeAcceder: (recurso: string) => boolean
 }
 
 type LoginResponse = {
   token: string
   nombre: string
   rol: string
+  permisos: string[]
 }
 
 function decodeJwtPayload(token: string): Record<string, unknown> {
@@ -33,7 +35,13 @@ const AuthContext = createContext<AuthContextType | null>(null)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [usuario, setUsuario] = useState<Usuario | null>(() => {
     const guardado = localStorage.getItem('hce_sesion')
-    return guardado ? JSON.parse(guardado) : null
+    if (!guardado) return null
+    const sesion = JSON.parse(guardado) as Usuario
+    // Sesiones guardadas antes de que existiera `permisos` (antigua actualización)
+    // se descartan en vez de crashear puedeAcceder(): el usuario vuelve a login,
+    // donde /auth/login ya le devuelve la sesión con el campo correcto.
+    if (!Array.isArray(sesion.permisos)) return null
+    return sesion
   })
 
   async function login(usuarioInput: string, password: string): Promise<boolean> {
@@ -51,6 +59,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         nombre: data.nombre,
         usuario: usuarioInput,
         rol: data.rol as Rol,
+        permisos: data.permisos,
       }
 
       localStorage.setItem('hce_token', data.token)
@@ -68,14 +77,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('hce_sesion')
   }
 
-  function tieneRol(...roles: Rol[]): boolean {
+  function puedeAcceder(recurso: string): boolean {
     if (!usuario) return false
-    if (usuario.rol === 'admin') return true
-    return roles.includes(usuario.rol)
+    return usuario.permisos.includes(recurso)
   }
 
   return (
-    <AuthContext.Provider value={{ usuario, login, logout, tieneRol }}>
+    <AuthContext.Provider value={{ usuario, login, logout, puedeAcceder }}>
       {children}
     </AuthContext.Provider>
   )

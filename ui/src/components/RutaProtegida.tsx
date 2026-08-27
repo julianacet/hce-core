@@ -1,16 +1,16 @@
 import { Navigate, Outlet } from 'react-router'
-import { useAuth, type Rol } from '../context/AuthContext'
+import { useAuth } from '../context/AuthContext'
 
 type Props = {
-  roles?: Rol[]
+  recurso?: string
 }
 
-export default function RutaProtegida({ roles }: Props) {
-  const { usuario, tieneRol } = useAuth()
+export default function RutaProtegida({ recurso }: Props) {
+  const { usuario, puedeAcceder } = useAuth()
 
   if (!usuario) return <Navigate to="/login" replace />
 
-  if (roles && !tieneRol(...roles)) return <Navigate to="/" replace />
+  if (recurso && !puedeAcceder(recurso)) return <Navigate to="/" replace />
 
   return <Outlet />
 }

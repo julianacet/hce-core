@@ -13,7 +13,7 @@ type VersionInfo = {
 }
 
 export default function BannerActualizacion() {
-  const { tieneRol } = useAuth()
+  const { puedeAcceder } = useAuth()
   const [descartado, setDescartado] = useState(false)
   const [instalando, setInstalando] = useState(false)
 
@@ -31,8 +31,8 @@ export default function BannerActualizacion() {
     onSuccess: () => setInstalando(true),
   })
 
-  // Solo visible para admin y medico, cuando hay actualización y no fue descartada
-  if (!tieneRol('medico')) return null
+  // Solo visible para quien puede usar /sistema (admin y medico), cuando hay actualización y no fue descartada
+  if (!puedeAcceder('admin')) return null
   if (!data?.hay_actualizacion) return null
   if (descartado) return null
 

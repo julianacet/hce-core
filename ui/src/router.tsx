@@ -31,7 +31,12 @@ const pacienteChildren = [
   { index: true, element: <FichaPaciente /> },
   { path: 'encuentros', element: <HistorialEncuentros /> },
   { path: 'encuentros/:encId', element: <DetalleEncuentro /> },
-  { path: 'encuentros/:encId/formula', element: <NuevaFormula /> },
+  // Emitir/editar fórmula es exclusivo de médico, aunque el resto de la ficha
+  // del paciente sea visible para recepcionista/enfermeria.
+  {
+    element: <RutaProtegida recurso="nueva-consulta" />,
+    children: [{ path: 'encuentros/:encId/formula', element: <NuevaFormula /> }],
+  },
 ]
 
 const router = createBrowserRouter([
@@ -47,22 +52,31 @@ const router = createBrowserRouter([
           // Accesible por todos los roles autenticados
           { index: true, element: <Inicio /> },
 
-          // medico (+ admin vía superrol)
           {
-            element: <RutaProtegida roles={['medico']} />,
+            element: <RutaProtegida recurso="nueva-consulta" />,
             children: [
               { path: 'nueva-consulta', element: <EncuentrosGlobal /> },
               { path: 'nueva-consulta/nuevo', element: <NuevaConsulta /> },
-              { path: 'consentimientos', element: <Consentimientos /> },
-              { path: 'consentimientos/nuevo', element: <NuevoConsentimiento /> },
-              { path: 'proveedores', element: <Proveedores /> },
-              { path: 'eventos-adversos', element: <EventosAdversos /> },
             ],
           },
-
-          // medico + recepcionista + enfermeria (+ admin)
           {
-            element: <RutaProtegida roles={['medico', 'recepcionista', 'enfermeria']} />,
+            element: <RutaProtegida recurso="consentimientos" />,
+            children: [
+              { path: 'consentimientos', element: <Consentimientos /> },
+              { path: 'consentimientos/nuevo', element: <NuevoConsentimiento /> },
+            ],
+          },
+          {
+            element: <RutaProtegida recurso="proveedores" />,
+            children: [{ path: 'proveedores', element: <Proveedores /> }],
+          },
+          {
+            element: <RutaProtegida recurso="eventos-adversos" />,
+            children: [{ path: 'eventos-adversos', element: <EventosAdversos /> }],
+          },
+
+          {
+            element: <RutaProtegida recurso="pacientes" />,
             children: [
               { path: 'pacientes', element: <ListaPacientes /> },
               { path: 'pacientes/nuevo', element: <NuevoPaciente /> },
@@ -70,19 +84,21 @@ const router = createBrowserRouter([
             ],
           },
 
-          // medico + recepcionista (+ admin)
           {
-            element: <RutaProtegida roles={['medico', 'recepcionista']} />,
-            children: [
-              { path: 'agenda', element: <Agenda /> },
-              { path: 'inventario', element: <Inventario /> },
-              { path: 'encuestas', element: <Encuestas /> },
-            ],
+            element: <RutaProtegida recurso="agenda" />,
+            children: [{ path: 'agenda', element: <Agenda /> }],
+          },
+          {
+            element: <RutaProtegida recurso="inventario" />,
+            children: [{ path: 'inventario', element: <Inventario /> }],
+          },
+          {
+            element: <RutaProtegida recurso="encuestas" />,
+            children: [{ path: 'encuestas', element: <Encuestas /> }],
           },
 
-          // medico + recepcionista + facturador (+ admin)
           {
-            element: <RutaProtegida roles={['medico', 'recepcionista', 'facturador']} />,
+            element: <RutaProtegida recurso="facturas" />,
             children: [
               { path: 'facturas', element: <Facturas /> },
               { path: 'facturas/nueva', element: <NuevaFactura /> },
@@ -90,22 +106,24 @@ const router = createBrowserRouter([
             ],
           },
 
-          // medico + facturador (+ admin)
           {
-            element: <RutaProtegida roles={['medico', 'facturador']} />,
-            children: [
-              { path: 'rips-mensual', element: <RipsMensual /> },
-              { path: 'tarifas', element: <Tarifas /> },
-            ],
+            element: <RutaProtegida recurso="rips-mensual" />,
+            children: [{ path: 'rips-mensual', element: <RipsMensual /> }],
+          },
+          {
+            element: <RutaProtegida recurso="tarifas" />,
+            children: [{ path: 'tarifas', element: <Tarifas /> }],
           },
 
+          // admin + medico (la pestaña "Usuarios" se filtra dentro de PanelAdmin)
+          {
+            element: <RutaProtegida recurso="admin" />,
+            children: [{ path: 'admin', element: <PanelAdmin /> }],
+          },
           // Solo admin
           {
-            element: <RutaProtegida roles={['admin']} />,
-            children: [
-              { path: 'admin', element: <PanelAdmin /> },
-              { path: 'historial', element: <Historial /> },
-            ],
+            element: <RutaProtegida recurso="historial" />,
+            children: [{ path: 'historial', element: <Historial /> }],
           },
 
           { path: 'configuracion', element: <Navigate to="/admin" replace /> },

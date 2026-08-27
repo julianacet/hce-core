@@ -2,11 +2,13 @@ import { Outlet, NavLink, useParams, useNavigate, useLocation } from 'react-rout
 import { User, ClipboardList, PlusCircle } from 'lucide-react'
 import { usePaciente } from '../api/pacientes'
 import { Breadcrumb } from '../components/Breadcrumb'
+import { useAuth } from '../context/AuthContext'
 
 export default function PacienteLayout() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { pathname } = useLocation()
+  const { puedeAcceder } = useAuth()
   const { data: paciente } = usePaciente(id ?? '')
 
   const nombreCompleto = paciente
@@ -48,13 +50,15 @@ export default function PacienteLayout() {
                   : id}
               </p>
             </div>
-            <button
-              onClick={() => navigate('/nueva-consulta/nuevo', { state: { paciente } })}
-              className="btn-primary"
-            >
-              <PlusCircle size={15} />
-              Nueva consulta
-            </button>
+            {puedeAcceder('nueva-consulta') && (
+              <button
+                onClick={() => navigate('/nueva-consulta/nuevo', { state: { paciente } })}
+                className="btn-primary"
+              >
+                <PlusCircle size={15} />
+                Nueva consulta
+              </button>
+            )}
           </div>
 
           <div className="flex gap-1">

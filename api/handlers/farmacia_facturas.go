@@ -30,7 +30,7 @@ func FarmaciaFacturasRouter(db *pgxpool.Pool) http.Handler {
 		r.Get("/", h.obtener)
 		r.Patch("/anular", h.anular)
 		r.Post("/imprimir-termica", FarmaciaImprimirTermicaFactura(db))
-		r.With(appmiddleware.RequiereRol("admin")).Delete("/", h.eliminar)
+		r.Delete("/", h.eliminar)
 	})
 	return r
 }
