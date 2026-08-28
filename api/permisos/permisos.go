@@ -32,9 +32,9 @@ var catalogoRecursos = []string{
 	"pacientes", "nueva-consulta", "agenda", "consentimientos", "facturas",
 	"rips-mensual", "tarifas", "inventario", "proveedores", "eventos-adversos",
 	"encuestas", "farmacia",
-	"admin", "admin.perfil", "admin.apariencia", "admin.antecedentes",
+	"admin.perfil", "admin.apariencia", "admin.antecedentes",
 	"admin.consentimientos", "admin.eventos", "admin.campos", "admin.medicamentos",
-	"admin.examenes", "admin.sistema", "admin.usuarios",
+	"admin.examenes", "admin.sistema", "admin.usuarios", "admin.permisos",
 	"historial",
 }
 
@@ -61,6 +61,22 @@ func Init(pool *pgxpool.Pool) error {
 		}
 	}()
 	return nil
+}
+
+// Recargar fuerza una relectura inmediata de rol_permiso, sin esperar al
+// próximo tick del refresco periódico. Pensada para que los endpoints de
+// escritura (PUT/DELETE /permisos/{recurso}/{rol}) hagan visible un cambio
+// al instante.
+func Recargar(ctx context.Context) error {
+	return recargar(ctx)
+}
+
+// Catalogo expone las claves de recurso válidas del sistema (copia
+// defensiva de catalogoRecursos).
+func Catalogo() []string {
+	claves := make([]string, len(catalogoRecursos))
+	copy(claves, catalogoRecursos)
+	return claves
 }
 
 func recargar(ctx context.Context) error {

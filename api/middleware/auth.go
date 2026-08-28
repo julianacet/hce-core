@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/golang-jwt/jwt/v5"
+	"hce/api/permisos"
 	"hce/api/repository"
 )
 
@@ -15,9 +16,9 @@ type contextKey string
 const UsuarioKey contextKey = "usuario"
 
 type ClaimsUsuario struct {
-	ID       string `json:"id"`
-	Nombre   string `json:"nombre"`
-	Rol      string `json:"rol"`
+	ID     string `json:"id"`
+	Nombre string `json:"nombre"`
+	Rol    string `json:"rol"`
 	jwt.RegisteredClaims
 }
 
@@ -59,10 +60,13 @@ func UsuarioDesdeContexto(ctx context.Context) *ClaimsUsuario {
 	return claims
 }
 
-// RequiereRol rechaza el request si el usuario no tiene alguno de los roles indicados.
-// Admin siempre pasa, independientemente de los roles listados.
+// RequiereRol rechaza el request si el usuario no tiene acceso al recurso
+// indicado. Admin siempre pasa. Consulta permisos.Roles(recurso) en cada
+// request (no al construir el middleware) — así un cambio hecho en caliente
+// en rol_permiso (por SQL directo o, más adelante, desde el panel) se
+// refleja de inmediato, sin reiniciar el servidor.
 // Debe usarse después de RequiereAuth.
-func RequiereRol(roles ...string) func(http.Handler) http.Handler {
+func RequiereRol(recurso string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			u := UsuarioDesdeContexto(r.Context())
@@ -74,7 +78,7 @@ func RequiereRol(roles ...string) func(http.Handler) http.Handler {
 				next.ServeHTTP(w, r)
 				return
 			}
-			for _, rol := range roles {
+			for _, rol := range permisos.Roles(recurso) {
 				if u.Rol == rol {
 					next.ServeHTTP(w, r)
 					return

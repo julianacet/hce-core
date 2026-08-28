@@ -16,7 +16,6 @@ import (
 
 	appmiddleware "hce/api/middleware"
 	"hce/api/models"
-	"hce/api/permisos"
 	"hce/api/repository"
 )
 
@@ -34,7 +33,7 @@ func FormulasRouter(db *pgxpool.Pool) http.Handler {
 	r.Get("/", h.listar)
 	r.Get("/{formulaId}", h.obtener)
 	r.Group(func(r chi.Router) {
-		r.Use(appmiddleware.RequiereRol(permisos.Roles("nueva-consulta")...))
+		r.Use(appmiddleware.RequiereRol("nueva-consulta"))
 		r.Post("/", h.crear)
 		r.Put("/{formulaId}", h.actualizar)
 		r.Patch("/{formulaId}/finalizar", h.finalizar)

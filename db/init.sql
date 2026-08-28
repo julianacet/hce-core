@@ -1134,10 +1134,11 @@ CREATE INDEX IF NOT EXISTS idx_tarifa_cups ON tarifa(codigo_cups);
 -- ============================================================
 
 CREATE TABLE rol_permiso (
+    id      UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
     rol     VARCHAR(20) NOT NULL
                         CHECK (rol IN ('medico', 'recepcionista', 'enfermeria', 'facturador', 'farmacia')),
     recurso VARCHAR(50) NOT NULL,
-    PRIMARY KEY (rol, recurso)
+    UNIQUE (rol, recurso)
 );
 
 INSERT INTO rol_permiso (rol, recurso) VALUES
@@ -1154,7 +1155,6 @@ INSERT INTO rol_permiso (rol, recurso) VALUES
     ('medico', 'encuestas'), ('recepcionista', 'encuestas'),
     ('farmacia', 'farmacia'), ('medico', 'farmacia'), ('recepcionista', 'farmacia'),
     ('enfermeria', 'farmacia'), ('facturador', 'farmacia'),
-    ('medico', 'admin'),
     ('medico', 'admin.perfil'),
     ('medico', 'admin.apariencia'),
     ('medico', 'admin.antecedentes'),

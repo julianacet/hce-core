@@ -117,7 +117,7 @@ const router = createBrowserRouter([
 
           // admin + medico (la pestaña "Usuarios" se filtra dentro de PanelAdmin)
           {
-            element: <RutaProtegida recurso="admin" />,
+            element: <RutaProtegida prefijo="admin." />,
             children: [{ path: 'admin', element: <PanelAdmin /> }],
           },
           // Solo admin

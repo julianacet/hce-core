@@ -18,7 +18,7 @@ type NavGroup = {
 }
 
 export default function RootLayout() {
-  const { usuario, logout, puedeAcceder } = useAuth()
+  const { usuario, logout, puedeAcceder, tieneAlgunRecurso } = useAuth()
   const { tema } = useTema()
   const navigate = useNavigate()
 
@@ -116,13 +116,13 @@ export default function RootLayout() {
             )
           })}
 
-          {(puedeAcceder('admin') || puedeAcceder('historial')) && (
+          {(tieneAlgunRecurso('admin.') || puedeAcceder('historial')) && (
             <div className="mt-5">
               <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-white/40">
                 Sistema
               </p>
               <div className="pl-2 flex flex-col gap-0.5">
-                {puedeAcceder('admin') && (
+                {tieneAlgunRecurso('admin.') && (
                   <NavLink
                     to="/admin"
                     className={({ isActive }) =>

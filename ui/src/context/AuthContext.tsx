@@ -16,6 +16,7 @@ type AuthContextType = {
   login: (usuario: string, password: string) => Promise<boolean>
   logout: () => void
   puedeAcceder: (recurso: string) => boolean
+  tieneAlgunRecurso: (prefijo: string) => boolean
 }
 
 type LoginResponse = {
@@ -82,8 +83,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return usuario.permisos.includes(recurso)
   }
 
+  function tieneAlgunRecurso(prefijo: string): boolean {
+    if (!usuario) return false
+    return usuario.permisos.some((p) => p.startsWith(prefijo))
+  }
+
   return (
-    <AuthContext.Provider value={{ usuario, login, logout, puedeAcceder }}>
+    <AuthContext.Provider value={{ usuario, login, logout, puedeAcceder, tieneAlgunRecurso }}>
       {children}
     </AuthContext.Provider>
   )

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, Fragment } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { useTabParam } from '../../hooks/useTabParam'
 import { useTema, DEFAULTS, type Tema } from '../../context/TemaContext'
@@ -80,6 +80,8 @@ import {
 import { Breadcrumb } from '../../components/Breadcrumb'
 import EditorConsentimiento, { type EditorConsentimientoHandle } from '../../components/EditorConsentimiento'
 import { asegurarHtml, htmlEstaVacio } from '../../utils/textoEnriquecido'
+import { GRUPOS_PERMISOS } from '../../utils/catalogoPermisos'
+import { usePermisos, useOtorgarPermiso, useRevocarPermiso } from '../../api/permisos'
 
 const PALETAS = [
   {
@@ -1624,6 +1626,82 @@ function ExamenesAdmin({ onAbierto }: { onAbierto?: (v: boolean) => void }) {
   )
 }
 
+// ── Roles y permisos ───────────────────────────────────────────────────────
+
+function RolesPermisosAdmin() {
+  const { data, isLoading } = usePermisos()
+  const otorgar = useOtorgarPermiso()
+  const revocar = useRevocarPermiso()
+  const [error, setError] = useState('')
+
+  function toggle(recurso: string, rol: string, marcado: boolean) {
+    setError('')
+    const mutacion = marcado ? otorgar : revocar
+    mutacion.mutate({ rol, recurso }, {
+      onError: () => setError(`No se pudo actualizar el permiso de "${rol}" sobre "${recurso}".`),
+    })
+  }
+
+  if (isLoading || !data) {
+    return <p className="text-sm text-center py-6" style={{ color: 'var(--hce-text-muted)' }}>Cargando…</p>
+  }
+
+  return (
+    <div className="space-y-4">
+      <p className="text-sm" style={{ color: 'var(--hce-text-muted)' }}>
+        Cada casilla otorga o revoca el acceso de ese rol a ese recurso al instante. Admin siempre tiene acceso total y no aparece aquí.
+      </p>
+      {error && <p className="form-error">{error}</p>}
+
+      <div className="card-hce overflow-hidden overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="thead-sticky border-b" style={{ borderColor: 'var(--hce-border)' }}>
+            <tr>
+              <th className="th-hce px-5">Recurso</th>
+              {data.roles.map((rol) => (
+                <th key={rol} className="th-hce text-center capitalize">{rol}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y" style={{ borderColor: 'var(--hce-border)' }}>
+            {GRUPOS_PERMISOS.map((grupo) => (
+              <Fragment key={grupo.grupo}>
+                <tr style={{ background: 'var(--hce-bg)' }}>
+                  <td colSpan={data.roles.length + 1} className="px-5 py-1.5 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--hce-text-muted)' }}>
+                    {grupo.grupo}
+                  </td>
+                </tr>
+                {grupo.recursos.map(({ recurso, label }) => (
+                  <tr key={recurso}>
+                    <td className="px-5 py-2.5">{label}</td>
+                    {data.roles.map((rol) => {
+                      const marcado = data.asignaciones[recurso]?.includes(rol) ?? false
+                      const pendiente =
+                        (otorgar.isPending && otorgar.variables?.recurso === recurso && otorgar.variables?.rol === rol) ||
+                        (revocar.isPending && revocar.variables?.recurso === recurso && revocar.variables?.rol === rol)
+                      return (
+                        <td key={rol} className="text-center">
+                          <input
+                            type="checkbox"
+                            checked={marcado}
+                            disabled={pendiente}
+                            onChange={(e) => toggle(recurso, rol, e.target.checked)}
+                            className="cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
+                          />
+                        </td>
+                      )
+                    })}
+                  </tr>
+                ))}
+              </Fragment>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
 export default function PanelAdmin() {
   const { puedeAcceder } = useAuth()
   const { tema, guardarTema } = useTema()
@@ -1641,7 +1719,7 @@ export default function PanelAdmin() {
   const [tab, setTab] = useTabParam(
     'tab',
     'perfil' as const,
-    ['perfil', 'impresion', 'apariencia', 'consentimientos', 'usuarios', 'eventos', 'antecedentes', 'campos', 'medicamentos', 'examenes'] as const,
+    ['perfil', 'impresion', 'apariencia', 'consentimientos', 'usuarios', 'eventos', 'antecedentes', 'campos', 'medicamentos', 'examenes', 'roles'] as const,
   )
   const inputLogo = useRef<HTMLInputElement>(null)
 
@@ -1757,6 +1835,7 @@ export default function PanelAdmin() {
           { id: 'eventos',         label: 'Eventos adversos', recurso: 'admin.eventos' },
           { id: 'medicamentos',    label: 'Medicamentos',     recurso: 'admin.medicamentos' },
           { id: 'examenes',        label: 'Exámenes',         recurso: 'admin.examenes' },
+          { id: 'roles',           label: 'Roles y permisos', recurso: 'admin.permisos' },
         ] as const)
           .filter(({ recurso }) => puedeAcceder(recurso))
           .map(({ id, label }) => (
@@ -1944,6 +2023,7 @@ export default function PanelAdmin() {
       {tab === 'campos' && puedeAcceder('admin.campos') && <CamposClinicosAdmin onAbierto={setFormularioAbierto} />}
       {tab === 'medicamentos' && puedeAcceder('admin.medicamentos') && <MedicamentosAdmin onAbierto={setFormularioAbierto} />}
       {tab === 'examenes'    && puedeAcceder('admin.examenes') && <ExamenesAdmin     onAbierto={setFormularioAbierto} />}
+      {tab === 'roles' && puedeAcceder('admin.permisos') && <RolesPermisosAdmin />}
 
       {tab === 'apariencia' && puedeAcceder('admin.apariencia') && <form onSubmit={guardar} className="space-y-6">
 
